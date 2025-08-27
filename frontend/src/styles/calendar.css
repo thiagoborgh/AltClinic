@@ -1,0 +1,246 @@
+/* Estilos para React Big Calendar */
+.rbc-calendar {
+  font-family: 'Roboto', sans-serif;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rbc-header {
+  background-color: #f5f5f5;
+  color: #333;
+  font-weight: 600;
+  padding: 12px 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-today {
+  background-color: #e3f2fd;
+}
+
+.rbc-off-range-bg {
+  background-color: #fafafa;
+}
+
+.rbc-date-cell {
+  text-align: center;
+  padding: 4px;
+}
+
+.rbc-date-cell.rbc-now {
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.rbc-event {
+  border-radius: 4px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  font-size: 12px;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rbc-event:hover {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.16);
+  transform: translateY(-1px);
+}
+
+.rbc-event.rbc-selected {
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.4);
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #f0f0f0;
+}
+
+.rbc-time-header {
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-time-content {
+  border-left: 1px solid #e0e0e0;
+}
+
+.rbc-current-time-indicator {
+  background-color: #f44336;
+  height: 2px;
+  position: absolute;
+  z-index: 1;
+}
+
+.rbc-agenda-view {
+  font-size: 14px;
+}
+
+.rbc-agenda-view table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rbc-agenda-view .rbc-agenda-date-cell {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-agenda-view .rbc-agenda-time-cell {
+  background-color: #f9f9f9;
+  padding: 8px;
+  font-weight: 500;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-agenda-view .rbc-agenda-event-cell {
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-toolbar {
+  background-color: #f5f5f5;
+  padding: 16px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rbc-toolbar button {
+  background: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin: 0 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f0f0f0;
+  border-color: #1976d2;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+.rbc-toolbar .rbc-toolbar-label {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 16px;
+}
+
+.rbc-month-view {
+  border: 1px solid #e0e0e0;
+}
+
+.rbc-day-bg {
+  border-right: 1px solid #e0e0e0;
+}
+
+.rbc-day-bg:last-child {
+  border-right: none;
+}
+
+.rbc-date-cell {
+  border-right: 1px solid #f0f0f0;
+}
+
+.rbc-date-cell:last-child {
+  border-right: none;
+}
+
+.rbc-month-row {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.rbc-month-row:last-child {
+  border-bottom: none;
+}
+
+.rbc-row-content {
+  padding: 2px;
+}
+
+.rbc-show-more {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 11px;
+  margin: 1px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.rbc-show-more:hover {
+  background-color: #bbdefb;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .rbc-toolbar .rbc-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .rbc-toolbar button {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .rbc-event {
+    font-size: 11px;
+    padding: 1px 3px;
+  }
+}
+
+/* Cores personalizadas para status */
+.rbc-event-confirmado {
+  background-color: #4caf50;
+  color: white;
+}
+
+.rbc-event-pendente {
+  background-color: #ff9800;
+  color: white;
+}
+
+.rbc-event-cancelado {
+  background-color: #f44336;
+  color: white;
+}
+
+.rbc-event-realizado {
+  background-color: #9c27b0;
+  color: white;
+}
+
+/* Animações suaves */
+.rbc-calendar * {
+  transition: all 0.2s ease;
+}
+
+/* Melhorias de acessibilidade */
+.rbc-event:focus {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.rbc-toolbar button:focus {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}

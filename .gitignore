@@ -1,0 +1,17 @@
+node_modules/
+.env
+*.log
+logs/
+saee.db
+saee.db-*
+uploads/
+whatsapp-session/
+dist/
+build/
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~

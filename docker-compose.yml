@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Aplicação principal
+  saae-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/saee.db
+      - UPLOAD_PATH=/app/uploads
+    volumes:
+      - saae-data:/app/data
+      - saae-uploads:/app/uploads
+      - saae-logs:/app/logs
+      - saae-whatsapp:/app/whatsapp-session
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - saae-network
+    depends_on:
+      - saae-db
+    healthcheck:
+      test: ["CMD", "node", "health-check.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Banco de dados PostgreSQL (opcional para produção)
+  saae-db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=saae
+      - POSTGRES_USER=saae
+      - POSTGRES_PASSWORD=sua_senha_segura_aqui
+    volumes:
+      - saae-postgres:/var/lib/postgresql/data
+    networks:
+      - saae-network
+    restart: unless-stopped
+
+  # Redis para cache (opcional)
+  saae-redis:
+    image: redis:7-alpine
+    networks:
+      - saae-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - saae-redis:/data
+
+  # Nginx como proxy reverso
+  saae-nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    networks:
+      - saae-network
+    depends_on:
+      - saae-app
+    restart: unless-stopped
+
+volumes:
+  saae-data:
+    driver: local
+  saae-uploads:
+    driver: local
+  saae-logs:
+    driver: local
+  saae-whatsapp:
+    driver: local
+  saae-postgres:
+    driver: local
+  saae-redis:
+    driver: local
+
+networks:
+  saae-network:
+    driver: bridge
