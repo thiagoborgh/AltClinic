@@ -12,8 +12,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  QRCodeCanvas
+  DialogActions
 } from '@mui/material';
 import {
   QrCode,
@@ -52,7 +51,7 @@ const PIXGenerator = () => {
   };
 
   const enviarWhatsApp = () => {
-    const mensagem = `🎯 *PIX Gerado - ALTclinic*
+    const mensagem = `*PIX Gerado - ALTclinic*
 
 💰 *Valor:* R$ ${dadosPIX.valor.toFixed(2)}
 📝 *Descrição:* ${formData.descricao}

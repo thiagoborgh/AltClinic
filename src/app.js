@@ -12,6 +12,7 @@ const propostasRoutes = require('./routes/propostas');
 const crmRoutes = require('./routes/crm');
 const prontuariosRoutes = require('./routes/prontuarios');
 const financeiroRoutes = require('./routes/financeiro');
+const tenantsRoutes = require('./routes/tenants');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
@@ -106,6 +107,9 @@ class SaeeApp {
     });
 
     // Rotas da API
+    // Rotas multi-tenant (devem vir ANTES das outras)
+    this.app.use('/api/tenants', tenantsRoutes);
+    
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/agendamentos', agendamentosRoutes);
     this.app.use('/api/propostas', propostasRoutes);

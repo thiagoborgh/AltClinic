@@ -1,0 +1,124 @@
+/* Estilos específicos para o módulo CRM */
+
+.crm-dashboard {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.crm-metric-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.crm-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.crm-chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+.crm-engagement-bar {
+  transition: width 0.8s ease-in-out;
+  border-radius: 4px;
+}
+
+.crm-quick-action-btn {
+  min-height: 80px;
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+.crm-quick-action-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.crm-alert-panel {
+  border-left: 4px solid;
+  padding-left: 16px;
+}
+
+.crm-alert-panel.warning {
+  border-left-color: #ff9800;
+}
+
+.crm-alert-panel.info {
+  border-left-color: #2196f3;
+}
+
+.crm-alert-panel.success {
+  border-left-color: #4caf50;
+}
+
+.crm-alert-panel.error {
+  border-left-color: #f44336;
+}
+
+/* Loading animations */
+.crm-loading-skeleton {
+  animation: crm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes crm-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .crm-metric-card {
+    margin-bottom: 16px;
+  }
+  
+  .crm-chart-container {
+    height: 250px;
+  }
+  
+  .crm-quick-action-btn {
+    min-height: 60px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Tab navigation styling */
+.crm-tabs {
+  border-bottom: 1px solid #e0e0e0;
+  background: white;
+  border-radius: 8px 8px 0 0;
+}
+
+.crm-tab-content {
+  padding: 24px;
+  background: white;
+  border-radius: 0 0 8px 8px;
+  min-height: 400px;
+}
+
+/* Custom scrollbar for lists */
+.crm-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.crm-scrollable::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.crm-scrollable::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.crm-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}

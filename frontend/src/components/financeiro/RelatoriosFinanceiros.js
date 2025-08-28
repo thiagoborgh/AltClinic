@@ -12,16 +12,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   TextField,
   MenuItem,
-  Chip,
   Alert,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  LinearProgress,
-  Divider
+  LinearProgress
 } from '@mui/material';
 import {
   GetApp,
@@ -31,12 +28,7 @@ import {
   ExpandMore,
   TrendingUp,
   TrendingDown,
-  PieChart,
-  BarChart,
-  DateRange,
-  Receipt,
-  AccountBalance,
-  Business
+  AccountBalance
 } from '@mui/icons-material';
 import { useFinanceiro } from '../../hooks/financeiro/useFinanceiro';
 import moment from 'moment';
@@ -155,18 +147,18 @@ const RelatoriosFinanceiros = () => {
 
   const exportarRelatorio = (tipo) => {
     // Simulação de exportação
-    alert(`📄 Exportando relatório ${tipo} em PDF...`);
+    alert(`Exportando relatório ${tipo} em PDF...`);
   };
 
   const enviarPorEmail = () => {
-    alert('📧 Enviando relatório por e-mail...');
+    alert('Enviando relatório por e-mail...');
   };
 
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          📊 Relatórios Financeiros
+          Relatórios Financeiros
         </Typography>
         <Box display="flex" gap={2}>
           <Button
@@ -265,7 +257,7 @@ const RelatoriosFinanceiros = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  📈 Resumo Executivo - DRE
+                  Resumo Executivo - DRE
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={3}>
@@ -325,7 +317,7 @@ const RelatoriosFinanceiros = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom color="success.main">
-                  💰 Receitas Detalhadas
+                  Receitas Detalhadas
                 </Typography>
                 <TableContainer>
                   <Table size="small">
@@ -359,7 +351,7 @@ const RelatoriosFinanceiros = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom color="error.main">
-                  📋 Despesas por Categoria
+                  Despesas por Categoria
                 </Typography>
                 {Object.entries(dre.despesasPorCategoria).map(([categoria, valor]) => (
                   <Box key={categoria} sx={{ mb: 2 }}>
@@ -392,7 +384,7 @@ const RelatoriosFinanceiros = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  💼 Análise de Propostas
+                  Análise de Propostas
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={2}>
@@ -452,7 +444,7 @@ const RelatoriosFinanceiros = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  📊 Aging de Recebíveis
+                  Aging de Recebíveis
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={3}>
@@ -519,7 +511,7 @@ const RelatoriosFinanceiros = () => {
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="h6">
-              📋 Configurações de Relatório
+              Configurações de Relatório
             </Typography>
           </AccordionSummary>
           <AccordionDetails>

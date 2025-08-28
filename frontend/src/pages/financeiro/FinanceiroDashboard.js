@@ -93,7 +93,7 @@ const FinanceiroDashboard = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  💰 Saldo Atual
+                  Saldo Atual
                 </Typography>
                 <Typography variant="h4" fontWeight="bold">
                   R$ {resumoFinanceiro?.saldoAtual?.toLocaleString('pt-BR') || '0,00'}
@@ -119,7 +119,7 @@ const FinanceiroDashboard = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  📈 Receita Mensal
+                  Receita Mensal
                 </Typography>
                 <Typography variant="h4" fontWeight="bold">
                   R$ {resumoFinanceiro?.receitaMensal?.toLocaleString('pt-BR') || '0,00'}
@@ -148,7 +148,7 @@ const FinanceiroDashboard = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>
                 <Typography variant="h6" gutterBottom>
-                  📉 Despesas Mensais
+                  Despesas Mensais
                 </Typography>
                 <Typography variant="h4" fontWeight="bold">
                   R$ {resumoFinanceiro?.despesasMensais?.toLocaleString('pt-BR') || '0,00'}
@@ -205,7 +205,7 @@ const FinanceiroDashboard = () => {
         sx={{ mb: 3, background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)' }}
       >
         <Typography variant="h6" gutterBottom>
-          🤖 Insights de IA - Otimização Financeira
+          Insights de IA - Otimização Financeira
         </Typography>
         {insightsIA.map((insight, index) => (
           <Typography key={index} variant="body2" sx={{ mb: 1 }}>
@@ -220,7 +220,7 @@ const FinanceiroDashboard = () => {
   const renderToolbar = () => (
     <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
       <Typography variant="h4" fontWeight="bold">
-        💼 Módulo Financeiro SAAE
+        Módulo Financeiro SAAE
       </Typography>
       
       <Box display="flex" gap={2}>
@@ -242,7 +242,7 @@ const FinanceiroDashboard = () => {
           <Button
             variant="outlined"
             startIcon={<Analytics />}
-            onClick={() => setMenuAnchor(event.currentTarget)}
+            onClick={(event) => setMenuAnchor(event.currentTarget)}
           >
             Relatórios
           </Button>
@@ -306,37 +306,37 @@ const FinanceiroDashboard = () => {
             scrollButtons="auto"
           >
             <Tab 
-              label="💰 Propostas/Orçamentos" 
+              label="Propostas/Orçamentos" 
               icon={<Description />} 
               iconPosition="start" 
             />
             <Tab 
-              label="💳 Contas a Receber" 
+              label="Contas a Receber" 
               icon={<TrendingUp />} 
               iconPosition="start" 
             />
             <Tab 
-              label="💸 Contas a Pagar" 
+              label="Contas a Pagar" 
               icon={<TrendingDown />} 
               iconPosition="start" 
             />
             <Tab 
-              label="📊 Fluxo de Caixa" 
+              label="Fluxo de Caixa" 
               icon={<Analytics />} 
               iconPosition="start" 
             />
             <Tab 
-              label="📈 Relatórios" 
+              label="Relatórios" 
               icon={<PieChart />} 
               iconPosition="start" 
             />
             <Tab 
-              label="🏦 Reconciliação" 
+              label="Reconciliação" 
               icon={<AccountBalance />} 
               iconPosition="start" 
             />
             <Tab 
-              label="📦 Estoque" 
+              label="Estoque" 
               icon={<Inventory />} 
               iconPosition="start" 
             />

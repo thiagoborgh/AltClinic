@@ -7,19 +7,24 @@ require('dotenv').config();
 
 // Importar utilitários
 const dbManager = require('./src/models/database');
+const multiTenantDb = require('./src/models/MultiTenantDatabase');
 const cronManager = require('./src/cron/inactivityChecker');
 const { botManager } = require('./src/utils/bot');
+
+// Importar middlewares multi-tenant
+const { extractTenant, tenantRateLimit } = require('./src/middleware/tenant');
 
 // Importar rotas
 const authRoutes = require('./src/routes/auth');
 const agendamentosRoutes = require('./src/routes/agendamentos');
 const propostasRoutes = require('./src/routes/propostas');
 const crmRoutes = require('./src/routes/crm');
+const tenantsRoutes = require('./src/routes/tenants');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware de segurança
+// Middleware de segurança - atualizado para multi-tenant
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -28,28 +33,35 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       scriptSrc: ["'self'"],
+      connectSrc: ["'self'", "https:"] // Para APIs externas
     },
   },
 }));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting global
+const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP por janela
+  max: 1000, // máximo 1000 requests por IP por janela (aumentado para SaaS)
   message: {
     success: false,
     message: 'Muitas tentativas. Tente novamente em 15 minutos.'
   }
 });
 
-app.use('/api/', limiter);
+app.use('/api/', globalLimiter);
 
-// Middleware básico
+// Middleware básico - atualizado para multi-tenant
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://altclinic.vercel.app',
+    /^https:\/\/.*\.altclinic\.com\.br$/,  // Subdomínios dos tenants
+    /^https:\/\/.*\.railway\.app$/         // Railway deployments
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Slug']
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -58,18 +70,27 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Middleware de log
+// Middleware de log - melhorado para multi-tenant
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`${timestamp} ${req.method} ${req.path} - ${req.ip}`);
+  const tenant = req.headers['x-tenant-slug'] || 'no-tenant';
+  console.log(`${timestamp} [${tenant}] ${req.method} ${req.path} - ${req.ip}`);
   next();
 });
 
-// Rotas da API
-app.use('/api/auth', authRoutes);
-app.use('/api/agendamentos', agendamentosRoutes);
-app.use('/api/propostas', propostasRoutes);
-app.use('/api/crm', crmRoutes);
+// === ROTAS PÚBLICAS (sem tenant) ===
+app.use('/api/tenants', tenantsRoutes);
+
+// === ROTAS COM TENANT ===
+// Aplicar middleware de tenant em todas as rotas protegidas
+app.use('/api/t/:tenantSlug/*', extractTenant);
+app.use('/api/t/:tenantSlug/', tenantRateLimit());
+
+// Rotas da API com tenant
+app.use('/api/t/:tenantSlug/auth', authRoutes);
+app.use('/api/t/:tenantSlug/agendamentos', agendamentosRoutes);
+app.use('/api/t/:tenantSlug/propostas', propostasRoutes);
+app.use('/api/t/:tenantSlug/crm', crmRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {

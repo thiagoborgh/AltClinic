@@ -35,9 +35,7 @@ import {
   ExpandMore,
   Sync,
   Download,
-  CompareArrows,
-  TrendingUp,
-  TrendingDown
+  CompareArrows
 } from '@mui/icons-material';
 import moment from 'moment';
 
@@ -170,7 +168,7 @@ const ReconciliacaoBancaria = () => {
   return (
     <Box>
       <Typography variant="h5" fontWeight="bold" gutterBottom>
-        🏦 Reconciliação Bancária
+        Reconciliação Bancária
       </Typography>
 
       {/* Estatísticas */}
@@ -311,7 +309,7 @@ const ReconciliacaoBancaria = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📊 Progresso da Reconciliação
+            Progresso da Reconciliação
           </Typography>
           
           <Box sx={{ mb: 2 }}>
@@ -332,7 +330,7 @@ const ReconciliacaoBancaria = () => {
           </Box>
 
           <Alert severity="info">
-            🔄 A reconciliação automática identifica e relaciona transações bancárias com as movimentações internas do sistema.
+            A reconciliação automática identifica e relaciona transações bancárias com as movimentações internas do sistema.
           </Alert>
         </CardContent>
       </Card>
@@ -344,7 +342,7 @@ const ReconciliacaoBancaria = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                🏦 Extrato Bancário
+                Extrato Bancário
               </Typography>
 
               <TableContainer component={Paper} variant="outlined">
@@ -399,7 +397,7 @@ const ReconciliacaoBancaria = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                💼 Movimentação Interna
+                Movimentação Interna
               </Typography>
 
               <TableContainer component={Paper} variant="outlined">

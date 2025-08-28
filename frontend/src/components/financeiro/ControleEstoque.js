@@ -21,16 +21,13 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  LinearProgress,
   IconButton,
   Tooltip,
-  Fab
 } from '@mui/material';
 import {
   Inventory,
   Add,
   Edit,
-  Delete,
   Warning,
   CheckCircle,
   TrendingDown,
@@ -39,7 +36,6 @@ import {
   LocalShipping,
   Assignment
 } from '@mui/icons-material';
-import moment from 'moment';
 
 const ControleEstoque = () => {
   const [modalProdutoOpen, setModalProdutoOpen] = useState(false);
@@ -191,14 +187,14 @@ const ControleEstoque = () => {
   };
 
   const gerarPedidoCompra = (produto) => {
-    alert(`📋 Gerando pedido de compra para: ${produto.nome}\nQuantidade sugerida: ${produto.quantidadeMinima * 2} unidades`);
+    alert(`Gerando pedido de compra para: ${produto.nome}\nQuantidade sugerida: ${produto.quantidadeMinima * 2} unidades`);
   };
 
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          📦 Controle de Estoque
+          Controle de Estoque
         </Typography>
         <Button
           variant="contained"
@@ -219,7 +215,7 @@ const ControleEstoque = () => {
       
       {stats.produtosBaixoEstoque > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          📉 {stats.produtosBaixoEstoque} produto(s) com baixo estoque - Considere fazer pedidos
+          {stats.produtosBaixoEstoque} produto(s) com baixo estoque - Considere fazer pedidos
         </Alert>
       )}
 
@@ -454,7 +450,7 @@ const ControleEstoque = () => {
 
       {/* Modal Novo Produto */}
       <Dialog open={modalProdutoOpen} onClose={() => setModalProdutoOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>📦 Novo Produto</DialogTitle>
+        <DialogTitle>Novo Produto</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
@@ -553,7 +549,7 @@ const ControleEstoque = () => {
 
       {/* Modal Movimentação */}
       <Dialog open={modalMovimentacaoOpen} onClose={() => setModalMovimentacaoOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>📋 Movimentação de Estoque</DialogTitle>
+        <DialogTitle>Movimentação de Estoque</DialogTitle>
         <DialogContent>
           {produtoSelecionado && (
             <Box sx={{ mt: 2 }}>

@@ -11,12 +11,14 @@ import DashboardLayout from './layouts/DashboardLayoutNew';
 
 // Pages
 import Login from './pages/Login';
+import OnboardingPage from './pages/OnboardingPage';
+import MultiTenantLogin from './pages/MultiTenantLogin';
 import Dashboard from './pages/DashboardNew';
 import AgendaFuncional from './pages/AgendaFuncional';
 import Pacientes from './pages/Pacientes';
 import Propostas from './pages/Propostas';
 import Prontuarios from './pages/Prontuarios';
-import CRM from './pages/CRM';
+import CRM from './pages/crm/CRMDashboard';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
@@ -39,6 +41,16 @@ function App() {
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : 
           <AuthLayout><Login /></AuthLayout>
+        } />
+        
+        <Route path="/register" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
+          <AuthLayout><OnboardingPage /></AuthLayout>
+        } />
+        
+        <Route path="/login/:slug" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
+          <AuthLayout><MultiTenantLogin /></AuthLayout>
         } />
 
         {/* Rotas protegidas */}

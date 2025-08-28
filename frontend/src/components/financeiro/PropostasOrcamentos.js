@@ -19,7 +19,6 @@ import {
   TextField,
   Grid,
   MenuItem,
-  Fab,
   Tooltip,
   Card,
   CardContent,
@@ -32,7 +31,6 @@ import {
   Visibility,
   QrCode,
   Send,
-  Download,
   CheckCircle,
   Cancel,
   Schedule
@@ -153,7 +151,7 @@ const PropostasOrcamentos = ({ searchTerm }) => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          💰 Propostas e Orçamentos
+          Propostas e Orçamentos
         </Typography>
         <Button
           variant="contained"
@@ -311,12 +309,12 @@ const PropostasOrcamentos = ({ searchTerm }) => {
 
       {/* Modal Nova Proposta */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>💰 Nova Proposta/Orçamento</DialogTitle>
+        <DialogTitle>Nova Proposta/Orçamento</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Dados do Paciente */}
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>👤 Dados do Paciente</Typography>
+              <Typography variant="h6" gutterBottom>Dados do Paciente</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField
@@ -356,7 +354,7 @@ const PropostasOrcamentos = ({ searchTerm }) => {
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
               <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">🛍️ Itens da Proposta</Typography>
+                <Typography variant="h6">Itens da Proposta</Typography>
                 <Button
                   variant="outlined"
                   startIcon={<Add />}
@@ -434,7 +432,7 @@ const PropostasOrcamentos = ({ searchTerm }) => {
             {/* Totais e Pagamento */}
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" gutterBottom>💳 Forma de Pagamento e Totais</Typography>
+              <Typography variant="h6" gutterBottom>Forma de Pagamento e Totais</Typography>
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField
@@ -496,7 +494,7 @@ const PropostasOrcamentos = ({ searchTerm }) => {
 
       {/* Modal PIX */}
       <Dialog open={pixModalOpen} onClose={() => setPixModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 PIX Gerado com Sucesso</DialogTitle>
+        <DialogTitle>PIX Gerado com Sucesso</DialogTitle>
         <DialogContent>
           {dadosPIX && (
             <Box textAlign="center">

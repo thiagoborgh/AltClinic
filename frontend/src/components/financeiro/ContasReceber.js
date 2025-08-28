@@ -21,7 +21,6 @@ import {
   MenuItem,
   Card,
   CardContent,
-  Divider,
   Tooltip,
   LinearProgress,
   Alert
@@ -36,7 +35,6 @@ import {
   Send,
   Receipt,
   AccessTime,
-  TrendingUp
 } from '@mui/icons-material';
 import { useFinanceiro } from '../../hooks/financeiro/useFinanceiro';
 import moment from 'moment';
@@ -110,14 +108,6 @@ const ContasReceber = ({ searchTerm }) => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'paga': return 'success';
-      case 'pendente': return 'warning';
-      case 'vencida': return 'error';
-      default: return 'default';
-    }
-  };
 
   const getStatusIcon = (conta) => {
     if (conta.status === 'paga') return <CheckCircle />;
@@ -136,7 +126,7 @@ const ContasReceber = ({ searchTerm }) => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          💰 Contas a Receber
+          Contas a Receber
         </Typography>
         <Button
           variant="contained"
@@ -156,7 +146,7 @@ const ContasReceber = ({ searchTerm }) => {
       
       {contasVencendoHoje.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          📅 {contasVencendoHoje.length} contas vencem hoje no valor de R$ {totalVencendoHoje.toLocaleString('pt-BR')}
+          {contasVencendoHoje.length} contas vencem hoje no valor de R$ {totalVencendoHoje.toLocaleString('pt-BR')}
         </Alert>
       )}
 
@@ -223,7 +213,7 @@ const ContasReceber = ({ searchTerm }) => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📊 Performance de Recebimento
+            Performance de Recebimento
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
@@ -498,7 +488,7 @@ const ContasReceber = ({ searchTerm }) => {
 
       {/* Modal PIX */}
       <Dialog open={pixModalOpen} onClose={() => setPixModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>🎯 PIX para Cobrança</DialogTitle>
+        <DialogTitle>PIX para Cobrança</DialogTitle>
         <DialogContent>
           {dadosPIX && contaSelecionada && (
             <Box textAlign="center">

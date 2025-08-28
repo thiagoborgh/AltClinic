@@ -8,9 +8,10 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 
 ## ✅ Status do Sistema
 
-**MVP COMPLETO E FUNCIONAL!** 
+**MVP COMPLETO E FUNCIONAL!**
 
 🎉 **O sistema está 100% operacional com:**
+
 - ✅ API completa com 40+ endpoints
 - ✅ Banco de dados SQLite configurado
 - ✅ Autenticação JWT e criptografia AES
@@ -22,6 +23,7 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 - ✅ Conformidade LGPD
 
 **Credenciais de teste:**
+
 - Email: `admin@clinica.com`
 - Senha: `123456`
 - Servidor: `http://localhost:3000`
@@ -29,24 +31,28 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 ## 🚀 Funcionalidades
 
 ### 📅 Agendamento
+
 - ✅ Agendamento via bots (WhatsApp/Telegram)
 - ✅ Verificação automática de disponibilidade
 - ✅ Gestão de equipamentos/salas com capacidade
 - ✅ Confirmações e lembretes automáticos
 
 ### 💰 Financeiro
+
 - ✅ Geração de propostas com contratos
 - ✅ Agendamento automático de itens contratados
 - ✅ Recibos digitais via bots
 - ✅ Controle de contas a receber
 
 ### 👥 CRM
+
 - ✅ Mensagens automáticas para agendamentos
 - ✅ Campanhas para clientes inativos
 - ✅ Relatórios de ativação de vendas
 - ✅ Integração com Mailchimp (free tier)
 
 ### 🏥 Prontuário Digital
+
 - ✅ Anamnese configurável (JSON)
 - ✅ Evolução de medidas (séries temporais)
 - ✅ Upload de imagens criptografadas
@@ -54,11 +60,13 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 - ✅ Sugestões de IA para anamnese
 
 ### 🤖 Integração com IA
+
 - ✅ Claude 3.5 Sonnet para respostas naturais
 - ✅ Sugestões automáticas de anamnese
 - ✅ Análise de evolução de medidas
 
 ### 🔒 Segurança
+
 - ✅ Criptografia AES para dados sensíveis
 - ✅ Autenticação JWT
 - ✅ Conformidade com LGPD
@@ -67,6 +75,7 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 ## 🛠 Tech Stack
 
 ### Backend
+
 - **Node.js** com Express.js
 - **SQLite** com better-sqlite3 (MVP)
 - **WhatsApp Web.js** para bot WhatsApp
@@ -76,6 +85,7 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 - **node-cron** para tarefas agendadas
 
 ### Frontend
+
 - **React.js** 18+
 - **Material-UI** para componentes
 - **Fabric.js** para editor de imagem
@@ -83,30 +93,34 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 - **React Hook Form** para formulários
 
 ### Infraestrutura
+
 - **Docker** (opcional)
 - **Supabase** (migração futura)
 - **Vercel/Netlify** (deploy frontend)
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+ 
+- Node.js 18+
 - npm ou yarn
 - Git
 
 ## 🚀 Instalação
 
 ### 1. Clone o repositório
+
 ```bash
 git clone https://github.com/seu-usuario/saae.git
 cd saae
 ```
 
 ### 2. Instale dependências do backend
+
 ```bash
 npm install
 ```
 
 ### 3. Configure variáveis de ambiente
+
 ```bash
 cp .env.example .env
 ```
@@ -141,11 +155,13 @@ MAILCHIMP_LIST_ID=seu_list_id_aqui
 ```
 
 ### 4. Execute as migrations
+
 ```bash
 npm run migrate
 ```
 
 ### 5. Inicie o servidor backend
+
 ```bash
 # Desenvolvimento
 npm run dev
@@ -155,6 +171,7 @@ npm start
 ```
 
 ### 6. Configure o frontend (opcional)
+
 ```bash
 cd frontend
 npm install
@@ -164,16 +181,19 @@ npm start
 ## 🔧 Configuração dos Bots
 
 ### WhatsApp Bot
+
 1. Execute o backend: `npm run dev`
 2. Escaneie o QR Code que aparece no terminal
 3. O bot estará conectado e pronto
 
 ### Telegram Bot
+
 1. Crie um bot no [@BotFather](https://t.me/botfather)
 2. Adicione o token no `.env`
 3. Reinicie o servidor
 
 ### Mailchimp
+
 1. Crie conta gratuita no [Mailchimp](https://mailchimp.com)
 2. Gere API key em Account > Extras > API Keys
 3. Crie uma lista e obtenha o List ID
@@ -182,6 +202,7 @@ npm start
 ## 📊 Uso da API
 
 ### Autenticação
+
 ```bash
 # Login
 curl -X POST http://localhost:3000/api/auth/login \
@@ -190,6 +211,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 ```
 
 ### Agendamentos
+
 ```bash
 # Criar agendamento
 curl -X POST http://localhost:3000/api/agendamentos \
@@ -204,6 +226,7 @@ curl -X POST http://localhost:3000/api/agendamentos \
 ```
 
 ### Prontuários
+
 ```bash
 # Upload de imagem
 curl -X POST http://localhost:3000/api/prontuarios \
@@ -218,6 +241,7 @@ curl -X POST http://localhost:3000/api/prontuarios \
 O sistema inclui um editor de imagem completo baseado em Fabric.js:
 
 ### Funcionalidades
+
 - ✅ Desenho livre com pincel configurável
 - ✅ Adição de textos e anotações
 - ✅ Zoom e navegação
@@ -226,8 +250,9 @@ O sistema inclui um editor de imagem completo baseado em Fabric.js:
 - ✅ Export em alta qualidade
 
 ### Uso
+
 ```jsx
-import { ImageEditorModal } from './components/ImageEditor';
+import { ImageEditorModal } from "./components/ImageEditor";
 
 const MyComponent = () => {
   const [editorOpen, setEditorOpen] = useState(false);
@@ -235,8 +260,8 @@ const MyComponent = () => {
   const handleSave = async (blob, dataURL) => {
     // Salvar imagem editada
     const formData = new FormData();
-    formData.append('imagem', blob);
-    await api.post('/prontuarios', formData);
+    formData.append("imagem", blob);
+    await api.post("/prontuarios", formData);
   };
 
   return (
@@ -255,12 +280,14 @@ const MyComponent = () => {
 O sistema executa tarefas automatizadas:
 
 ### Jobs Configurados
+
 - **9h diárias**: Verificação de pacientes inativos
 - **A cada 2h (8-18h)**: Confirmações de agendamento
 - **A cada hora (8-20h)**: Lembretes de agendamento
 - **20h diárias**: Relatórios diários
 
 ### Execução Manual
+
 ```bash
 # Via API
 curl -X POST http://localhost:3000/api/crm/cron/manual \
@@ -271,12 +298,14 @@ curl -X POST http://localhost:3000/api/crm/cron/manual \
 ## 📈 Relatórios CRM
 
 ### Tipos Disponíveis
+
 - **Inativos**: Pacientes sem atendimento há X dias
 - **Ativos**: Pacientes com atendimento recente
 - **Novos**: Pacientes cadastrados recentemente
 - **Geral**: Visão geral com estatísticas
 
 ### API
+
 ```bash
 # Relatório de inativos
 curl "http://localhost:3000/api/crm/relatorios?tipo=inativos&dias_inativo=90" \
@@ -288,21 +317,25 @@ curl "http://localhost:3000/api/crm/relatorios?tipo=inativos&dias_inativo=90" \
 ### Problemas Comuns
 
 **Erro de permissão SQLite**
+
 ```bash
 chmod 666 saee.db
 chmod 777 .
 ```
 
 **WhatsApp não conecta**
+
 - Limpe a pasta `./whatsapp-session`
 - Reinicie o servidor
 - Escaneie o QR code novamente
 
 **Erro de criptografia**
+
 - Gere nova chave: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 - Atualize `ENCRYPTION_KEY` no `.env`
 
 **Upload de imagens falha**
+
 ```bash
 mkdir uploads
 chmod 755 uploads
@@ -311,6 +344,7 @@ chmod 755 uploads
 ## 🔐 Segurança
 
 ### Boas Práticas Implementadas
+
 - ✅ Senhas hash com bcrypt (12 rounds)
 - ✅ Criptografia AES-256 para dados sensíveis
 - ✅ JWT com expiração
@@ -320,6 +354,7 @@ chmod 755 uploads
 - ✅ Headers de segurança (Helmet)
 
 ### Em Produção
+
 ```bash
 # Use HTTPS sempre
 # Configure variáveis seguras
@@ -334,6 +369,7 @@ ENCRYPTION_KEY=chave_hex_32_bytes_gerada_com_crypto_randomBytes
 ## 📦 Deploy
 
 ### Backend (Railway/Render)
+
 ```bash
 # Build
 npm run build
@@ -343,6 +379,7 @@ npm run build
 ```
 
 ### Frontend (Vercel/Netlify)
+
 ```bash
 cd frontend
 npm run build
@@ -351,6 +388,7 @@ npm run build
 ```
 
 ### Docker (opcional)
+
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -382,18 +420,21 @@ Este projeto está sob licença MIT. Veja [LICENSE](LICENSE) para detalhes.
 ## 🗺 Roadmap
 
 ### v1.1 (Q1 2024)
+
 - [ ] PWA para mobile
 - [ ] Notificações push
 - [ ] Relatórios avançados
 - [ ] Integração com calendários
 
 ### v1.2 (Q2 2024)
+
 - [ ] Migração para PostgreSQL
 - [ ] Multi-tenancy
 - [ ] API webhooks
 - [ ] Módulo financeiro completo
 
 ### v2.0 (Q3 2024)
+
 - [ ] Marketplace de procedimentos
 - [ ] IA para análise de imagens
 - [ ] Telemedicina básica

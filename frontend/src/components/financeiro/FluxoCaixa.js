@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Button,
   Card,
   CardContent,
   Grid,
@@ -27,7 +26,6 @@ import {
   AccountBalance,
   DateRange,
   Insights,
-  PieChart,
   BarChart,
   Schedule
 } from '@mui/icons-material';
@@ -35,11 +33,11 @@ import { useFinanceiro } from '../../hooks/financeiro/useFinanceiro';
 import moment from 'moment';
 
 const FluxoCaixa = () => {
-  const { fluxoCaixa, contasReceber, contasPagar } = useFinanceiro();
   const [tabAtiva, setTabAtiva] = useState(0);
   const [periodoFiltro, setPeriodoFiltro] = useState('mes');
   const [dataInicio, setDataInicio] = useState(moment().startOf('month').format('YYYY-MM-DD'));
   const [dataFim, setDataFim] = useState(moment().endOf('month').format('YYYY-MM-DD'));
+  const { contasReceber, contasPagar } = useFinanceiro();
 
   // Calcular dados do fluxo de caixa
   const calcularFluxo = () => {
@@ -190,7 +188,7 @@ const FluxoCaixa = () => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          💰 Fluxo de Caixa
+          Fluxo de Caixa
         </Typography>
         <Box display="flex" gap={2}>
           <TextField
@@ -305,9 +303,9 @@ const FluxoCaixa = () => {
           onChange={(e, newValue) => setTabAtiva(newValue)}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="📊 Resumo Período" icon={<BarChart />} />
-          <Tab label="📈 Fluxo Diário" icon={<DateRange />} />
-          <Tab label="🔮 Projeção" icon={<Schedule />} />
+          <Tab label="Resumo Período" icon={<BarChart />} />
+          <Tab label="Fluxo Diário" icon={<DateRange />} />
+          <Tab label="Projeção" icon={<Schedule />} />
         </Tabs>
 
         <CardContent>
@@ -315,13 +313,13 @@ const FluxoCaixa = () => {
           {tabAtiva === 0 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                📊 Análise do Período Selecionado
+                Análise do Período Selecionado
               </Typography>
               
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" color="success.main" fontWeight="bold" gutterBottom>
-                    💰 Entradas
+                    Entradas
                   </Typography>
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
@@ -352,7 +350,7 @@ const FluxoCaixa = () => {
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" color="error.main" fontWeight="bold" gutterBottom>
-                    📋 Saídas
+                    Saídas
                   </Typography>
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
@@ -388,7 +386,7 @@ const FluxoCaixa = () => {
           {tabAtiva === 1 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                📈 Fluxo de Caixa Diário (Últimos 30 dias)
+                Fluxo de Caixa Diário (Últimos 30 dias)
               </Typography>
               
               <TableContainer component={Paper}>
@@ -451,7 +449,7 @@ const FluxoCaixa = () => {
           {tabAtiva === 2 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                🔮 Projeção para os Próximos 30 dias
+                Projeção para os Próximos 30 dias
               </Typography>
               
               <Alert 
@@ -465,7 +463,7 @@ const FluxoCaixa = () => {
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" color="success.main" fontWeight="bold" gutterBottom>
-                    💰 Entradas Previstas
+                    Entradas Previstas
                   </Typography>
                   <Typography variant="h5" color="success.main" fontWeight="bold" gutterBottom>
                     R$ {projecao.totalEntradasPrevistas.toLocaleString('pt-BR')}
@@ -494,7 +492,7 @@ const FluxoCaixa = () => {
                 
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" color="error.main" fontWeight="bold" gutterBottom>
-                    📋 Saídas Previstas
+                    Saídas Previstas
                   </Typography>
                   <Typography variant="h5" color="error.main" fontWeight="bold" gutterBottom>
                     R$ {projecao.totalSaidasPrevistas.toLocaleString('pt-BR')}

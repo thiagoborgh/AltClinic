@@ -151,7 +151,7 @@ const ContasPagar = ({ searchTerm }) => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h5" fontWeight="bold">
-          📋 Contas a Pagar
+          Contas a Pagar
         </Typography>
         <Button
           variant="contained"
@@ -172,7 +172,7 @@ const ContasPagar = ({ searchTerm }) => {
       
       {contasVencendoHoje.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          📅 {contasVencendoHoje.length} contas vencem hoje no valor de R$ {totalVencendoHoje.toLocaleString('pt-BR')}
+          {contasVencendoHoje.length} contas vencem hoje no valor de R$ {totalVencendoHoje.toLocaleString('pt-BR')}
         </Alert>
       )}
 
@@ -239,7 +239,7 @@ const ContasPagar = ({ searchTerm }) => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            📊 Gastos por Categoria
+            Gastos por Categoria
           </Typography>
           <Grid container spacing={2}>
             {Object.entries(gastoPorCategoria).map(([categoria, valor]) => (
@@ -499,7 +499,7 @@ const ContasPagar = ({ searchTerm }) => {
 
       {/* Modal Nova Conta */}
       <Dialog open={modalNovaContaOpen} onClose={() => setModalNovaContaOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>📋 Nova Conta a Pagar</DialogTitle>
+        <DialogTitle>Nova Conta a Pagar</DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
