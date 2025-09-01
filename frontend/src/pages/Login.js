@@ -22,13 +22,21 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
-import { useAuthStore } from '../store/authStore';
+import { useAuth } from '../hooks/useAuth';
+import LicenseSelector from '../components/Auth/LicenseSelector';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { 
+    login, 
+    selectLicense, 
+    loginLoading, 
+    user, 
+    licenses, 
+    showLicenseSelector, 
+    setShowLicenseSelector 
+  } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const {
     control,
@@ -42,21 +50,36 @@ const Login = () => {
   });
 
   const onSubmit = async (data) => {
-    setIsLoading(true);
-    
     try {
       const result = await login(data.email, data.senha);
       
       if (result.success) {
-        toast.success('Login realizado com sucesso!');
-        navigate('/dashboard');
+        if (result.singleLicense) {
+          toast.success('Login realizado com sucesso!');
+          navigate('/dashboard');
+        } else if (result.multipleLicenses) {
+          toast.success('Selecione a clínica que deseja acessar');
+        }
       } else {
-        toast.error(result.error || 'Erro ao fazer login');
+        toast.error(result.message || 'Erro ao fazer login');
       }
     } catch (error) {
       toast.error('Erro inesperado. Tente novamente.');
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const handleSelectLicense = async (selectedLicense) => {
+    try {
+      const result = await selectLicense(selectedLicense);
+      
+      if (result.success) {
+        toast.success(`Bem-vindo à ${selectedLicense.tenant.nome}!`);
+        navigate('/dashboard');
+      } else {
+        toast.error(result.message || 'Erro ao acessar clínica');
+      }
+    } catch (error) {
+      toast.error('Erro inesperado. Tente novamente.');
     }
   };
 
@@ -151,7 +174,7 @@ const Login = () => {
             variant="contained"
             size="large"
             fullWidth
-            disabled={isLoading}
+            disabled={loginLoading}
             startIcon={<LoginIcon />}
             sx={{
               py: 1.5,
@@ -163,7 +186,7 @@ const Login = () => {
               },
             }}
           >
-            {isLoading ? 'Entrando...' : 'Entrar'}
+            {loginLoading ? 'Entrando...' : 'Entrar'}
           </Button>
         </Stack>
       </form>
@@ -198,6 +221,16 @@ const Login = () => {
           </Link>
         </Typography>
       </Box>
+
+      {/* Modal de Seleção de Licença */}
+      <LicenseSelector
+        open={showLicenseSelector}
+        onClose={() => setShowLicenseSelector(false)}
+        licenses={licenses}
+        user={user}
+        onSelectLicense={handleSelectLicense}
+        loading={loginLoading}
+      />
     </Box>
   );
 };

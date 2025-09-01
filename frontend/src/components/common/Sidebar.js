@@ -16,7 +16,6 @@ import {
   CalendarMonth,
   AttachMoney,
   People,
-  Description,
   Chat,
   Settings,
   Assessment
@@ -45,11 +44,6 @@ const menuItems = [
     text: 'CRM',
     icon: Chat,
     path: '/crm'
-  },
-  {
-    text: 'Prontuário',
-    icon: Description,
-    path: '/prontuarios'
   },
   {
     text: 'Pacientes',

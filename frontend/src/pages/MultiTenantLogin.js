@@ -17,9 +17,9 @@ import {
   Lock, 
   Visibility, 
   VisibilityOff,
-  Business,
-  Login as LoginIcon
+  Business
 } from '@mui/icons-material';
+import Logo from '../components/common/Logo';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 const MultiTenantLogin = () => {
@@ -125,7 +125,15 @@ const MultiTenantLogin = () => {
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <LoginIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+            <Logo 
+              variant="complete" 
+              size="large"
+              sx={{ 
+                height: '60px'
+              }} 
+            />
+          </Box>
           <Typography variant="h4" gutterBottom>
             Entrar na Clínica
           </Typography>

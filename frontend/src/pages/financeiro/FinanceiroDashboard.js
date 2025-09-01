@@ -220,7 +220,7 @@ const FinanceiroDashboard = () => {
   const renderToolbar = () => (
     <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
       <Typography variant="h4" fontWeight="bold">
-        Módulo Financeiro SAAE
+        Módulo Financeiro Alt Clinic
       </Typography>
       
       <Box display="flex" gap={2}>

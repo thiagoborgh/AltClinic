@@ -77,6 +77,35 @@ module.exports = (sequelize) => {
         subscriptionId: null
       }
     },
+    stripeCustomerId: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    stripeSubscriptionId: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    billingStatus: {
+      type: DataTypes.ENUM('active', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'trialing', 'unpaid'),
+      defaultValue: 'trialing',
+      allowNull: true
+    },
+    planActivatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    lastPaymentAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    cancelRequestedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    canceledAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     theme: {
       type: DataTypes.JSON,
       defaultValue: {

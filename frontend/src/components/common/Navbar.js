@@ -19,6 +19,7 @@ import {
   Logout
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
+import Logo from './Logo';
 
 const Navbar = ({ onMenuClick }) => {
   const theme = useTheme();
@@ -66,17 +67,23 @@ const Navbar = ({ onMenuClick }) => {
         )}
 
         {/* Logo */}
-        <Typography
-          variant="h6"
-          component="div"
-          sx={{
-            flexGrow: 1,
-            fontWeight: 'bold',
-            color: 'primary.main'
+        <Box 
+          sx={{ 
+            flexGrow: 1, 
+            display: 'flex', 
+            alignItems: 'center',
+            height: 40 
           }}
         >
-          SAAE
-        </Typography>
+          <Logo 
+            variant="complete" 
+            size="medium"
+            sx={{ 
+              height: '100%',
+              maxWidth: '200px'
+            }} 
+          />
+        </Box>
 
         {/* Notificações */}
         <IconButton color="inherit" sx={{ mr: 1 }}>

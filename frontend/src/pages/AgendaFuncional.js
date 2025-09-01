@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Typography, Card, CardContent, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid } from '@mui/material';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAgenda } from '../hooks/useAgendaSimple';
+import ProfessionalSelector from '../components/agenda/ProfessionalSelector';
 
 // Configurar moment para português
 moment.locale('pt-br');
@@ -14,14 +15,57 @@ const AgendaFuncional = () => {
   // Hook para dados da agenda
   const { agendamentos, loading, error, criarAgendamento } = useAgenda();
   
+  // Estados do filtro de profissionais
+  const [selectedProfessionals, setSelectedProfessionals] = useState(() => {
+    const saved = localStorage.getItem('selectedProfessionals');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   // Estados do modal
   const [modalOpen, setModalOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     title: '',
     start: new Date(),
     end: new Date(),
-    paciente: ''
+    paciente: '',
+    profissional: ''
   });
+
+  // Filtrar agendamentos por profissionais selecionados
+  const agendamentosFiltrados = useMemo(() => {
+    if (!agendamentos || agendamentos.length === 0) return [];
+    
+    // Se "Todos" está selecionado, mostrar todos
+    if (selectedProfessionals.includes('todos')) {
+      return agendamentos;
+    }
+    
+    // Se nenhum profissional selecionado, mostrar todos (fallback)
+    if (selectedProfessionals.length === 0) {
+      return agendamentos;
+    }
+    
+    // Filtrar por profissionais selecionados
+    return agendamentos.filter(agendamento => {
+      // Se o agendamento tem profissional definido
+      if (agendamento.profissional_id) {
+        return selectedProfessionals.includes(agendamento.profissional_id);
+      }
+      
+      // Se o agendamento tem médico definido (compatibilidade)
+      if (agendamento.medico_id) {
+        return selectedProfessionals.includes(agendamento.medico_id);
+      }
+      
+      // Fallback: mostrar agendamentos sem profissional definido apenas se "Todos" estiver selecionado
+      return selectedProfessionals.includes('todos');
+    });
+  }, [agendamentos, selectedProfessionals]);
+
+  // Atualizar profissionais selecionados
+  const handleProfessionalsChange = (professionals) => {
+    setSelectedProfessionals(professionals);
+  };
 
   const handleSelectEvent = (event) => {
     alert(`📅 Agendamento: ${event.title}\n⏰ Horário: ${moment(event.start).format('DD/MM/YYYY HH:mm')}`);
@@ -96,17 +140,32 @@ const AgendaFuncional = () => {
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">
+              Filtro de Profissionais
+            </Typography>
+          </Box>
+          
+          <ProfessionalSelector 
+            selectedProfessionals={selectedProfessionals}
+            onSelectionChange={handleProfessionalsChange}
+          />
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mt: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">
               Calendário de Agendamentos
             </Typography>
             <Typography variant="body2" color="primary">
-              📊 Total: {agendamentos?.length || 0} agendamentos
+              📊 Total: {agendamentosFiltrados?.length || 0} agendamentos
             </Typography>
           </Box>
           
           <Box sx={{ height: 600, mt: 2 }}>
             <Calendar
               localizer={localizer}
-              events={agendamentos || []}
+              events={agendamentosFiltrados || []}
               startAccessor="start"
               endAccessor="end"
               onSelectEvent={handleSelectEvent}

@@ -7,7 +7,7 @@ import {
   Avatar,
   Stack 
 } from '@mui/material';
-import { MedicalServices } from '@mui/icons-material';
+import Logo from '../components/common/Logo';
 
 const AuthLayout = ({ children }) => {
   return (
@@ -34,25 +34,30 @@ const AuthLayout = ({ children }) => {
           {/* Header */}
           <Stack spacing={3} alignItems="center" mb={4}>
             <Avatar
-              sx={{
-                width: 64,
-                height: 64,
-                bgcolor: 'primary.main',
-                background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              sx={{ 
+                width: 80, 
+                height: 80, 
+                bgcolor: 'transparent',
+                background: 'transparent',
               }}
             >
-              <MedicalServices sx={{ fontSize: 32 }} />
-            </Avatar>
-            
-            <Box textAlign="center">
-              <Typography 
-                variant="h4" 
-                fontWeight="bold" 
-                color="primary.main"
-                gutterBottom
-              >
-                SAAE
-              </Typography>
+              <Logo 
+                variant="only" 
+                size="large"
+                sx={{ 
+                  width: '100%', 
+                  height: '100%'
+                }} 
+              />
+            </Avatar>            <Box textAlign="center">
+              <Logo 
+                variant="text" 
+                size="large"
+                sx={{ 
+                  mb: 1,
+                  maxWidth: 200
+                }} 
+              />
               <Typography 
                 variant="body2" 
                 color="text.secondary"
@@ -74,7 +79,7 @@ const AuthLayout = ({ children }) => {
               textAlign="center"
               display="block"
             >
-              © 2025 SAAE. Todos os direitos reservados.
+              © 2025 Alt Clinic. Todos os direitos reservados.
             </Typography>
           </Box>
         </Paper>
