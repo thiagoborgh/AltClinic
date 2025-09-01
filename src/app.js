@@ -13,6 +13,9 @@ const crmRoutes = require('./routes/crm');
 const prontuariosRoutes = require('./routes/prontuarios');
 const financeiroRoutes = require('./routes/financeiro');
 const tenantsRoutes = require('./routes/tenants');
+const billingRoutes = require('./routes/billing');
+const pacientesRoutes = require('./routes/pacientes-simple');
+const prontuarioRoutes = require('./routes/prontuario-simple');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
@@ -109,8 +112,13 @@ class SaeeApp {
     // Rotas da API
     // Rotas multi-tenant (devem vir ANTES das outras)
     this.app.use('/api/tenants', tenantsRoutes);
+    this.app.use('/api/billing', billingRoutes);
     
     this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/pacientes', pacientesRoutes);
+    this.app.use('/api/prontuario', prontuarioRoutes);
+    this.app.use('/api/ai', prontuarioRoutes); // Para rotas de IA
+    this.app.use('/api/automacao', prontuarioRoutes); // Para automações
     this.app.use('/api/agendamentos', agendamentosRoutes);
     this.app.use('/api/propostas', propostasRoutes);
     this.app.use('/api/crm', crmRoutes);
