@@ -3,7 +3,7 @@ require('dotenv').config();
 const aiService = require('./src/utils/ai');
 const { mailchimpService } = require('./src/utils/mailchimp');
 
-console.log('🧪 SAAE - Teste de Integrações API\n');
+console.log('🧪 Alt Clinic - Teste de Integrações API\n');
 
 async function testGemini() {
   console.log('🤖 Testando Google Gemini...');

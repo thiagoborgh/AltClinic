@@ -265,7 +265,7 @@ export const useFinanceiro = () => {
       }
 
       // Fallback local
-      const pixCode = `00020126${descricao.length.toString().padStart(2, '0')}${descricao}5204000053039865802BR5925CLINICA SAAE LTDA6009SAO PAULO61080540900062290525${Date.now()}6304`;
+      const pixCode = `00020126${descricao.length.toString().padStart(2, '0')}${descricao}5204000053039865802BR5925ALT CLINIC LTDA6009SAO PAULO61080540900062290525${Date.now()}6304`;
       
       const pixData = {
         codigo: pixCode,

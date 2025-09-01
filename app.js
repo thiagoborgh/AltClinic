@@ -20,6 +20,7 @@ const agendamentosRoutes = require('./src/routes/agendamentos');
 const propostasRoutes = require('./src/routes/propostas');
 const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
+const pacientesRoutes = require('./src/routes/pacientes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,6 +92,7 @@ app.use('/api/t/:tenantSlug/auth', authRoutes);
 app.use('/api/t/:tenantSlug/agendamentos', agendamentosRoutes);
 app.use('/api/t/:tenantSlug/propostas', propostasRoutes);
 app.use('/api/t/:tenantSlug/crm', crmRoutes);
+app.use('/api/t/:tenantSlug/pacientes', pacientesRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
@@ -149,7 +151,7 @@ app.use('*', (req, res) => {
 // Inicialização do servidor
 async function startServer() {
   try {
-    console.log('🚀 Iniciando SAAE - Sistema de Agendamento Automatizado...');
+    console.log('🚀 Iniciando Alt Clinic - Sistema de Agendamento Automatizado...');
     
     // Verificar conexão com banco
     const db = dbManager.getDb();

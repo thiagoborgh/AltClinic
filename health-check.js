@@ -41,7 +41,7 @@ function checkDependency(command, name) {
 }
 
 async function healthCheck() {
-  log('\n🏥 SAAE - Health Check\n', 'cyan');
+  log('\n🏥 Alt Clinic - Health Check\n', 'cyan');
 
   let allGood = true;
 

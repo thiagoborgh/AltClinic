@@ -3,7 +3,7 @@ const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 Iniciando WhatsApp Bot - SAAE');
+console.log('🚀 Iniciando WhatsApp Bot - Alt Clinic');
 console.log('📱 Preparando para gerar QR Code...\n');
 
 // Configurar diretório de sessão
@@ -53,7 +53,7 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
     console.log('');
     console.log('🎉 WhatsApp conectado com sucesso!');
-    console.log('✅ Bot SAAE está ativo e funcionando');
+    console.log('✅ Bot Alt Clinic está ativo e funcionando');
     console.log('');
     
     // Obter informações do cliente

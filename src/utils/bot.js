@@ -80,8 +80,13 @@ class BotManager {
         await this.handleWhatsAppMessage(message);
       });
 
-      // Inicializar cliente
-      this.whatsappClient.initialize();
+      // Inicializar cliente apenas se habilitado
+      if (process.env.WHATSAPP_AUTO_INIT !== 'false') {
+        console.log('🔄 Inicializando WhatsApp Client...');
+        this.whatsappClient.initialize();
+      } else {
+        console.log('⚠️  Inicialização automática do WhatsApp desabilitada');
+      }
       
     } catch (error) {
       console.error('❌ Erro ao configurar WhatsApp:', error.message);

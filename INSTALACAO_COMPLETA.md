@@ -1,8 +1,8 @@
-# 🎉 SAAE - Sistema de Agendamento Automatizado Configurado!
+# 🎉 Alt Clinic - Sistema de Agendamento Automatizado Configurado!
 
 ## ✅ Status da Instalação
 
-**PARABÉNS!** Seu sistema SAAE está funcionando e pronto para uso!
+**PARABÉNS!** Seu sistema Alt Clinic está funcionando e pronto para uso!
 
 ### 🏁 O que já está funcionando:
 
@@ -137,5 +137,5 @@ Você tem um sistema de agendamento profissional funcionando!
 
 ---
 
-_SAAE - Sistema de Agendamento Automatizado para Clínicas Estéticas_
+_Alt Clinic - Sistema de Agendamento Automatizado para Clínicas Estéticas_
 _Versão: 1.0.0 | Status: ✅ Funcionando_

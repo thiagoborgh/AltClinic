@@ -1,6 +1,7 @@
 # Integração WhatsApp Business API — Documentação Completa
 
 ## 1. Visão Geral
+
 Integração completa com WhatsApp Business API para comunicação automática, agendamentos e gestão financeira através do WhatsApp.
 
 ---
@@ -8,6 +9,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ## 2. WhatsApp Business API - Funcionalidades
 
 ### 2.1. Mensagens Básicas
+
 - **Envio de mensagens de texto**
 - **Mensagens com mídia** (imagens, documentos, PDFs)
 - **Templates aprovados** pela Meta
@@ -15,12 +17,14 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 - **Status de entrega** (enviado, entregue, lido)
 
 ### 2.2. Webhooks e Recebimento
+
 - **Recebimento de mensagens** em tempo real
 - **Status de entrega** via webhook
 - **Mensagens de erro** e falhas
 - **Eventos de conversa** (início, fim)
 
 ### 2.3. Templates de Negócio
+
 - **Confirmação de agendamento**
 - **Lembrete de consulta**
 - **Cobrança e pagamento**
@@ -32,6 +36,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ## 3. Sistema de Agendamentos via WhatsApp
 
 ### 3.1. Fluxo de Agendamento
+
 1. **Paciente solicita agendamento** via WhatsApp
 2. **Bot responde com horários disponíveis** (botões interativos)
 3. **Paciente seleciona horário**
@@ -40,6 +45,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 6. **Lembretes automáticos** (24h, 2h antes)
 
 ### 3.2. Mensagens Interativas
+
 ```javascript
 // Exemplo de mensagem com botões para agendamento
 {
@@ -61,6 +67,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ```
 
 ### 3.3. Gestão de Agenda
+
 - **Slots de horários** disponíveis/ocupados
 - **Bloqueio automático** ao confirmar
 - **Reagendamento** via WhatsApp
@@ -72,6 +79,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ## 4. Gestão Financeira via WhatsApp
 
 ### 4.1. Cobrança e Pagamento
+
 - **Envio de cobranças** automáticas
 - **Links de pagamento** (PIX, cartão)
 - **Confirmação de pagamento**
@@ -79,6 +87,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 - **Lembretes de vencimento**
 
 ### 4.2. Templates Financeiros
+
 ```javascript
 // Template de cobrança
 {
@@ -99,6 +108,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ```
 
 ### 4.3. Integração com Gateway de Pagamento
+
 - **Geração de PIX** automático
 - **Links de pagamento** seguros
 - **Webhook de confirmação** de pagamento
@@ -110,6 +120,7 @@ Integração completa com WhatsApp Business API para comunicação automática, 
 ## 5. Estrutura Técnica
 
 ### 5.1. Configuração da API
+
 ```javascript
 // Configuração base
 const whatsappConfig = {
@@ -117,11 +128,12 @@ const whatsappConfig = {
   accessToken: "ACCESS_TOKEN",
   webhookToken: "WEBHOOK_VERIFY_TOKEN",
   apiVersion: "v18.0",
-  baseUrl: "https://graph.facebook.com"
-}
+  baseUrl: "https://graph.facebook.com",
+};
 ```
 
 ### 5.2. Componentes Frontend
+
 - `WhatsAppDashboard.js`: Dashboard principal da integração
 - `TemplateManager.js`: Gestão de templates
 - `ConversationView.js`: Visualização de conversas
@@ -130,6 +142,7 @@ const whatsappConfig = {
 - `WebhookMonitor.js`: Monitor de webhooks em tempo real
 
 ### 5.3. Hooks Especializados
+
 - `useWhatsAppAPI.js`: Comunicação com API
 - `useWhatsAppTemplates.js`: Gestão de templates
 - `useAgendamentoWhatsApp.js`: Lógica de agendamentos
@@ -141,6 +154,7 @@ const whatsappConfig = {
 ## 6. Fluxos Integrados
 
 ### 6.1. Agendamento Completo
+
 1. **Solicitação** → Bot responde com horários
 2. **Seleção** → Sistema bloqueia e confirma
 3. **Lembrete** → Automação 24h antes
@@ -148,6 +162,7 @@ const whatsappConfig = {
 5. **Pós-consulta** → Avaliação e próximos passos
 
 ### 6.2. Cobrança Automática
+
 1. **Consulta realizada** → Sistema gera cobrança
 2. **Envio automático** → WhatsApp com link de pagamento
 3. **Acompanhamento** → Lembretes automáticos
@@ -159,24 +174,28 @@ const whatsappConfig = {
 ## 7. Implementação por Etapas
 
 ### **Fase 1: Base WhatsApp Business**
+
 - Configuração da API
 - Envio/recebimento básico
 - Templates iniciais
 - Dashboard de conversas
 
 ### **Fase 2: Agendamentos**
+
 - Interface de slots
 - Mensagens interativas
 - Fluxo completo de agendamento
 - Lembretes automáticos
 
 ### **Fase 3: Gestão Financeira**
+
 - Templates de cobrança
 - Integração com pagamentos
 - Automação de cobranças
 - Conciliação automática
 
 ### **Fase 4: Automações Avançadas**
+
 - Chatbot inteligente
 - Fluxos condicionais
 - Integração com IA

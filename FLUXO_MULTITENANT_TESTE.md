@@ -3,12 +3,14 @@
 ## 🌐 **URLs DISPONÍVEIS:**
 
 ### **Frontend (localhost:3001):**
+
 - 🏠 **Home**: http://localhost:3001/
-- 📝 **Registro Público**: http://localhost:3001/register *(SEM LOGIN)*
+- 📝 **Registro Público**: http://localhost:3001/register _(SEM LOGIN)_
 - 🔐 **Login Geral**: http://localhost:3001/login
 - 🏥 **Login Específico**: http://localhost:3001/login/clinica-teste
 
 ### **Backend (localhost:3000):**
+
 - 💚 **Health Check**: http://localhost:3000/health
 - 📊 **Status**: http://localhost:3000/api/status
 - 📝 **API Registro**: `POST /api/tenants/register`
@@ -19,6 +21,7 @@
 ## 🚀 **FLUXO DE TESTE COMPLETO:**
 
 ### **1. Registrar Nova Clínica (SEM LOGIN)** ✅
+
 ```
 URL: http://localhost:3001/register
 
@@ -38,6 +41,7 @@ Resultado:
 ```
 
 ### **2. Login Multi-Tenant** ✅
+
 ```
 URL: http://localhost:3001/login/clinica-abc
 
@@ -53,6 +57,7 @@ Resultado:
 ```
 
 ### **3. Dashboard Multi-Tenant** ✅
+
 ```
 URL: http://localhost:3001/dashboard
 
@@ -70,11 +75,13 @@ Features Disponíveis:
 ## 🧪 **TESTES VIA API:**
 
 ### **Criar Tenant:**
+
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:3000/api/tenants/register" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"clinicaNome":"Clínica Teste 2","slug":"clinica-teste-2","ownerNome":"Dr. Maria","ownerEmail":"maria@teste2.com","ownerSenha":"123456"}'
 ```
 
 ### **Login Tenant:**
+
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:3000/api/tenants/login" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"email":"maria@teste2.com","senha":"123456","tenantSlug":"clinica-teste-2"}'
 ```
@@ -84,6 +91,7 @@ Invoke-WebRequest -Uri "http://localhost:3000/api/tenants/login" -Method POST -H
 ## 📊 **VERIFICAÇÃO DO SISTEMA:**
 
 ### **Databases Criados:**
+
 ```
 c:\Users\thiag\saee\databases\
 ├── saee-master.db                    ← Tenants e configurações
@@ -93,6 +101,7 @@ c:\Users\thiag\saee\databases\
 ```
 
 ### **Logs do Sistema:**
+
 ```
 2025-08-28T18:xx:xx.xxxZ - POST /api/tenants/register
 2025-08-28T18:xx:xx.xxxZ - POST /api/tenants/login
@@ -100,6 +109,7 @@ c:\Users\thiag\saee\databases\
 ```
 
 ### **Isolamento Verificado:**
+
 - ✅ **Database separado** por tenant
 - ✅ **JWT com contexto** do tenant
 - ✅ **Rate limiting** por tenant
@@ -111,20 +121,24 @@ c:\Users\thiag\saee\databases\
 ## 🎯 **CENÁRIOS DE TESTE:**
 
 ### **1. Registro Múltiplo:**
+
 - Criar 3 clínicas diferentes
 - Verificar isolation completo
 - Testar login de cada uma
 
 ### **2. Conflito de Dados:**
+
 - Tentar criar paciente igual em 2 tenants
 - Verificar que dados ficam isolados
 
 ### **3. Performance:**
+
 - Criar 10 tenants
 - Verificar tempo de resposta
 - Monitorar uso de memória
 
 ### **4. Segurança:**
+
 - Tentar acessar dados de outro tenant
 - Verificar validação de JWT
 - Testar rate limiting
@@ -134,6 +148,7 @@ c:\Users\thiag\saee\databases\
 ## 🚀 **RESULTADO ESPERADO:**
 
 ### **✅ Sistema Multi-Tenant Funcional:**
+
 - **Isolamento total** entre clínicas
 - **Performance** otimizada
 - **Segurança** robusta
@@ -141,6 +156,7 @@ c:\Users\thiag\saee\databases\
 - **UX** perfeita para onboarding
 
 ### **🎯 Pronto para Produção:**
+
 - Deploy no Railway
 - DNS com wildcard
 - SSL automático

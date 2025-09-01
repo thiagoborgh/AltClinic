@@ -3,9 +3,11 @@
 ## 📋 Opções de Deploy Gratuito
 
 ### 1. **Vercel** ⭐ (RECOMENDADO)
+
 **Melhor para projetos React/Next.js**
 
 **Vantagens:**
+
 - ✅ Deploy automático via GitHub
 - ✅ HTTPS automático
 - ✅ Preview branches
@@ -14,10 +16,12 @@
 - ✅ Domínio customizado gratuito
 
 **Limites:**
+
 - 100GB bandwidth/mês
 - 100 deployments/dia
 
 **Como fazer deploy:**
+
 ```bash
 # 1. Instalar Vercel CLI
 npm i -g vercel
@@ -38,9 +42,11 @@ vercel
 ---
 
 ### 2. **Netlify** ⭐
+
 **Excelente para SPAs React**
 
 **Vantagens:**
+
 - ✅ Drag & drop deploy
 - ✅ Forms gratuitos
 - ✅ 100GB bandwidth/mês
@@ -48,6 +54,7 @@ vercel
 - ✅ HTTPS automático
 
 **Como fazer deploy:**
+
 ```bash
 # 1. Build do projeto
 cd frontend
@@ -62,18 +69,22 @@ netlify deploy --prod --dir=build
 ---
 
 ### 3. **GitHub Pages**
+
 **Gratuito para repositórios públicos**
 
 **Vantagens:**
+
 - ✅ Totalmente gratuito
 - ✅ Integração nativa com GitHub
 - ✅ Domínio github.io incluído
 
 **Limitações:**
+
 - ❌ Apenas sites estáticos
 - ❌ Sem variáveis de ambiente privadas
 
 **Setup:**
+
 ```bash
 # 1. Instalar gh-pages
 npm install --save-dev gh-pages
@@ -92,9 +103,11 @@ npm run deploy
 ---
 
 ### 4. **Railway** 🚂
+
 **Bom para full-stack**
 
 **Vantagens:**
+
 - ✅ $5 crédito/mês gratuito
 - ✅ Deploy de banco de dados
 - ✅ Variáveis de ambiente
@@ -103,9 +116,11 @@ npm run deploy
 ---
 
 ### 5. **Render**
+
 **Alternativa ao Heroku**
 
 **Vantagens:**
+
 - ✅ 750h gratuitas/mês
 - ✅ PostgreSQL gratuito
 - ✅ SSL automático
@@ -128,25 +143,30 @@ npm run deploy
 ## 🛠️ Preparando o Projeto para Deploy
 
 ### **1. Build otimizado:**
+
 ```bash
 cd frontend
 npm run build
 ```
 
 ### **2. Testar build local:**
+
 ```bash
 npm install -g serve
 serve -s build
 ```
 
 ### **3. Variáveis de ambiente:**
+
 Criar arquivo `.env.production`:
+
 ```env
 REACT_APP_API_URL=https://sua-api.com
 REACT_APP_WHATSAPP_API_URL=https://graph.facebook.com/v18.0
 ```
 
 ### **4. Otimizações para produção:**
+
 ```javascript
 // Adicionar no package.json
 "scripts": {
@@ -162,6 +182,7 @@ REACT_APP_WHATSAPP_API_URL=https://graph.facebook.com/v18.0
 ## 🚀 Deploy Passo a Passo - Vercel
 
 ### **Opção A: Via Website (Mais Fácil)**
+
 1. Acesse [vercel.com](https://vercel.com)
 2. Conecte com GitHub
 3. Selecione o repositório AltClinic
@@ -173,6 +194,7 @@ REACT_APP_WHATSAPP_API_URL=https://graph.facebook.com/v18.0
 5. Clique em "Deploy"
 
 ### **Opção B: Via CLI**
+
 ```bash
 # 1. Instalar Vercel
 npm i -g vercel
@@ -198,19 +220,23 @@ vercel
 ## 🔧 Configurações Específicas
 
 ### **Para WhatsApp Business API:**
+
 ```javascript
 // Adicionar verificação de ambiente
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://graph.facebook.com/v18.0'
-  : 'https://graph.facebook.com/v18.0';
+const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://graph.facebook.com/v18.0"
+    : "https://graph.facebook.com/v18.0";
 
 // Webhook URL para produção
-const WEBHOOK_URL = process.env.NODE_ENV === 'production'
-  ? 'https://altclinic.vercel.app/api/webhook'
-  : 'http://localhost:3000/api/webhook';
+const WEBHOOK_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://altclinic.vercel.app/api/webhook"
+    : "http://localhost:3000/api/webhook";
 ```
 
 ### **Configurar domínio personalizado:**
+
 1. No dashboard Vercel
 2. Vá em Settings > Domains
 3. Adicione seu domínio (ex: altclinic.com.br)
@@ -222,14 +248,17 @@ const WEBHOOK_URL = process.env.NODE_ENV === 'production'
 Após o deploy, você terá:
 
 **Vercel:**
+
 - URL principal: `https://altclinic.vercel.app`
 - Preview branches: `https://altclinic-git-[branch].vercel.app`
 
 **Netlify:**
+
 - URL principal: `https://altclinic.netlify.app`
 - Preview: `https://[id]--altclinic.netlify.app`
 
 **GitHub Pages:**
+
 - URL: `https://thiagoborgh.github.io/AltClinic`
 
 ---
@@ -237,6 +266,7 @@ Após o deploy, você terá:
 ## 🔐 Configurações de Segurança
 
 ### **Variáveis de ambiente no Vercel:**
+
 ```bash
 # No dashboard Vercel > Settings > Environment Variables
 REACT_APP_WHATSAPP_PHONE_ID=your_phone_id
@@ -245,7 +275,9 @@ REACT_APP_API_URL=https://sua-api.com
 ```
 
 ### **Headers de segurança:**
+
 Criar `vercel.json`:
+
 ```json
 {
   "headers": [
@@ -283,11 +315,13 @@ Criar `vercel.json`:
 ## 📈 Monitoramento Pós-Deploy
 
 ### **Analytics gratuitos:**
+
 - Vercel Analytics (incluído)
 - Google Analytics
 - Hotjar (heatmaps)
 
 ### **Monitoramento de erros:**
+
 - Sentry (gratuito até 5k erros/mês)
 - LogRocket (sessões gratuitas)
 

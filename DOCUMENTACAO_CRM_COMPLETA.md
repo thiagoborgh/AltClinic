@@ -1,4 +1,4 @@
-# Documentação Completa: Módulo CRM do Sistema SAAE
+# Documentação Completa: Módulo CRM do Sistema Alt Clinic
 
 ## 📋 Índice
 
@@ -16,7 +16,7 @@
 
 ### Objetivo Principal
 
-O módulo CRM do SAAE é um auxiliar inteligente para gestão de relacionamentos com pacientes em clínicas de qualquer área da saúde (estética, odontologia, fisioterapia, medicina geral).
+O módulo CRM do Alt Clinic é um auxiliar inteligente para gestão de relacionamentos com pacientes em clínicas de qualquer área da saúde (estética, odontologia, fisioterapia, medicina geral).
 
 ### Pilares Fundamentais
 
@@ -320,4 +320,4 @@ frontend/src/data/crm/
 
 ---
 
-**📞 CRM SAAE - Transformando relacionamentos em resultados!**
+**📞 CRM Alt Clinic - Transformando relacionamentos em resultados!**

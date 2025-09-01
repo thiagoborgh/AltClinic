@@ -56,7 +56,7 @@ async function testarSistema() {
     }
     
     console.log('\n🎉 TODOS OS TESTES PASSARAM!');
-    console.log('✨ Seu sistema SAAE está funcionando perfeitamente!');
+    console.log('✨ Seu sistema Alt Clinic está funcionando perfeitamente!');
     
   } catch (error) {
     console.error('❌ Erro no teste:', error.message);

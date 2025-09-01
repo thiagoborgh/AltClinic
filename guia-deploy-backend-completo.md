@@ -1,4 +1,5 @@
 # 🚀 Deploy Completo - Frontend + Backend GRATUITO
+
 **Sistema AltClinic - Guia de Deploy Full-Stack**
 
 ---
@@ -12,6 +13,7 @@ Você tem um **backend Node.js robusto** + **frontend React**. Vamos fazer deplo
 ## 🏗️ **Opções para Deploy Full-Stack GRATUITO**
 
 ### 🥇 **1. RAILWAY (RECOMENDADO para Full-Stack)**
+
 **✅ Frontend + Backend no mesmo lugar**
 
 ```bash
@@ -25,6 +27,7 @@ railway up
 ```
 
 **Vantagens:**
+
 - ✅ **$5/mês GRÁTIS** (suficiente para testes)
 - ✅ **PostgreSQL/MySQL gratuito**
 - ✅ **Auto-deploy** do GitHub
@@ -34,6 +37,7 @@ railway up
 ---
 
 ### 🥈 **2. RENDER (Ótima opção)**
+
 **✅ Backend grátis + Frontend grátis**
 
 ```bash
@@ -42,6 +46,7 @@ railway up
 ```
 
 **Vantagens:**
+
 - ✅ **PostgreSQL gratuito** (90 dias)
 - ✅ **750h/mês** de uso gratuito
 - ✅ **SSL automático**
@@ -50,6 +55,7 @@ railway up
 ---
 
 ### 🥉 **3. VERCEL + PLANETSCALE (Combo poderoso)**
+
 **Frontend: Vercel | Backend: Edge Functions | DB: PlanetScale**
 
 ---
@@ -57,6 +63,7 @@ railway up
 ## 🎯 **DEPLOY IMEDIATO - Railway (Recomendado)**
 
 ### **Passo 1: Preparar o projeto**
+
 ```bash
 # Criar arquivo de configuração para Railway
 cd c:\Users\thiag\saee
@@ -65,6 +72,7 @@ cd c:\Users\thiag\saee
 ### **Passo 2: Estrutura para deploy**
 
 **Arquivo `railway.json`:**
+
 ```json
 {
   "build": {
@@ -78,11 +86,13 @@ cd c:\Users\thiag\saee
 ```
 
 **Arquivo `Procfile`:**
+
 ```
 web: npm start
 ```
 
 ### **Passo 3: Variáveis de ambiente**
+
 ```bash
 # No Railway dashboard, adicionar:
 PORT=3000
@@ -97,6 +107,7 @@ WHATSAPP_SESSION_PATH=/tmp/whatsapp-session
 ## 🎨 **OPÇÃO HÍBRIDA (Frontend + Backend separados)**
 
 ### **Frontend → Vercel**
+
 ```bash
 cd frontend
 npm run build
@@ -104,6 +115,7 @@ vercel --prod
 ```
 
 ### **Backend → Railway/Render**
+
 ```bash
 cd ..  # volta para raiz
 railway up
@@ -113,30 +125,34 @@ railway up
 
 ## 📊 **Comparativo de Plataformas GRATUITAS**
 
-| Plataforma | Frontend | Backend | Database | Bandwidth | Uptime |
-|------------|----------|---------|----------|-----------|---------|
-| **Railway** | ✅ | ✅ | PostgreSQL | 100GB | 99.9% |
-| **Render** | ✅ | ✅ | PostgreSQL | Unlimited | 99.9% |
-| **Vercel** | ✅ | Functions | - | 100GB | 99.99% |
-| **Netlify** | ✅ | Functions | - | 100GB | 99.9% |
+| Plataforma  | Frontend | Backend   | Database   | Bandwidth | Uptime |
+| ----------- | -------- | --------- | ---------- | --------- | ------ |
+| **Railway** | ✅       | ✅        | PostgreSQL | 100GB     | 99.9%  |
+| **Render**  | ✅       | ✅        | PostgreSQL | Unlimited | 99.9%  |
+| **Vercel**  | ✅       | Functions | -          | 100GB     | 99.99% |
+| **Netlify** | ✅       | Functions | -          | 100GB     | 99.9%  |
 
 ---
 
 ## 🔧 **Ajustes necessários para deploy**
 
 ### **1. Configurar CORS para produção**
+
 ```javascript
 // app.js - atualizar CORS
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://altclinic.vercel.app',
-    'https://seu-dominio.railway.app'
-  ]
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://altclinic.vercel.app",
+      "https://seu-dominio.railway.app",
+    ],
+  })
+);
 ```
 
 ### **2. Configurar build do frontend**
+
 ```json
 // frontend/package.json
 {
@@ -148,13 +164,14 @@ app.use(cors({
 ```
 
 ### **3. Servir frontend pelo backend (Opção integrada)**
+
 ```javascript
 // app.js - adicionar no final
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'frontend/build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "frontend/build")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "frontend/build", "index.html"));
   });
 }
 ```
@@ -164,6 +181,7 @@ if (process.env.NODE_ENV === 'production') {
 ## 🚀 **DEPLOY STEP-BY-STEP (Railway)**
 
 ### **1. Preparar repositório**
+
 ```bash
 # Fazer push para GitHub se ainda não fez
 git add .
@@ -172,6 +190,7 @@ git push origin main
 ```
 
 ### **2. Conectar ao Railway**
+
 ```bash
 # Instalar CLI
 npm install -g @railway/cli
@@ -186,6 +205,7 @@ railway init
 ```
 
 ### **3. Configurar variáveis**
+
 ```bash
 # Via CLI ou Dashboard
 railway env set NODE_ENV=production
@@ -194,11 +214,13 @@ railway env set PORT=3000
 ```
 
 ### **4. Deploy**
+
 ```bash
 railway up
 ```
 
 ### **5. Configurar domínio**
+
 ```bash
 # Railway fornece automaticamente:
 # https://altclinic-production.railway.app
@@ -209,15 +231,17 @@ railway up
 ## 📱 **Configuração WhatsApp para produção**
 
 ### **1. Webhook URL**
+
 ```javascript
 // Para Railway
-const WEBHOOK_URL = 'https://altclinic-production.railway.app/webhook/whatsapp';
+const WEBHOOK_URL = "https://altclinic-production.railway.app/webhook/whatsapp";
 
 // Para Vercel Functions
-const WEBHOOK_URL = 'https://altclinic.vercel.app/api/webhook/whatsapp';
+const WEBHOOK_URL = "https://altclinic.vercel.app/api/webhook/whatsapp";
 ```
 
 ### **2. Configurar no Facebook Developers**
+
 ```
 Webhook URL: https://seu-dominio.railway.app/webhook/whatsapp
 Verify Token: seu_webhook_token
@@ -228,12 +252,14 @@ Verify Token: seu_webhook_token
 ## 💾 **Database para produção**
 
 ### **Railway PostgreSQL (Gratuito)**
+
 ```javascript
 // Conectar automaticamente
 const DATABASE_URL = process.env.DATABASE_URL;
 ```
 
 ### **PlanetScale MySQL (Gratuito)**
+
 ```bash
 # 10GB grátis
 # Branching de database
@@ -241,6 +267,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 ```
 
 ### **Supabase PostgreSQL (Gratuito)**
+
 ```bash
 # 500MB grátis
 # Real-time subscriptions
@@ -252,6 +279,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 ## 🎯 **RECOMENDAÇÃO FINAL**
 
 ### **Para teste rápido (5 minutos):**
+
 ```bash
 # Railway - Sistema completo
 railway login
@@ -260,6 +288,7 @@ railway up
 ```
 
 ### **Para produção robusta:**
+
 ```bash
 # Frontend: Vercel
 # Backend: Railway
@@ -267,6 +296,7 @@ railway up
 ```
 
 ### **Para máxima simplicidade:**
+
 ```bash
 # Tudo no Railway
 # Um comando só
@@ -289,12 +319,12 @@ railway up
 
 ## 📊 **Custos (todos os tiers gratuitos)**
 
-| Serviço | Custo | Limite |
-|---------|-------|---------|
-| Railway | **$0** | $5 crédito/mês |
-| Render | **$0** | 750h/mês |
-| Vercel | **$0** | 100GB bandwidth |
-| PlanetScale | **$0** | 10GB storage |
+| Serviço     | Custo  | Limite          |
+| ----------- | ------ | --------------- |
+| Railway     | **$0** | $5 crédito/mês  |
+| Render      | **$0** | 750h/mês        |
+| Vercel      | **$0** | 100GB bandwidth |
+| PlanetScale | **$0** | 10GB storage    |
 
 ---
 

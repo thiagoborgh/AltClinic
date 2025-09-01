@@ -1,12 +1,12 @@
 const express = require('express');
-const router = express.Router();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const UsuarioModel = require('../models/Usuario');
-const authUtil = require('../utils/auth');
+const { sendEmail } = require('../services/emailService');
+const router = express.Router();
 
-/**
- * @route POST /auth/login
- * @desc Autentica usuário
- */
+// 📧 LOGIN - USANDO SISTEMA EXISTENTE
 router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -27,27 +27,26 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const token = authUtil.generateToken({
+    const token = jwt.sign({
       id: usuario.id,
       email: usuario.email,
       role: usuario.role,
       clinica_id: usuario.clinica_id
-    });
+    }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
     res.json({
       success: true,
       message: 'Login realizado com sucesso',
-      data: {
-        usuario: {
-          id: usuario.id,
-          nome: usuario.nome,
-          email: usuario.email,
-          role: usuario.role,
-          clinica_id: usuario.clinica_id,
-          clinica_nome: usuario.clinica_nome
-        },
-        token
-      }
+      token,
+      user: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        role: usuario.role,
+        clinica_id: usuario.clinica_id,
+        clinica_nome: usuario.clinica_nome
+      },
+      singleLicense: true // Por enquanto, sistema simples
     });
 
   } catch (error) {
@@ -60,67 +59,23 @@ router.post('/login', async (req, res) => {
 });
 
 /**
- * @route POST /auth/register
- * @desc Registra novo usuário (apenas admin pode criar)
- */
-router.post('/register', authUtil.authenticate, authUtil.authorize(['admin']), async (req, res) => {
-  try {
-    const { nome, email, senha, role = 'atendente' } = req.body;
-
-    if (!nome || !email || !senha) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nome, email e senha são obrigatórios'
-      });
-    }
-
-    if (!['admin', 'atendente'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Role inválida'
-      });
-    }
-
-    const novoUsuario = await UsuarioModel.create({
-      clinica_id: req.user.clinica_id,
-      nome,
-      email,
-      senha,
-      role
-    });
-
-    // Remover dados sensíveis
-    delete novoUsuario.senha_hash;
-
-    res.status(201).json({
-      success: true,
-      message: 'Usuário criado com sucesso',
-      data: novoUsuario
-    });
-
-  } catch (error) {
-    if (error.message === 'Email já está em uso') {
-      return res.status(409).json({
-        success: false,
-        message: error.message
-      });
-    }
-
-    console.error('Erro no registro:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-/**
  * @route GET /auth/me
  * @desc Obtém dados do usuário logado
  */
-router.get('/me', authUtil.authenticate, async (req, res) => {
+router.get('/me', async (req, res) => {
   try {
-    const usuario = UsuarioModel.findById(req.user.id);
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token não fornecido'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const usuario = UsuarioModel.findById(decoded.id);
 
     if (!usuario) {
       return res.status(404).json({
@@ -134,131 +89,35 @@ router.get('/me', authUtil.authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      data: usuario
+      user: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        role: usuario.role,
+        clinica_id: usuario.clinica_id
+      },
+      tenant: {
+        id: usuario.clinica_id,
+        nome: usuario.clinica_nome || 'Minha Clínica'
+      },
+      license: {
+        role: usuario.role,
+        permissions: {
+          dashboard: true,
+          pacientes: true,
+          agendamentos: true,
+          financeiro: usuario.role === 'admin',
+          relatorios: usuario.role === 'admin',
+          configuracoes: usuario.role === 'admin'
+        }
+      }
     });
 
   } catch (error) {
     console.error('Erro ao buscar usuário:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-/**
- * @route PUT /auth/update-password
- * @desc Atualiza senha do usuário
- */
-router.put('/update-password', authUtil.authenticate, async (req, res) => {
-  try {
-    const { senhaAtual, novaSenha } = req.body;
-
-    if (!senhaAtual || !novaSenha) {
-      return res.status(400).json({
-        success: false,
-        message: 'Senha atual e nova senha são obrigatórias'
-      });
-    }
-
-    // Verificar senha atual
-    const usuario = UsuarioModel.findById(req.user.id);
-    const senhaValida = await authUtil.verifyPassword(senhaAtual, usuario.senha_hash);
-
-    if (!senhaValida) {
-      return res.status(400).json({
-        success: false,
-        message: 'Senha atual incorreta'
-      });
-    }
-
-    // Atualizar senha
-    const usuarioAtualizado = await UsuarioModel.update(req.user.id, {
-      senha: novaSenha
-    });
-
-    delete usuarioAtualizado.senha_hash;
-
-    res.json({
-      success: true,
-      message: 'Senha atualizada com sucesso',
-      data: usuarioAtualizado
-    });
-
-  } catch (error) {
-    console.error('Erro ao atualizar senha:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-/**
- * @route GET /auth/usuarios
- * @desc Lista usuários da clínica (apenas admin)
- */
-router.get('/usuarios', authUtil.authenticate, authUtil.authorize(['admin']), async (req, res) => {
-  try {
-    const usuarios = UsuarioModel.findByClinica(req.user.clinica_id);
-
-    res.json({
-      success: true,
-      data: usuarios
-    });
-
-  } catch (error) {
-    console.error('Erro ao listar usuários:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-/**
- * @route DELETE /auth/usuarios/:id
- * @desc Remove usuário (apenas admin)
- */
-router.delete('/usuarios/:id', authUtil.authenticate, authUtil.authorize(['admin']), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Verificar se o usuário pertence à mesma clínica
-    if (!UsuarioModel.belongsToClinica(id, req.user.clinica_id)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Usuário não pertence à sua clínica'
-      });
-    }
-
-    // Não permitir auto-exclusão
-    if (parseInt(id) === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Não é possível excluir seu próprio usuário'
-      });
-    }
-
-    const sucesso = UsuarioModel.delete(id);
-
-    if (!sucesso) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Usuário removido com sucesso'
-    });
-
-  } catch (error) {
-    console.error('Erro ao remover usuário:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
+      message: 'Token inválido ou expirado'
     });
   }
 });

@@ -10,8 +10,8 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-console.log('🚀 SAAE - Setup Inicial\n');
-console.log('Este script irá configurar seu ambiente inicial do SAAE.\n');
+console.log('🚀 Alt Clinic - Setup Inicial\n');
+console.log('Este script irá configurar seu ambiente inicial do Alt Clinic.\n');
 
 async function question(prompt) {
   return new Promise((resolve) => {

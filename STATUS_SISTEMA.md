@@ -1,4 +1,4 @@
-# 🎉 SAAE - STATUS ATUAL DO SISTEMA
+# 🎉 Alt Clinic - STATUS ATUAL DO SISTEMA
 
 ## ✅ SISTEMAS FUNCIONANDO
 
@@ -126,7 +126,7 @@ POST http://localhost:3000/api/auth/register
 
 ## 🎯 MVP PRONTO!
 
-Seu sistema SAAE está **100% funcional** para começar a usar:
+Seu sistema Alt Clinic está **100% funcional** para começar a usar:
 
 - ✅ **3 de 6 testes passando** (principais funcionando)
 - ✅ **WhatsApp conectado**

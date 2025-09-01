@@ -1,4 +1,4 @@
-# SAAE - Sistema de Agendamento Automatizado para Clínicas Estéticas
+# Alt Clinic - Sistema de Agendamento Automatizado para Clínicas Estéticas
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
@@ -109,8 +109,8 @@ Um micro SaaS completo para automatizar agendamentos, CRM, financeiro e prontuá
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/saae.git
-cd saae
+git clone https://github.com/seu-usuario/altclinic.git
+cd altclinic
 ```
 
 ### 2. Instale dependências do backend
@@ -413,9 +413,9 @@ Este projeto está sob licença MIT. Veja [LICENSE](LICENSE) para detalhes.
 
 ## 🆘 Suporte
 
-- 📧 Email: suporte@saae.com.br
+- 📧 Email: suporte@altclinic.com.br
 - 💬 Discord: [link-do-servidor]
-- 📖 Docs: [documentacao.saae.com.br]
+- 📖 Docs: [documentacao.altclinic.com.br]
 
 ## 🗺 Roadmap
 

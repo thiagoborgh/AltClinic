@@ -225,8 +225,8 @@ export const mockFinanceiroData = {
     },
     {
       id: 5,
-      fornecedor: 'Software SAAE Ltda',
-      descricao: 'Licença mensal do sistema SAAE',
+      fornecedor: 'Software Alt Clinic Ltda',
+      descricao: 'Licença mensal do sistema Alt Clinic',
       categoria: 'Software',
       valor: 299.90,
       dataVencimento: moment().add(15, 'days').toDate(),

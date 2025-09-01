@@ -1,6 +1,7 @@
 # Sistema de Automações e Workflows — Documentação
 
 ## 1. Visão Geral
+
 Sistema inteligente de automação de comunicação que permite criar fluxos automatizados de mensagens baseados em gatilhos específicos, reduzindo trabalho manual e melhorando o engajamento com pacientes.
 
 ---
@@ -8,18 +9,21 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 ## 2. Tipos de Automações
 
 ### 2.1. Gatilhos Temporais
+
 - **Aniversário**: Mensagem automática no aniversário do paciente
 - **Consulta Agendada**: Lembrete 24h/2h antes da consulta
 - **Follow-up**: Mensagem pós-consulta (1 dia, 1 semana, 1 mês depois)
 - **Inatividade**: Reconquista de pacientes inativos (30, 60, 90 dias)
 
 ### 2.2. Gatilhos de Ação
+
 - **Novo Paciente**: Sequência de boas-vindas
 - **Primeira Consulta**: Orientações pré e pós consulta
 - **Cancelamento**: Reagendamento automático
 - **Resultado de Exame**: Notificação quando exame fica pronto
 
 ### 2.3. Gatilhos de Segmento
+
 - **Mudança de Segmento**: Mensagem quando paciente muda de categoria
 - **Alto Valor**: Tratamento VIP para pacientes premium
 - **Risco de Churn**: Ações preventivas para retenção
@@ -29,6 +33,7 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 ## 3. Estrutura de Workflow
 
 ### 3.1. Componentes de um Workflow
+
 - **Nome e Descrição**: Identificação clara
 - **Gatilho**: Condição que inicia o workflow
 - **Filtros**: Critérios para aplicar (segmento, idade, etc.)
@@ -37,6 +42,7 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 - **Status**: Ativo/Inativo/Pausado
 
 ### 3.2. Ações Disponíveis
+
 - **Enviar Mensagem**: WhatsApp, Email, SMS
 - **Agendar Consulta**: Criar slot de agendamento
 - **Adicionar Tag**: Marcar paciente
@@ -48,12 +54,14 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 ## 4. Interface e Componentes
 
 ### 4.1. Dashboard de Automações
+
 - Lista de workflows ativos/inativos
 - Métricas de performance (taxa de sucesso, engajamento)
 - Botão para criar novo workflow
 - Status de execução em tempo real
 
 ### 4.2. Editor de Workflow
+
 - **Passo 1**: Configuração básica (nome, descrição)
 - **Passo 2**: Definição do gatilho
 - **Passo 3**: Filtros e critérios
@@ -61,6 +69,7 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 - **Passo 5**: Revisão e ativação
 
 ### 4.3. Monitoramento
+
 - Log de execuções
 - Pacientes em cada etapa do workflow
 - Taxa de conversão por etapa
@@ -82,6 +91,7 @@ Sistema inteligente de automação de comunicação que permite criar fluxos aut
 ## 6. Estrutura de Dados
 
 ### 6.1. Workflow
+
 ```javascript
 {
   id: number,

@@ -1,6 +1,6 @@
-# 🚀 SAAE - Guia de Configuração das APIs Gratuitas
+# 🚀 Alt Clinic - Guia de Configuração das APIs Gratuitas
 
-Este guia mostra como configurar todas as integrações gratuitas para o MVP do SAAE.
+Este guia mostra como configurar todas as integrações gratuitas para o MVP do Alt Clinic.
 
 ## 📱 1. Google Gemini (IA Principal - GRATUITO)
 
@@ -33,7 +33,7 @@ Este guia mostra como configurar todas as integrações gratuitas para o MVP do 
 1. Acesse: https://huggingface.co/settings/tokens
 2. Crie uma conta gratuita
 3. Clique em "New token"
-4. Dê um nome (ex: "SAAE-Token")
+4. Dê um nome (ex: "Alt-Clinic-Token")
 5. Escolha "Read"
 6. Cole no arquivo `.env`: `HUGGINGFACE_API_KEY=sua_chave_aqui`
 
@@ -77,8 +77,8 @@ Este guia mostra como configurar todas as integrações gratuitas para o MVP do 
 1. Abra o Telegram
 2. Procure por @BotFather
 3. Digite `/newbot`
-4. Escolha um nome para seu bot (ex: "SAAE Clínica Bot")
-5. Escolha um username (ex: "saae_clinica_bot")
+4. Escolha um nome para seu bot (ex: "Alt Clinic Bot")
+5. Escolha um username (ex: "altclinic_bot")
 6. Copie o token gerado
 7. Cole no arquivo `.env`: `TELEGRAM_BOT_TOKEN=sua_token_aqui`
 

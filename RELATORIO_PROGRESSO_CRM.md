@@ -98,7 +98,7 @@
 - Design moderno seguindo padrões do Material-UI
 - Animações suaves em hover e carregamento
 - Layout responsivo para mobile e desktop
-- Cores consistentes com o sistema SAAE
+- Cores consistentes com o sistema Alt Clinic
 
 ### **Arquitetura Escalável:**
 

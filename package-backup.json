@@ -11,10 +11,10 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "build": "echo 'Build completed - ready for production'",
-    "docker:build": "docker build -t saae .",
-    "docker:run": "docker run -p 3000:3000 saae",
+    "docker:build": "docker build -t altclinic .",
+    "docker:run": "docker run -p 3000:3000 altclinic",
     "docker:compose": "docker-compose up -d",
-    "docker:logs": "docker-compose logs -f saee-app",
+    "docker:logs": "docker-compose logs -f altclinic-app",
     "clean": "rm -rf node_modules package-lock.json && npm install",
     "backup:db": "cp ./saee.db ./backup-$(date +%Y%m%d-%H%M%S).db",
     "reset:db": "rm -f ./saee.db && npm run migrate"

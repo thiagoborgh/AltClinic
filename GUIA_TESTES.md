@@ -1,8 +1,8 @@
-# 🧪 GUIA DE TESTES - SAAE
+# 🧪 GUIA DE TESTES - Alt Clinic
 
 ## 🎯 Sistema Pronto Para Uso!
 
-Seu SAAE está funcionando! Aqui estão os testes que você pode fazer agora:
+Seu Alt Clinic está funcionando! Aqui estão os testes que você pode fazer agora:
 
 ## 1. 🌐 Teste da API (FUNCIONANDO)
 

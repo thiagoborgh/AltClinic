@@ -3,7 +3,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 
 // Hooks
-import { useAuthStore } from './store/authStore';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+
+// Components
+import LoadingSpinner from './components/common/LoadingSpinner';
+import LicenseSelector from './components/Auth/LicenseSelector';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -17,26 +21,48 @@ import Dashboard from './pages/DashboardNew';
 import AgendaFuncional from './pages/AgendaFuncional';
 import Pacientes from './pages/Pacientes';
 import Propostas from './pages/Propostas';
-import Prontuarios from './pages/Prontuarios';
 import CRM from './pages/crm/CRMDashboard';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
 import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
+import BillingPage from './pages/billing/BillingPage';
 
-// Components
-import LoadingSpinner from './components/common/LoadingSpinner';
-import ToastProvider from './components/common/ToastProvider';
+// Componente interno que usa o contexto de auth
+const AppContent = () => {
+  console.log('AppContent renderizando...');
+  
+  const { 
+    isAuthenticated, 
+    loading, 
+    showLicenseSelector, 
+    setShowLicenseSelector, 
+    licenses, 
+    user, 
+    selectLicense,
+    loginLoading
+  } = useAuth();
 
-function App() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  console.log('AppContent estado:', { isAuthenticated, loading, user });
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (loading) {
+    console.log('Mostrando tela de loading');
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingSpinner message="Verificando autenticação..." />
+      </Box>
+    );
   }
 
+  console.log('Renderizando rotas principais');
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <Routes>
+        {/* Rota raiz - redireciona baseado na autenticação */}
+        <Route path="/" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
+          <Navigate to="/login" replace />
+        } />
+
         {/* Rotas públicas */}
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : 
@@ -52,35 +78,49 @@ function App() {
           isAuthenticated ? <Navigate to="/dashboard" replace /> : 
           <AuthLayout><MultiTenantLogin /></AuthLayout>
         } />
-
-        {/* Rotas protegidas */}
-        <Route path="/" element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
-          <Navigate to="/login" replace />
-        } />
         
         {/* Layout protegido com rotas aninhadas */}
-        <Route path="/" element={
-          isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" replace />
-        }>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="agendamentos" element={<AgendaFuncional />} />
-          <Route path="pacientes" element={<Pacientes />} />
-          <Route path="financeiro" element={<FinanceiroDashboard />} />
-          <Route path="propostas" element={<Propostas />} />
-          <Route path="prontuarios" element={<Prontuarios />} />
-          <Route path="crm" element={<CRM />} />
-          <Route path="relatorios" element={<Relatorios />} />
-          <Route path="configuracoes" element={<Configuracoes />} />
-        </Route>
+        {isAuthenticated && (
+          <Route path="/" element={<DashboardLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="agendamentos" element={<AgendaFuncional />} />
+            <Route path="pacientes" element={<Pacientes />} />
+            <Route path="financeiro" element={<FinanceiroDashboard />} />
+            <Route path="propostas" element={<Propostas />} />
+            <Route path="crm" element={<CRM />} />
+            <Route path="relatorios" element={<Relatorios />} />
+            <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="billing" element={<BillingPage />} />
+          </Route>
+        )}
 
         {/* Rota 404 */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+        } />
       </Routes>
-      
-      {/* Toast Provider Global */}
-      <ToastProvider />
+
+      {/* Modal de Seleção de Licença */}
+      <LicenseSelector
+        open={showLicenseSelector}
+        onClose={() => setShowLicenseSelector(false)}
+        licenses={licenses}
+        user={user}
+        onSelectLicense={selectLicense}
+        loading={loginLoading}
+      />
     </Box>
+  );
+};
+
+// Componente principal
+function App() {
+  console.log('App com rotas completas renderizando...');
+  
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
