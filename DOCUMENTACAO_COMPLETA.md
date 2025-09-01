@@ -1,9 +1,9 @@
-# Documentação Completa do Projeto SAAE
+# Documentação Completa do Projeto Alt Clinic
 
 ## 🏗️ Estrutura Geral do Projeto
 
 ```
-saae/
+altclinic/
 ├── frontend/                    # Aplicação React.js
 ├── backend/                     # API Node.js (arquivos na raiz)
 ├── docs/                        # Documentação
@@ -93,6 +93,15 @@ saae/
 
 ## 🗑️ Lista de Arquivos para Exclusão/Limpeza
 
+### 1. Arquivos Duplicados/Corrompidos
+
+- frontend/src/components/agenda/AgendamentoModal.js
+- frontend/src/hooks/useAgenda.js
+- frontend/src/pages/AgendaSimples.js
+- frontend/src/pages/AgendaCompleta.js
+- frontend/src/pages/Dashboard.js (se versão antiga)
+- frontend/src/layouts/DashboardLayout.js (se versão antiga)
+
 ### 2. Arquivos Temporários/Cache
 
 - node_modules/
@@ -154,4 +163,4 @@ rm -f frontend/src/pages/AgendaSimples.js
 | Backend      | ✅ 90%  | APIs REST, dados mock, integração          |
 | Frontend     | ✅ 98%  | Interface responsiva, navegação            |
 
-**O projeto SAAE está 97% completo e pronto para produção!** 🎯
+**O projeto Alt Clinic está 97% completo e pronto para produção!** 🎯
