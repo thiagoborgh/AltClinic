@@ -8,18 +8,7 @@ import {
   Button,
   IconButton,
   Grid,
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineOppositeContent,
-  TimelineDot,
   Paper,
-  Avatar,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   List,
   ListItem,
   ListItemIcon,
@@ -34,7 +23,6 @@ import {
   Assessment as AssessmentIcon,
   LocalHospital as HospitalIcon,
   Medication as MedicationIcon,
-  Description as DescriptionIcon,
   ExpandMore as ExpandMoreIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
@@ -43,7 +31,7 @@ import {
   MonitorHeart as MonitorIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
-import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Timeline completa dos atendimentos do paciente
@@ -214,163 +202,153 @@ const TimelinePaciente = ({ timeline = [], pacienteId, onNovoAtendimento }) => {
     const isExpanded = expandedItems.has(item.id);
 
     return (
-      <TimelineItem key={item.id}>
-        <TimelineOppositeContent
-          sx={{ m: 'auto 0', width: '120px', flexShrink: 0 }}
-          align="right"
-          variant="body2"
-          color="text.secondary"
-        >
-          {formatarData(item.data)}
-        </TimelineOppositeContent>
-        
-        <TimelineSeparator>
-          <TimelineDot color={tipoConfig.color} variant="outlined">
-            {tipoConfig.icon}
-          </TimelineDot>
-          {index < timelinesFiltradas.length - 1 && <TimelineConnector />}
-        </TimelineSeparator>
-        
-        <TimelineContent sx={{ py: '12px', px: 2 }}>
-          <Paper elevation={1} sx={{ p: 2 }}>
-            {/* Header do Item */}
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-              <Box flex={1}>
-                <Typography variant="h6" component="div" gutterBottom>
-                  {item.motivoConsulta || 'Atendimento'}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1} mb={1}>
+      <Card key={item.id} sx={{ mb: 2, border: `1px solid ${tipoConfig.color}` }}>
+        <CardContent>
+          {/* Header do Item */}
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+            <Box flex={1}>
+              <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <Chip
+                  icon={tipoConfig.icon}
+                  label={formatarData(item.data)}
+                  size="small"
+                  color={tipoConfig.color}
+                />
+              </Box>
+              <Typography variant="h6" component="div" gutterBottom>
+                {item.motivoConsulta || 'Atendimento'}
+              </Typography>
+              <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <Chip
+                  label={tipoConfig.label}
+                  size="small"
+                  color={tipoConfig.color}
+                  variant="outlined"
+                />
+                {item.profissional && (
                   <Chip
-                    label={tipoConfig.label}
+                    label={item.profissional}
                     size="small"
-                    color={tipoConfig.color}
                     variant="outlined"
                   />
-                  {item.profissional && (
-                    <Chip
-                      label={item.profissional}
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
-                  {item.metadata?.status && (
-                    <Chip
-                      label={item.metadata.status}
-                      size="small"
-                      color={item.metadata.status === 'Concluído' ? 'success' : 'default'}
-                    />
-                  )}
-                </Box>
-              </Box>
-              
-              <Box display="flex" alignItems="center" gap={1}>
-                {item.anexos && Object.keys(item.anexos).length > 0 && (
-                  <Badge
-                    badgeContent={Object.values(item.anexos).flat().length}
-                    color="primary"
-                  >
-                    <AttachFileIcon fontSize="small" />
-                  </Badge>
                 )}
-                <Tooltip title={isExpanded ? 'Recolher' : 'Expandir'}>
-                  <IconButton
+                {item.metadata?.status && (
+                  <Chip
+                    label={item.metadata.status}
                     size="small"
-                    onClick={() => handleExpandItem(item.id)}
-                  >
-                    <ExpandMoreIcon
-                      sx={{
-                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.3s'
-                      }}
-                    />
-                  </IconButton>
-                </Tooltip>
+                    color={item.metadata.status === 'Concluído' ? 'success' : 'default'}
+                  />
+                )}
               </Box>
             </Box>
+            
+            <Box display="flex" alignItems="center" gap={1}>
+              {item.anexos && Object.keys(item.anexos).length > 0 && (
+                <Badge
+                  badgeContent={Object.values(item.anexos).flat().length}
+                  color="primary"
+                >
+                  <AttachFileIcon fontSize="small" />
+                </Badge>
+              )}
+              <Tooltip title={isExpanded ? 'Recolher' : 'Expandir'}>
+                <IconButton
+                  size="small"
+                  onClick={() => handleExpandItem(item.id)}
+                >
+                  <ExpandMoreIcon
+                    sx={{
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s'
+                    }}
+                  />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
 
-            {/* Conteúdo Principal */}
-            {item.historicoDoencaAtual && (
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>HDA:</strong> {item.historicoDoencaAtual}
-              </Typography>
-            )}
+          {/* Conteúdo Principal */}
+          {item.historicoDoencaAtual && (
+            <Typography variant="body2" color="text.secondary" paragraph>
+              <strong>HDA:</strong> {item.historicoDoencaAtual}
+            </Typography>
+          )}
 
-            {item.exameClinico?.exameFisico && (
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Exame Físico:</strong> {item.exameClinico.exameFisico}
-              </Typography>
-            )}
+          {item.exameClinico?.exameFisico && (
+            <Typography variant="body2" color="text.secondary" paragraph>
+              <strong>Exame Físico:</strong> {item.exameClinico.exameFisico}
+            </Typography>
+          )}
 
-            {/* Conteúdo Expandido */}
-            {isExpanded && (
-              <Box mt={2}>
-                {/* Sinais Vitais */}
-                {renderSinaisVitais(item.exameClinico?.sinaisVitais)}
-                
-                {/* Procedimentos */}
-                {renderProcedimentos(item.procedimentosRealizados)}
-                
-                {/* Anexos */}
-                {renderAnexos(item.anexos)}
-                
-                {/* Hipótese Diagnóstica */}
-                {item.hipoteseDiagnostica && (
-                  <Box mt={2}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Hipótese Diagnóstica
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.hipoteseDiagnostica}
-                    </Typography>
-                  </Box>
-                )}
-                
-                {/* Conduta */}
-                {item.conduta && (
-                  <Box mt={2}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Conduta
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.conduta}
-                    </Typography>
-                  </Box>
-                )}
-                
-                {/* Observações */}
-                {item.observacoes && (
-                  <Box mt={2}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Observações
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.observacoes}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Botões de Ação */}
-                <Box mt={2} display="flex" gap={1}>
-                  <Button
-                    size="small"
-                    startIcon={<VisibilityIcon />}
-                    variant="outlined"
-                  >
-                    Ver Detalhes
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<EditIcon />}
-                    variant="outlined"
-                  >
-                    Editar
-                  </Button>
+          {/* Conteúdo Expandido */}
+          {isExpanded && (
+            <Box mt={2}>
+              {/* Sinais Vitais */}
+              {renderSinaisVitais(item.exameClinico?.sinaisVitais)}
+              
+              {/* Procedimentos */}
+              {renderProcedimentos(item.procedimentosRealizados)}
+              
+              {/* Anexos */}
+              {renderAnexos(item.anexos)}
+              
+              {/* Hipótese Diagnóstica */}
+              {item.hipoteseDiagnostica && (
+                <Box mt={2}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Hipótese Diagnóstica
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {item.hipoteseDiagnostica}
+                  </Typography>
                 </Box>
+              )}
+              
+              {/* Conduta */}
+              {item.conduta && (
+                <Box mt={2}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Conduta
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {item.conduta}
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Observações */}
+              {item.observacoes && (
+                <Box mt={2}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Observações
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {item.observacoes}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Botões de Ação */}
+              <Box mt={2} display="flex" gap={1}>
+                <Button
+                  size="small"
+                  startIcon={<VisibilityIcon />}
+                  variant="outlined"
+                >
+                  Ver Detalhes
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<EditIcon />}
+                  variant="outlined"
+                >
+                  Editar
+                </Button>
               </Box>
-            )}
-          </Paper>
-        </TimelineContent>
-      </TimelineItem>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
     );
   };
 
@@ -425,9 +403,9 @@ const TimelinePaciente = ({ timeline = [], pacienteId, onNovoAtendimento }) => {
           </Button>
         </Paper>
       ) : (
-        <Timeline position="alternate">
+        <Box>
           {timelinesFiltradas.map((item, index) => renderItemTimeline(item, index))}
-        </Timeline>
+        </Box>
       )}
     </Box>
   );

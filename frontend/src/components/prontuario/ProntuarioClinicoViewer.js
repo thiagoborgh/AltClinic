@@ -12,12 +12,11 @@ import {
   Tooltip,
   Avatar,
   Grid,
-  Divider,
   Button
 } from '@mui/material';
 import {
   PersonAdd as PersonAddIcon,
-  Timeline as TimelineIcon,
+  Assignment as TimelineIcon,
   Assessment as AssessmentIcon,
   Description as DescriptionIcon,
   Print as PrintIcon,

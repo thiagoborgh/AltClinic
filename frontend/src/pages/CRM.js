@@ -4,11 +4,16 @@ import { Chat, Add } from '@mui/icons-material';
 
 const CRM = () => {
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" fontWeight="bold">
-          CRM & Comunicação
-        </Typography>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            CRM & Comunicação
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Gerencie campanhas, comunicação com clientes e relacionamento
+          </Typography>
+        </Box>
         <Button variant="contained" startIcon={<Add />}>
           Nova Campanha
         </Button>

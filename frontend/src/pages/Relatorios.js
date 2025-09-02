@@ -4,11 +4,16 @@ import { Assessment, Download } from '@mui/icons-material';
 
 const Relatorios = () => {
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" fontWeight="bold">
-          Relatórios & Analytics
-        </Typography>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Relatórios & Analytics
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Visualize dados, métricas de performance e relatórios financeiros
+          </Typography>
+        </Box>
         <Button variant="contained" startIcon={<Download />}>
           Exportar Relatório
         </Button>

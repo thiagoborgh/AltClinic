@@ -35,18 +35,21 @@ import {
   Visibility as ViewIcon,
   Edit as EditIcon,
   Assignment as AssignmentIcon,
-  Timeline as TimelineIcon,
+  Assignment as TimelineIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
   CalendarToday as CalendarIcon,
   MoreVert as MoreVertIcon,
   LocalHospital as HospitalIcon,
   Dashboard as DashboardIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  PlayArrow as AtendimentoIcon
 } from '@mui/icons-material';
 import { usePacientes } from '../../hooks/usePacientes';
 import CadastroPacienteSimples from './CadastroPacienteSimples';
+import ProntuarioCompleto from '../prontuario/ProntuarioCompleto';
 import ProntuarioClinicoViewer from './prontuario/ProntuarioClinicoViewer';
+import AtendimentoModal from '../atendimento/AtendimentoModal';
 import { format, differenceInYears, isValid, parseISO } from 'date-fns';
 
 // Componente principal unificado de Pacientes com Prontuário
@@ -74,10 +77,14 @@ const PacientesManager = () => {
   const [tabAtiva, setTabAtiva] = useState(0);
   const [busca, setBusca] = useState('');
   const [prontuarioAberto, setProntuarioAberto] = useState(null);
+  const [prontuarioCompletoAberto, setProntuarioCompletoAberto] = useState(null);
   const [cadastroAberto, setCadastroAberto] = useState(false);
-  const [pacienteSelecionado, setPacienteSelecionado] = useState(null);
+  const [pacienteSelecionadoLocal, setPacienteSelecionadoLocal] = useState(null);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuPaciente, setMenuPaciente] = useState(null);
+  // Estado para o modal de atendimento
+  const [atendimentoModalAberto, setAtendimentoModalAberto] = useState(false);
+  const [pacienteAtendimento, setPacienteAtendimento] = useState(null);
 
   // Abas do sistema
   const abas = [
@@ -128,20 +135,33 @@ const PacientesManager = () => {
   };
 
   const handleAbrirProntuario = (paciente) => {
-    setPacienteSelecionado(paciente);
+    setPacienteSelecionadoLocal(paciente);
     setProntuarioAberto(true);
     setMenuAnchor(null);
   };
 
   const handleFecharProntuario = () => {
     setProntuarioAberto(false);
-    setPacienteSelecionado(null);
+    setProntuarioCompletoAberto(null);
+    setPacienteSelecionadoLocal(null);
   };
 
   const handleEditarPaciente = (paciente) => {
-    setPacienteSelecionado(paciente);
+    setPacienteSelecionadoLocal(paciente);
     setCadastroAberto(true);
     setMenuAnchor(null);
+  };
+
+  // Nova função para iniciar atendimento
+  const handleIniciarAtendimento = (paciente) => {
+    setPacienteAtendimento(paciente);
+    setAtendimentoModalAberto(true);
+  };
+
+  // Função para fechar modal de atendimento
+  const handleFecharAtendimento = () => {
+    setAtendimentoModalAberto(false);
+    setPacienteAtendimento(null);
   };
 
   const handleMenuClick = (event, paciente) => {
@@ -317,13 +337,15 @@ const PacientesManager = () => {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleAbrirProntuario(paciente)}
-                          color="primary"
-                        >
-                          <ViewIcon />
-                        </IconButton>
+                        <Tooltip title="Ver Prontuário">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleAbrirProntuario(paciente)}
+                            color="primary"
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -334,6 +356,19 @@ const PacientesManager = () => {
       </Card>
     </Box>
   );
+
+  const renderConteudoTab = () => {
+    const abaAtual = abas[tabAtiva];
+    
+    switch (abaAtual.component) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'lista':
+        return renderListaPacientes();
+      default:
+        return <Typography>Selecione uma aba</Typography>;
+    }
+  };
 
   // Lista de pacientes em cards
   const renderCardsPaciente = () => (
@@ -412,12 +447,17 @@ const PacientesManager = () => {
                 <Button
                   size="small"
                   variant="contained"
-                  startIcon={<ViewIcon />}
-                  onClick={() => handleAbrirProntuario(paciente)}
+                  startIcon={<AtendimentoIcon />}
+                  onClick={() => handleIniciarAtendimento(paciente)}
+                  color="success"
                   fullWidth
                 >
-                  Prontuário
+                  Iniciar Atendimento
                 </Button>
+              </Box>
+
+              {/* Contatos */}
+              <Box display="flex" gap={1} justifyContent="center" mt={1}>
                 {paciente.telefone && (
                   <Tooltip title="Ligar">
                     <IconButton
@@ -513,19 +553,7 @@ const PacientesManager = () => {
     </Box>
   );
 
-  const renderConteudoTab = () => {
-    const abaAtual = abas[tabAtiva];
-    
-    switch (abaAtual.component) {
-      case 'dashboard':
-        return renderDashboard();
-      case 'lista':
-        return renderListaPacientes();
-      default:
-        return <Typography>Selecione uma aba</Typography>;
-    }
-  };
-
+  // Loading state check
   if (loading && pacientes.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="400px">
@@ -535,8 +563,16 @@ const PacientesManager = () => {
   }
 
   return (
-    <Box p={3}>
+    <Box sx={{ width: '100%' }}>
       {/* Header */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Gestão de Pacientes
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Gerencie pacientes, prontuários e inicie atendimentos
+        </Typography>
+      </Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom>
           Alt Clinic - Gestão de Pacientes
@@ -609,11 +645,18 @@ const PacientesManager = () => {
         onClose={handleFecharProntuario}
         maxWidth="xl"
         fullWidth
-        PaperProps={{ sx: { height: '90vh' } }}
+        PaperProps={{ 
+          sx: { 
+            height: '90vh',
+            maxHeight: '90vh',
+            borderRadius: 2,
+            overflow: 'hidden'
+          } 
+        }}
       >
-        {pacienteSelecionado && (
+        {pacienteSelecionadoLocal && (
           <ProntuarioClinicoViewer
-            pacienteId={pacienteSelecionado.id}
+            pacienteId={pacienteSelecionadoLocal.id}
             onClose={handleFecharProntuario}
           />
         )}
@@ -624,10 +667,10 @@ const PacientesManager = () => {
         open={cadastroAberto}
         onClose={() => {
           setCadastroAberto(false);
-          setPacienteSelecionado(null);
+          setPacienteSelecionadoLocal(null);
           carregarPacientes(); // Recarregar lista após cadastro/edição
         }}
-        pacienteParaEdicao={pacienteSelecionado}
+        pacienteParaEdicao={pacienteSelecionadoLocal}
       />
 
       {/* FAB para Novo Paciente */}
@@ -639,6 +682,22 @@ const PacientesManager = () => {
       >
         <PersonAddIcon />
       </Fab>
+
+      {/* Modal do Prontuário Completo */}
+      {prontuarioCompletoAberto && (
+        <ProntuarioCompleto
+          pacienteId={prontuarioCompletoAberto}
+          onClose={() => setProntuarioCompletoAberto(null)}
+        />
+      )}
+
+      {/* Modal de Atendimento com Cronômetro */}
+      <AtendimentoModal
+        open={atendimentoModalAberto}
+        onClose={handleFecharAtendimento}
+        pacienteId={pacienteAtendimento?.id}
+        paciente={pacienteAtendimento}
+      />
     </Box>
   );
 };

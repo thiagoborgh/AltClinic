@@ -22,7 +22,9 @@ import {
   Print as PrintIcon,
   Share as ShareIcon,
   Edit as EditIcon,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  Close as CloseIcon,
+  PhotoCamera as PhotoIcon
 } from '@mui/icons-material';
 import { useProntuario } from '../../../hooks/useProntuario';
 import AnamneseViewer from './AnamneseViewer';
@@ -31,6 +33,7 @@ import PlanoDeTratamento from './PlanoDeTratamento';
 import ResultadosAnalises from './ResultadosAnalises';
 import ComunicacaoHistorico from './ComunicacaoHistorico';
 import NovoAtendimentoModal from './NovoAtendimentoModal';
+import ImagemComparacaoViewer from './ImagemComparacaoViewer';
 
 // Componente principal do Prontuário Clínico integrado em Pacientes
 const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
@@ -38,11 +41,13 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
     prontuario,
     paciente,
     timeline,
+    imagens,
     loading,
     error,
     analises,
     gerarRelatorio,
-    clearError
+    clearError,
+    recarregarImagens
   } = useProntuario(pacienteId);
 
   const [tabAtiva, setTabAtiva] = useState(0);
@@ -53,6 +58,7 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
     { label: 'Timeline', icon: <TimelineIcon />, component: 'timeline' },
     { label: 'Anamnese', icon: <DescriptionIcon />, component: 'anamnese' },
     { label: 'Plano de Tratamento', icon: <AssessmentIcon />, component: 'plano' },
+    { label: 'Imagens', icon: <PhotoIcon />, component: 'imagens' },
     { label: 'Análises & Resultados', icon: <AssessmentIcon />, component: 'resultados' },
     { label: 'Comunicação', icon: <ShareIcon />, component: 'comunicacao' }
   ];
@@ -104,6 +110,19 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
           />
         );
         
+      case 'imagens':
+        return (
+          <ImagemComparacaoViewer
+            pacienteId={pacienteId}
+            prontuario={prontuario}
+            imagens={imagens}
+            onImagemAdicionada={(novaImagem) => {
+              console.log('Nova imagem adicionada:', novaImagem);
+            }}
+            onRecarregarImagens={recarregarImagens}
+          />
+        );
+        
       case 'resultados':
         return (
           <ResultadosAnalises
@@ -149,7 +168,13 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
   }
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      backgroundColor: 'background.default',
+      minHeight: '85vh'
+    }}>
       {/* Header do Prontuário */}
       <Card sx={{ mb: 2 }}>
         <CardHeader
@@ -224,6 +249,13 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
                   <EditIcon />
                 </IconButton>
               </Tooltip>
+              {onClose && (
+                <Tooltip title="Fechar Prontuário">
+                  <IconButton onClick={onClose} color="error">
+                    <CloseIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           }
         />

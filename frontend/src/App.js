@@ -17,14 +17,13 @@ import DashboardLayout from './layouts/DashboardLayoutNew';
 import Login from './pages/Login';
 import OnboardingPage from './pages/OnboardingPage';
 import MultiTenantLogin from './pages/MultiTenantLogin';
-import Dashboard from './pages/DashboardNew';
-import AgendaFuncional from './pages/AgendaFuncional';
+import Dashboard from './pages/Dashboard';
+import Agendamentos from './pages/Agendamentos';
 import Pacientes from './pages/Pacientes';
-import Propostas from './pages/Propostas';
-import CRM from './pages/crm/CRMDashboard';
+import Financeiro from './pages/Financeiro';
+import CRM from './pages/CRM';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
-import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
 import BillingPage from './pages/billing/BillingPage';
 
 // Componente interno que usa o contexto de auth
@@ -83,10 +82,9 @@ const AppContent = () => {
         {isAuthenticated && (
           <Route path="/" element={<DashboardLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="agendamentos" element={<AgendaFuncional />} />
+            <Route path="agendamentos" element={<Agendamentos />} />
             <Route path="pacientes" element={<Pacientes />} />
-            <Route path="financeiro" element={<FinanceiroDashboard />} />
-            <Route path="propostas" element={<Propostas />} />
+            <Route path="financeiro" element={<Financeiro />} />
             <Route path="crm" element={<CRM />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />

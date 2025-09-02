@@ -9,6 +9,7 @@ export const useProntuario = (pacienteId = null) => {
   const [prontuario, setProntuario] = useState(null);
   const [paciente, setPaciente] = useState(null);
   const [timeline, setTimeline] = useState([]);
+  const [imagens, setImagens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [analises, setAnalises] = useState({});
@@ -119,20 +120,26 @@ export const useProntuario = (pacienteId = null) => {
     setError(null);
     
     try {
-      // Carregar dados do paciente e prontuário em paralelo
-      const [pacienteData, prontuarioData] = await Promise.all([
+      // Carregar dados do paciente, prontuário e imagens em paralelo
+      const [pacienteData, prontuarioData, imagensData] = await Promise.all([
         buscarPacientePorId(id),
         fetch(`/api/prontuario/${id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
           }
-        }).then(res => res.ok ? res.json() : null)
+        }).then(res => res.ok ? res.json() : null),
+        fetch(`/api/prontuario/imagem/paciente/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }).then(res => res.ok ? res.json() : { data: [] })
       ]);
       
       setPaciente(pacienteData);
       setProntuario(prontuarioData || criarProntuarioVazio(id));
       setTimeline(prontuarioData?.timeline || []);
+      setImagens(imagensData.data || []);
       
       // Carregar análises automáticas
       if (prontuarioData) {
@@ -471,6 +478,26 @@ export const useProntuario = (pacienteId = null) => {
     }
   }, [pacienteId]);
 
+  // Recarregar imagens
+  const recarregarImagens = useCallback(async () => {
+    if (!pacienteId) return;
+    
+    try {
+      const response = await fetch(`/api/prontuario/imagem/paciente/${pacienteId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setImagens(result.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao recarregar imagens:', err);
+    }
+  }, [pacienteId]);
+
   // Carregar prontuário na inicialização
   useEffect(() => {
     if (pacienteId) {
@@ -484,6 +511,7 @@ export const useProntuario = (pacienteId = null) => {
     prontuario,
     paciente,
     timeline,
+    imagens,
     loading,
     error,
     analises,
@@ -499,6 +527,7 @@ export const useProntuario = (pacienteId = null) => {
     buscarHistoricoComunicacao,
     gerarRelatorio,
     validarAtendimento,
+    recarregarImagens,
     
     // Utilitários
     clearError: () => setError(null),

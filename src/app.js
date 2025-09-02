@@ -16,6 +16,8 @@ const tenantsRoutes = require('./routes/tenants');
 const billingRoutes = require('./routes/billing');
 const pacientesRoutes = require('./routes/pacientes-simple');
 const prontuarioRoutes = require('./routes/prontuario-simple');
+const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
+const configuracoesRoutes = require('./routes/configuracoes-simple');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
@@ -117,6 +119,8 @@ class SaeeApp {
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/pacientes', pacientesRoutes);
     this.app.use('/api/prontuario', prontuarioRoutes);
+    this.app.use('/api/prontuario/imagem', prontuarioImagemRoutes);
+    this.app.use('/api/prontuario-completo', require('./routes/prontuario-completo')); // Nova rota do prontuário
     this.app.use('/api/ai', prontuarioRoutes); // Para rotas de IA
     this.app.use('/api/automacao', prontuarioRoutes); // Para automações
     this.app.use('/api/agendamentos', agendamentosRoutes);
@@ -124,6 +128,7 @@ class SaeeApp {
     this.app.use('/api/crm', crmRoutes);
     this.app.use('/api/prontuarios', prontuariosRoutes);
     this.app.use('/api/financeiro', financeiroRoutes);
+    this.app.use('/api/configuracoes', configuracoesRoutes);
 
     // Webhook do Twilio para WhatsApp/SMS
     this.app.post('/webhook/twilio', (req, res) => {
