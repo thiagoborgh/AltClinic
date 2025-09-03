@@ -7,6 +7,7 @@
 ## 🚀 **Deploy GRATUITO em 5 minutos!**
 
 ### ⚡ **Opção 1: Railway (Recomendado)**
+
 1. Acesse: https://railway.app
 2. Login com GitHub
 3. Deploy from GitHub repo → AltClinic
@@ -14,6 +15,7 @@
 5. **PRONTO!** 🎉
 
 ### ⚡ **Opção 2: Render**
+
 1. Acesse: https://render.com
 2. New → Web Service → GitHub → AltClinic
 3. Build: `cd frontend && npm run build && cd .. && npm install`
@@ -25,33 +27,39 @@
 ## 🌟 **Funcionalidades**
 
 ### 📋 **Landing Page Completa**
+
 - ✅ Apresentação profissional
 - ✅ Planos e preços
 - ✅ Sistema de trials gratuitos
 - ✅ FAQ e testemunhais
 
 ### 🆓 **Sistema de Trial**
+
 - ✅ 30 dias gratuitos automáticos
 - ✅ Email de boas-vindas
 - ✅ Dashboard com contador
 
 ### 💰 **Sistema de Upgrade**
+
 - ✅ Desconto de 30% (primeiros 30 dias)
 - ✅ Interface de pagamento
 - ✅ Notificações automáticas
 
 ### 🤖 **IA Integrada**
+
 - ✅ Google Gemini AI
 - ✅ Respostas automáticas
 - ✅ Análise inteligente
 
 ### 📱 **Multi-Canal**
+
 - ✅ WhatsApp Web
 - ✅ Telegram
 - ✅ SMS (Twilio)
 - ✅ Email automático
 
 ### 📊 **Dashboard Completo**
+
 - ✅ Agendamentos
 - ✅ Pacientes
 - ✅ Financeiro
@@ -63,6 +71,7 @@
 ## ⚙️ **Configuração Mínima**
 
 ### 🔑 **Variáveis Essenciais:**
+
 ```env
 NODE_ENV=production
 JWT_SECRET=SeuJWTSecretSuperSeguro123!
@@ -70,6 +79,7 @@ SESSION_SECRET=SeuSessionSecretSuperSeguro456!
 ```
 
 ### 📧 **Email (Opcional):**
+
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -78,6 +88,7 @@ SMTP_PASS=SuaSenhaDeApp
 ```
 
 **Como obter senha Gmail:**
+
 1. Gmail → Verificação em 2 etapas
 2. https://myaccount.google.com/apppasswords
 3. Criar senha para "Alt Clinic"

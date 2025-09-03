@@ -20,6 +20,7 @@ O Alt Clinic está **100% configurado** e pronto para ser colocado no ar! 🎉
 ### 1️⃣ **Heroku (Recomendado) - GRATUITO**
 
 **Por que Heroku?**
+
 - ✅ Deploy automático com Git
 - ✅ Plano gratuito disponível
 - ✅ Configuração de variáveis simples
@@ -29,17 +30,20 @@ O Alt Clinic está **100% configurado** e pronto para ser colocado no ar! 🎉
 **Como fazer:**
 
 1. **Instalar Heroku CLI:**
+
    ```
    https://devcenter.heroku.com/articles/heroku-cli
    ```
 
 2. **Login e criar app:**
+
    ```bash
    heroku login
    heroku create alt-clinic-sua-empresa
    ```
 
 3. **Configurar variáveis essenciais:**
+
    ```bash
    heroku config:set NODE_ENV=production
    heroku config:set JWT_SECRET=SeuJWTSecretSuperSeguro123!
@@ -49,6 +53,7 @@ O Alt Clinic está **100% configurado** e pronto para ser colocado no ar! 🎉
    ```
 
 4. **Deploy:**
+
    ```bash
    git add .
    git commit -m "Deploy Alt Clinic"
@@ -67,6 +72,7 @@ O Alt Clinic está **100% configurado** e pronto para ser colocado no ar! 🎉
 ### 2️⃣ **Vercel - GRATUITO**
 
 **Por que Vercel?**
+
 - ✅ Deploy em segundos
 - ✅ CDN global
 - ✅ Plano gratuito generoso
@@ -75,6 +81,7 @@ O Alt Clinic está **100% configurado** e pronto para ser colocado no ar! 🎉
 **Como fazer:**
 
 1. **Instalar Vercel CLI:**
+
    ```bash
    npm i -g vercel
    ```
@@ -111,6 +118,7 @@ Para o sistema funcionar 100%, configure o email:
 
 1. **Ativar verificação em 2 etapas**
 2. **Gerar senha de app:**
+
    - Ir em: https://myaccount.google.com/apppasswords
    - Criar senha para "Alt Clinic"
 
@@ -127,6 +135,7 @@ Para o sistema funcionar 100%, configure o email:
 ## 🔑 Variáveis de Ambiente Essenciais
 
 **Mínimas para funcionar:**
+
 ```env
 NODE_ENV=production
 JWT_SECRET=SeuJWTSecretSuperSeguro123!
@@ -136,6 +145,7 @@ SMTP_PASS=SuaSenhaDeApp
 ```
 
 **Opcionais (para recursos extras):**
+
 ```env
 GOOGLE_API_KEY=ChaveGoogleAI
 TWILIO_ACCOUNT_SID=TwilioSID
@@ -166,27 +176,32 @@ $env:NODE_ENV="production"; node app.js
 ## 📱 Funcionalidades Disponíveis Após Deploy:
 
 ### 🌟 **Landing Page**
+
 - Apresentação do Alt Clinic
 - Planos e preços
 - Formulário de trial gratuito
 - FAQ e testemunhais
 
 ### 🆓 **Sistema de Trial**
+
 - 30 dias gratuitos automáticos
 - Email de boas-vindas
 - Dashboard com contador
 
 ### 💰 **Sistema de Upgrade**
+
 - Desconto de 30% (primeiros 30 dias)
 - Interface de pagamento
 - Notificações automáticas
 
 ### 🤖 **IA Integrada**
+
 - Respostas automáticas
 - Análise de conversas
 - Sugestões inteligentes
 
 ### 📊 **Dashboard Completo**
+
 - Agendamentos
 - Pacientes
 - Financeiro
@@ -197,10 +212,12 @@ $env:NODE_ENV="production"; node app.js
 ## 🆘 Precisa de Ajuda?
 
 1. **Problemas com deploy?**
+
    - Verifique logs: `heroku logs --tail`
    - Teste local primeiro
 
 2. **Email não funciona?**
+
    - Verifique senha de app do Gmail
    - Confirme variáveis de ambiente
 

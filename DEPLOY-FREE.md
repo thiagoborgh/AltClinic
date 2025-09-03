@@ -9,6 +9,7 @@ Você tem **3 opções 100% GRATUITAS** para testar seu sistema:
 ## 1️⃣ **Railway (MAIS RECOMENDADO) 🚂**
 
 **Por que Railway?**
+
 - ✅ **$5 GRÁTIS por mês** (suficiente para testes)
 - ✅ Deploy automático com GitHub
 - ✅ Banco de dados incluído
@@ -37,6 +38,7 @@ Você tem **3 opções 100% GRATUITAS** para testar seu sistema:
 ## 2️⃣ **Render (ALTERNATIVA SÓLIDA) 🔄**
 
 **Por que Render?**
+
 - ✅ **750 horas GRÁTIS por mês**
 - ✅ SSL automático
 - ✅ Deploy contínuo
@@ -67,6 +69,7 @@ Você tem **3 opções 100% GRATUITAS** para testar seu sistema:
 ## 3️⃣ **Vercel (SUPER RÁPIDO) ⚡**
 
 **Por que Vercel?**
+
 - ✅ **Deploy em 30 segundos**
 - ✅ CDN global GRATUITO
 - ✅ Bandwidth ilimitado
@@ -92,6 +95,7 @@ vercel --prod
 ## 4️⃣ **Cyclic (SIMPLES) 🔄**
 
 **Por que Cyclic?**
+
 - ✅ **100% GRATUITO para sempre**
 - ✅ Deploy com 1 clique
 - ✅ Sem limites de tempo
@@ -108,6 +112,7 @@ vercel --prod
 ## 🎯 **RECOMENDAÇÃO: Use Railway!**
 
 **Por que Railway é o melhor para teste:**
+
 1. ✅ Mais fácil de configurar
 2. ✅ Funciona perfeitamente com Node.js
 3. ✅ $5 gratuitos são suficientes para 1 mês de testes
@@ -122,6 +127,7 @@ Se você quer testar **AGORA**, vou te mostrar como usar **Vercel**:
 ### 🚀 **Deploy em 60 segundos:**
 
 1. **Execute estes comandos:**
+
    ```bash
    npm i -g vercel
    vercel login
@@ -129,6 +135,7 @@ Se você quer testar **AGORA**, vou te mostrar como usar **Vercel**:
    ```
 
 2. **Responda as perguntas:**
+
    - Set up and deploy? **Y**
    - Which scope? **Sua conta**
    - Link to existing project? **N**
@@ -151,6 +158,7 @@ Para o sistema funcionar 100%, configure email:
 
 1. **Gmail > Configurações > Verificação em 2 etapas**
 2. **Gerar senha de app:**
+
    - https://myaccount.google.com/apppasswords
    - Nome: "Alt Clinic"
    - Copiar a senha (16 caracteres)

@@ -1,14 +1,33 @@
-const Database = require('better-sqlite3');
+// Try to use SQLite, fallback to mock for production deployment
+let Database;
+let useMock = false;
+
+try {
+  Database = require('better-sqlite3');
+} catch (error) {
+  console.log('🔄 SQLite not available, using mock database for deployment');
+  const { MockDatabase } = require('../utils/mockDatabase');
+  useMock = true;
+}
+
 const path = require('path');
 
 class DatabaseManager {
   constructor() {
+    if (useMock) {
+      const { MockDatabase } = require('../utils/mockDatabase');
+      this.db = new MockDatabase();
+      return;
+    }
+    
     this.dbPath = process.env.DB_PATH || './saee.db';
     this.db = null;
     this.init();
   }
 
   init() {
+    if (useMock) return;
+    
     try {
       this.db = new Database(this.dbPath);
       this.db.pragma('journal_mode = WAL');

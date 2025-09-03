@@ -7,6 +7,7 @@
 ## 📋 **PASSO A PASSO DETALHADO:**
 
 ### **1. Conectar seu repositório GitHub:**
+
 - No dashboard do Render, clique em **"New +"**
 - Selecione **"Web Service"**
 - Clique em **"Connect a repository"**
@@ -27,11 +28,13 @@
 ```
 
 **Build Command (copie exato):**
+
 ```
 cd frontend && npm install && npm run build && cd .. && npm install
 ```
 
 **Start Command (copie exato):**
+
 ```
 node app.js
 ```
@@ -39,6 +42,7 @@ node app.js
 ---
 
 ### **3. Plano (IMPORTANTE!):**
+
 - Selecione **"Free"** (não o Starter)
 - ✅ **0 USD/month**
 
@@ -55,6 +59,7 @@ SESSION_SECRET=AltClinicSession2024!
 ```
 
 **Como adicionar cada variável:**
+
 1. Name: `NODE_ENV` | Value: `production`
 2. Name: `JWT_SECRET` | Value: `AltClinic2024SuperSeguro!`
 3. Name: `SESSION_SECRET` | Value: `AltClinicSession2024!`
@@ -62,6 +67,7 @@ SESSION_SECRET=AltClinicSession2024!
 ---
 
 ### **5. Deploy:**
+
 - Clique **"Create Web Service"**
 - ⏳ **Aguarde 5-10 minutos** (primeira vez demora mais)
 - 👀 **Acompanhe os logs** na tela
@@ -100,6 +106,7 @@ SMTP_PASS=SuaSenhaDeApp
 ```
 
 **Como obter senha Gmail:**
+
 1. Gmail → Configurações → Verificação em 2 etapas
 2. https://myaccount.google.com/apppasswords
 3. Criar senha para "Alt Clinic"
@@ -110,14 +117,17 @@ SMTP_PASS=SuaSenhaDeApp
 ## 🆘 **Se der algum erro:**
 
 ### **Erro de build:**
+
 - Verifique se Build Command está correto
 - Logs vão mostrar onde parou
 
 ### **Erro de start:**
+
 - Verifique se Start Command é `node app.js`
 - Verifique se NODE_ENV=production
 
 ### **Página não carrega:**
+
 - Aguarde mais alguns minutos
 - Verifique logs para erros
 
@@ -137,6 +147,7 @@ SMTP_PASS=SuaSenhaDeApp
 **🚀 Em qual etapa você está agora?**
 
 **Me diga se:**
+
 1. Já conectou o repositório?
 2. Já preencheu as configurações?
 3. Já adicionou as variáveis de ambiente?

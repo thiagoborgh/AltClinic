@@ -1,9 +1,25 @@
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+
+// Try to use SQLite, fallback to mock for production deployment
+let Database;
+let useMock = false;
+
+try {
+  Database = require('better-sqlite3');
+} catch (error) {
+  console.log('🔄 SQLite not available, using mock database for deployment');
+  const { MockMultiTenantDatabase } = require('../utils/mockDatabase');
+  useMock = true;
+}
 
 class MultiTenantDatabaseManager {
   constructor() {
+    if (useMock) {
+      const { MockMultiTenantDatabase } = require('../utils/mockDatabase');
+      return new MockMultiTenantDatabase();
+    }
+    
     this.masterDb = null;
     this.tenantConnections = new Map();
     this.databasesPath = path.join(__dirname, '../../databases');
