@@ -87,6 +87,22 @@ class SaeeApp {
     // Servir arquivos estáticos (imagens de prontuário)
     this.app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+    // Servir arquivos estáticos do frontend em produção
+    if (process.env.NODE_ENV === 'production') {
+      // Middleware para definir MIME types corretos
+      this.app.use(express.static(path.join(__dirname, '../public'), {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+          } else if (filePath.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+          }
+        }
+      }));
+    }
+
     // Logs de requisições em desenvolvimento
     if (process.env.NODE_ENV !== 'production') {
       this.app.use((req, res, next) => {
@@ -216,10 +232,15 @@ class SaeeApp {
 
     // Rota catch-all para SPA (se servindo frontend)
     if (process.env.NODE_ENV === 'production') {
-      this.app.use(express.static(path.join(__dirname, '../frontend/build')));
-      
       this.app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+        // Evitar interferir com rotas da API
+        if (req.path.startsWith('/api/')) {
+          return res.status(404).json({
+            success: false,
+            message: 'Rota da API não encontrada'
+          });
+        }
+        res.sendFile(path.join(__dirname, '../public/index.html'));
       });
     }
 
