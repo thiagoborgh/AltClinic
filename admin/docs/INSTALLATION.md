@@ -3,12 +3,14 @@
 ## 📋 **PRÉ-REQUISITOS**
 
 ### Software Necessário
+
 - **Node.js** v16.0.0 ou superior
-- **npm** v8.0.0 ou superior  
+- **npm** v8.0.0 ou superior
 - **Git** (para clonar repositório)
 - **SQLite3** (incluído com Node.js)
 
 ### Verificar Instalações
+
 ```bash
 node --version
 npm --version
@@ -20,7 +22,9 @@ git --version
 ## ⬇️ **DOWNLOAD E PREPARAÇÃO**
 
 ### 1. Clone/Cópia dos Arquivos
+
 Se você possui acesso ao repositório:
+
 ```bash
 git clone https://github.com/altclinic/saee-admin.git
 cd saee-admin/admin
@@ -29,7 +33,9 @@ cd saee-admin/admin
 Ou copie manualmente a pasta `admin/` para seu servidor.
 
 ### 2. Estrutura de Diretórios
+
 Verifique se a estrutura está correta:
+
 ```
 admin/
 ├── frontend/
@@ -42,17 +48,21 @@ admin/
 ## 🔧 **CONFIGURAÇÃO DO BACKEND**
 
 ### 1. Navegar para o Backend
+
 ```bash
 cd admin/backend
 ```
 
 ### 2. Instalar Dependências
+
 ```bash
 npm install
 ```
 
 ### 3. Configurar Variáveis de Ambiente
+
 Crie o arquivo `.env`:
+
 ```bash
 # Windows
 copy .env.example .env
@@ -62,6 +72,7 @@ cp .env.example .env
 ```
 
 Edite o arquivo `.env`:
+
 ```env
 # Porta do servidor backend
 PORT=3001
@@ -85,16 +96,19 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 ⚠️ **IMPORTANTE**: Altere o `JWT_SECRET` para uma chave única e segura!
 
 ### 4. Inicializar Banco de Dados
+
 ```bash
 npm run init-db
 ```
 
 ### 5. Testar Backend
+
 ```bash
 npm run dev
 ```
 
 Você deve ver:
+
 ```
 ✅ Admin Server running on port 3001
 ✅ Admin database connected
@@ -107,24 +121,29 @@ Você deve ver:
 ## 🎨 **CONFIGURAÇÃO DO FRONTEND**
 
 ### 1. Navegar para o Frontend
+
 ```bash
 cd admin/frontend
 ```
 
 ### 2. Instalar Dependências
+
 ```bash
 npm install
 ```
 
 ### 3. Configurar API URL (se necessário)
+
 Edite `src/config.js` se a URL da API for diferente:
+
 ```javascript
 const config = {
-  API_BASE_URL: 'http://localhost:3001/api/admin'
+  API_BASE_URL: "http://localhost:3001/api/admin",
 };
 ```
 
 ### 4. Iniciar Frontend
+
 ```bash
 npm start
 ```
@@ -136,14 +155,18 @@ O frontend abrirá automaticamente em: http://localhost:3000
 ## 🔐 **PRIMEIRO ACESSO**
 
 ### 1. Acessar a Intranet
+
 Abra seu navegador e acesse: **http://localhost:3000/admin**
 
 ### 2. Login Inicial
+
 Use as credenciais padrão:
+
 - **Email**: `admin@altclinic.com`
 - **Senha**: `Admin123!`
 
 ### 3. Alterar Senha (OBRIGATÓRIO)
+
 1. Após o login, vá para o perfil
 2. Clique em "Alterar Senha"
 3. Digite uma nova senha segura
@@ -154,7 +177,9 @@ Use as credenciais padrão:
 ## 🔄 **SINCRONIZAÇÃO COM SISTEMA PRINCIPAL**
 
 ### 1. Configurar Caminho do Banco Principal
+
 No `.env` do backend, ajuste o caminho:
+
 ```env
 # Exemplo para Windows
 MAIN_DB_PATH=C:/caminho/para/seu/saee/src/database/database.sqlite
@@ -164,6 +189,7 @@ MAIN_DB_PATH=/home/user/saee/src/database/database.sqlite
 ```
 
 ### 2. Primeira Sincronização
+
 1. Acesse a intranet
 2. Vá para "Licenças"
 3. Clique em "Sincronizar Dados"
@@ -174,6 +200,7 @@ MAIN_DB_PATH=/home/user/saee/src/database/database.sqlite
 ## 🧪 **TESTES DE FUNCIONAMENTO**
 
 ### 1. Teste do Backend
+
 ```bash
 cd admin/backend
 
@@ -187,6 +214,7 @@ curl -X POST http://localhost:3001/api/admin/auth/login \
 ```
 
 ### 2. Teste do Frontend
+
 1. ✅ Login funciona
 2. ✅ Dashboard carrega estatísticas
 3. ✅ Licenças lista/cria/edita
@@ -198,7 +226,9 @@ curl -X POST http://localhost:3001/api/admin/auth/login \
 ## 🚨 **TROUBLESHOOTING**
 
 ### Backend não inicia
+
 **Erro comum**: `EADDRINUSE: address already in use :::3001`
+
 ```bash
 # Windows
 netstat -ano | findstr :3001
@@ -209,19 +239,23 @@ lsof -ti:3001 | xargs kill -9
 ```
 
 ### Frontend não conecta com Backend
+
 1. Verifique se o backend está rodando em :3001
 2. Confirme as configurações de CORS no backend
 3. Verifique o `API_BASE_URL` no frontend
 
 ### Banco de dados não encontrado
+
 1. Verifique o caminho no `ADMIN_DB_PATH`
 2. Confirme permissões de escrita no diretório
 3. Execute `npm run init-db` novamente
 
 ### Erro de sincronização
+
 1. Verifique o `MAIN_DB_PATH` no .env
 2. Confirme que o arquivo existe e tem permissão de leitura
 3. Teste a conexão manualmente:
+
 ```bash
 sqlite3 "../../src/database/database.sqlite" ".tables"
 ```
@@ -231,6 +265,7 @@ sqlite3 "../../src/database/database.sqlite" ".tables"
 ## 🔒 **CONFIGURAÇÃO DE SEGURANÇA**
 
 ### 1. Firewall (Produção)
+
 ```bash
 # Permitir apenas portas necessárias
 ufw allow 22    # SSH
@@ -240,12 +275,13 @@ ufw deny 3001   # Bloquear acesso direto ao backend
 ```
 
 ### 2. Proxy Reverso (Nginx)
+
 ```nginx
 # /etc/nginx/sites-available/admin.altclinic.com
 server {
     listen 80;
     server_name admin.altclinic.com;
-    
+
     # API Backend
     location /api/admin/ {
         proxy_pass http://localhost:3001;
@@ -253,12 +289,12 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
-    
+
     # Frontend Static Files
     location / {
         root /var/www/admin-frontend/build;
         try_files $uri $uri/ /index.html;
-        
+
         # Cache static assets
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
             expires 1y;
@@ -269,6 +305,7 @@ server {
 ```
 
 ### 3. SSL/HTTPS (Certbot)
+
 ```bash
 # Instalar certbot
 sudo apt install certbot python3-certbot-nginx
@@ -286,6 +323,7 @@ sudo crontab -e
 ## 📊 **MONITORAMENTO E LOGS**
 
 ### 1. Logs do Sistema
+
 ```bash
 # Backend logs
 tail -f admin/backend/logs/app.log
@@ -297,6 +335,7 @@ pm2 logs admin-frontend
 ```
 
 ### 2. Monitoramento com PM2
+
 ```bash
 # Instalar PM2
 npm install -g pm2
@@ -314,6 +353,7 @@ pm2 startup
 ```
 
 ### 3. Backup Automático
+
 ```bash
 #!/bin/bash
 # /home/user/scripts/backup-admin.sh
@@ -341,6 +381,7 @@ echo "Backup completed: $DATE"
 ```
 
 ### 4. Cron para Backup
+
 ```bash
 # Editar crontab
 crontab -e
@@ -354,6 +395,7 @@ crontab -e
 ## ✅ **CHECKLIST DE INSTALAÇÃO**
 
 ### Backend Setup
+
 - [ ] Node.js instalado
 - [ ] Dependências instaladas (`npm install`)
 - [ ] Arquivo `.env` configurado
@@ -363,12 +405,14 @@ crontab -e
 - [ ] API respondendo em :3001
 
 ### Frontend Setup
+
 - [ ] Dependências instaladas (`npm install`)
 - [ ] `API_BASE_URL` configurado
 - [ ] Frontend iniciado (`npm start`)
 - [ ] Interface acessível em :3000
 
 ### Configurações
+
 - [ ] Primeiro login realizado
 - [ ] Senha padrão alterada
 - [ ] Caminho do banco principal configurado
@@ -376,6 +420,7 @@ crontab -e
 - [ ] Testes de funcionalidade ok
 
 ### Produção (Opcional)
+
 - [ ] Proxy reverso configurado
 - [ ] SSL/HTTPS ativo
 - [ ] Firewall configurado
@@ -395,5 +440,5 @@ Se você encontrar problemas durante a instalação:
 
 ---
 
-*Guia de Instalação - Intranet Altclinic v1.0*  
-*Última atualização: 02/09/2025*
+_Guia de Instalação - Intranet Altclinic v1.0_  
+_Última atualização: 02/09/2025_

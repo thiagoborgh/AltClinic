@@ -1,6 +1,7 @@
 # 📚 Documentação da API - Intranet Altclinic
 
 ## 🌐 **BASE URL**
+
 ```
 http://localhost:3001/api/admin
 ```
@@ -8,6 +9,7 @@ http://localhost:3001/api/admin
 ## 🔐 **AUTENTICAÇÃO**
 
 Todas as rotas (exceto `/auth/login`) requerem um token JWT no header:
+
 ```
 Authorization: Bearer <jwt_token>
 ```
@@ -17,9 +19,11 @@ Authorization: Bearer <jwt_token>
 ## 🔑 **ENDPOINTS DE AUTENTICAÇÃO**
 
 ### POST `/auth/login`
+
 Realiza login na intranet.
 
 **Request Body:**
+
 ```json
 {
   "email": "admin@altclinic.com",
@@ -28,6 +32,7 @@ Realiza login na intranet.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -43,6 +48,7 @@ Realiza login na intranet.
 ```
 
 **Errors:**
+
 - `400`: Email e senha obrigatórios
 - `401`: Credenciais inválidas
 - `403`: Usuário inativo
@@ -50,14 +56,17 @@ Realiza login na intranet.
 ---
 
 ### GET `/auth/me`
+
 Retorna dados do usuário logado.
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -75,9 +84,11 @@ Authorization: Bearer <token>
 ---
 
 ### POST `/auth/logout`
+
 Realiza logout (invalida token).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -88,9 +99,11 @@ Realiza logout (invalida token).
 ---
 
 ### POST `/auth/change-password`
+
 Altera senha do usuário.
 
 **Request Body:**
+
 ```json
 {
   "currentPassword": "Admin123!",
@@ -99,6 +112,7 @@ Altera senha do usuário.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -111,9 +125,11 @@ Altera senha do usuário.
 ## 🏢 **ENDPOINTS DE LICENÇAS**
 
 ### GET `/licencas`
+
 Lista todas as licenças com filtros e paginação.
 
 **Query Parameters:**
+
 - `search`: Busca por nome ou email
 - `status`: Filtra por status (ativa, vencida, suspensa)
 - `page`: Página (default: 1)
@@ -122,11 +138,13 @@ Lista todas as licenças com filtros e paginação.
 - `sortOrder`: asc ou desc
 
 **Example:**
+
 ```
 GET /licencas?search=clinica&status=ativa&page=1&limit=10
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -140,7 +158,7 @@ GET /licencas?search=clinica&status=ativa&page=1&limit=10
         "status": "ativa",
         "data_inicio": "2024-01-01",
         "data_vencimento": "2025-01-01",
-        "valor_mensal": 299.90,
+        "valor_mensal": 299.9,
         "observacoes": "Cliente prioritário"
       }
     ],
@@ -157,9 +175,11 @@ GET /licencas?search=clinica&status=ativa&page=1&limit=10
 ---
 
 ### GET `/licencas/:id`
+
 Retorna dados detalhados de uma licença.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -174,7 +194,7 @@ Retorna dados detalhados de uma licença.
     "status": "ativa",
     "data_inicio": "2024-01-01",
     "data_vencimento": "2025-01-01",
-    "valor_mensal": 299.90,
+    "valor_mensal": 299.9,
     "observacoes": "Cliente prioritário",
     "created_at": "2024-01-01T00:00:00.000Z",
     "updated_at": "2024-06-15T14:30:00.000Z"
@@ -185,9 +205,11 @@ Retorna dados detalhados de uma licença.
 ---
 
 ### POST `/licencas`
+
 Cria uma nova licença.
 
 **Request Body:**
+
 ```json
 {
   "id": "lic_002",
@@ -199,18 +221,19 @@ Cria uma nova licença.
   "plano": "basic",
   "data_inicio": "2025-09-01",
   "data_vencimento": "2026-09-01",
-  "valor_mensal": 199.90,
+  "valor_mensal": 199.9,
   "observacoes": "Novo cliente"
 }
 ```
 
 **Response (201):**
+
 ```json
 {
   "success": true,
   "data": {
     "id": "lic_002",
-    "nome_clinica": "Clínica Nova",
+    "nome_clinica": "Clínica Nova"
     // ... outros campos
   },
   "message": "Licença criada com sucesso"
@@ -220,24 +243,27 @@ Cria uma nova licença.
 ---
 
 ### PUT `/licencas/:id`
+
 Atualiza uma licença existente.
 
 **Request Body:** (campos opcionais)
+
 ```json
 {
   "nome_clinica": "Clínica São João Atualizada",
   "plano": "premium_plus",
-  "valor_mensal": 399.90,
+  "valor_mensal": 399.9,
   "observacoes": "Plano atualizado"
 }
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
   "data": {
-    "id": "lic_001",
+    "id": "lic_001"
     // ... campos atualizados
   },
   "message": "Licença atualizada com sucesso"
@@ -247,9 +273,11 @@ Atualiza uma licença existente.
 ---
 
 ### DELETE `/licencas/:id`
+
 Suspende uma licença (soft delete).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -260,9 +288,11 @@ Suspende uma licença (soft delete).
 ---
 
 ### POST `/licencas/sync`
+
 Sincroniza licenças do sistema principal.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -280,9 +310,11 @@ Sincroniza licenças do sistema principal.
 ## ⚙️ **ENDPOINTS DE CONFIGURAÇÕES**
 
 ### GET `/configuracoes/:licencaId`
+
 Retorna todas as configurações de uma licença.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -314,9 +346,11 @@ Retorna todas as configurações de uma licença.
 ---
 
 ### PUT `/configuracoes/:licencaId`
+
 Atualiza configurações de uma licença.
 
 **Request Body:**
+
 ```json
 {
   "section": "smtp",
@@ -331,6 +365,7 @@ Atualiza configurações de uma licença.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -341,9 +376,11 @@ Atualiza configurações de uma licença.
 ---
 
 ### GET `/configuracoes/:licencaId/sections`
+
 Lista todas as seções de configuração disponíveis.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -370,9 +407,11 @@ Lista todas as seções de configuração disponíveis.
 ---
 
 ### GET `/configuracoes/:licencaId/backup`
+
 Gera backup das configurações.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -393,9 +432,11 @@ Gera backup das configurações.
 ## 📊 **ENDPOINTS DE DASHBOARD**
 
 ### GET `/dashboard/stats`
+
 Retorna estatísticas gerais do sistema.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -404,7 +445,7 @@ Retorna estatísticas gerais do sistema.
     "licencasAtivas": 38,
     "licencasVencendo": 4,
     "licencasVencidas": 3,
-    "faturamentoMensal": 12450.50,
+    "faturamentoMensal": 12450.5,
     "crescimentoMensal": 15.2,
     "novasLicencasUltimos30Dias": 8
   }
@@ -414,9 +455,11 @@ Retorna estatísticas gerais do sistema.
 ---
 
 ### GET `/dashboard/recent-activity`
+
 Retorna atividades recentes do sistema.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -444,9 +487,11 @@ Retorna atividades recentes do sistema.
 ---
 
 ### GET `/dashboard/alerts`
+
 Retorna alertas importantes do sistema.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -476,13 +521,16 @@ Retorna alertas importantes do sistema.
 ---
 
 ### GET `/dashboard/revenue`
+
 Retorna dados de faturamento por período.
 
 **Query Parameters:**
+
 - `period`: monthly, quarterly, yearly (default: monthly)
 - `months`: Número de meses para retornar (default: 12)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -490,12 +538,12 @@ Retorna dados de faturamento por período.
     "revenue": [
       {
         "month": "2024-01",
-        "value": 10500.00,
+        "value": 10500.0,
         "licenses": 35
       },
       {
-        "month": "2024-02", 
-        "value": 11200.00,
+        "month": "2024-02",
+        "value": 11200.0,
         "licenses": 37
       }
       // ... outros meses
@@ -507,9 +555,11 @@ Retorna dados de faturamento por período.
 ---
 
 ### GET `/dashboard/licenses-by-status`
+
 Retorna distribuição de licenças por status.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -540,15 +590,18 @@ Retorna distribuição de licenças por status.
 ## 📈 **ENDPOINTS DE RELATÓRIOS**
 
 ### GET `/relatorios`
+
 Lista relatórios disponíveis e gerados.
 
 **Query Parameters:**
+
 - `type`: Tipo de relatório (geral, financeiro, licencas, suporte)
 - `period`: Período (today, week, month, quarter, year, custom)
 - `startDate`: Data início (para custom)
 - `endDate`: Data fim (para custom)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -572,9 +625,11 @@ Lista relatórios disponíveis e gerados.
 ---
 
 ### POST `/relatorios/export`
+
 Gera e exporta um relatório.
 
 **Request Body:**
+
 ```json
 {
   "type": "financeiro",
@@ -586,6 +641,7 @@ Gera e exporta um relatório.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -601,9 +657,11 @@ Gera e exporta um relatório.
 ---
 
 ### GET `/relatorios/templates`
+
 Retorna templates de relatórios disponíveis.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -631,9 +689,11 @@ Retorna templates de relatórios disponíveis.
 ## 📱 **ENDPOINTS DE WHATSAPP**
 
 ### POST `/whatsapp/:licencaId/qr`
+
 Gera QR Code para conectar WhatsApp.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -648,9 +708,11 @@ Gera QR Code para conectar WhatsApp.
 ---
 
 ### GET `/whatsapp/:licencaId/status`
+
 Verifica status da conexão WhatsApp.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -667,9 +729,11 @@ Verifica status da conexão WhatsApp.
 ---
 
 ### POST `/whatsapp/:licencaId/disconnect`
+
 Desconecta sessão WhatsApp.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -680,9 +744,11 @@ Desconecta sessão WhatsApp.
 ---
 
 ### POST `/whatsapp/:licencaId/test-message`
+
 Envia mensagem de teste.
 
 **Request Body:**
+
 ```json
 {
   "phoneNumber": "+5511999999999",
@@ -691,6 +757,7 @@ Envia mensagem de teste.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -705,13 +772,16 @@ Envia mensagem de teste.
 ---
 
 ### GET `/whatsapp/:licencaId/logs`
+
 Retorna logs da sessão WhatsApp.
 
 **Query Parameters:**
+
 - `limit`: Número de logs (default: 50)
 - `level`: Nível do log (info, warning, error)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -734,9 +804,11 @@ Retorna logs da sessão WhatsApp.
 ---
 
 ### GET `/whatsapp/global-status`
+
 Status global de todas as sessões WhatsApp.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -766,6 +838,7 @@ Status global de todas as sessões WhatsApp.
 ## ⚠️ **CÓDIGOS DE ERRO**
 
 ### Códigos HTTP
+
 - `200`: Sucesso
 - `201`: Criado com sucesso
 - `400`: Dados inválidos
@@ -777,6 +850,7 @@ Status global de todas as sessões WhatsApp.
 - `500`: Erro interno do servidor
 
 ### Formato de Erro
+
 ```json
 {
   "success": false,
@@ -792,6 +866,7 @@ Status global de todas as sessões WhatsApp.
 ```
 
 ### Códigos de Erro Comuns
+
 - `INVALID_CREDENTIALS`: Credenciais inválidas
 - `TOKEN_EXPIRED`: Token JWT expirado
 - `PERMISSION_DENIED`: Permissão insuficiente
@@ -806,11 +881,13 @@ Status global de todas as sessões WhatsApp.
 ## 🔒 **RATE LIMITING**
 
 ### Limites Padrão
+
 - **Geral**: 100 requests por 15 minutos por IP
 - **Login**: 5 tentativas por 15 minutos por IP
 - **WhatsApp QR**: 10 gerações por hora por licença
 
 ### Headers de Rate Limit
+
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -822,66 +899,69 @@ X-RateLimit-Reset: 1693747200
 ## 📝 **EXEMPLOS DE USO**
 
 ### Autenticação e Busca de Licenças
+
 ```javascript
 // Login
-const loginResponse = await fetch('/api/admin/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const loginResponse = await fetch("/api/admin/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    email: 'admin@altclinic.com',
-    password: 'Admin123!'
-  })
+    email: "admin@altclinic.com",
+    password: "Admin123!",
+  }),
 });
 
 const { token } = await loginResponse.json();
 
 // Buscar licenças
-const licencasResponse = await fetch('/api/admin/licencas?status=ativa', {
-  headers: { 
-    'Authorization': `Bearer ${token}` 
-  }
+const licencasResponse = await fetch("/api/admin/licencas?status=ativa", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
 });
 
 const licencas = await licencasResponse.json();
 ```
 
 ### Atualizar Configurações
+
 ```javascript
 // Atualizar configurações SMTP
-const configResponse = await fetch('/api/admin/configuracoes/lic_001', {
-  method: 'PUT',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}` 
+const configResponse = await fetch("/api/admin/configuracoes/lic_001", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify({
-    section: 'smtp',
+    section: "smtp",
     config: {
-      host: 'smtp.gmail.com',
+      host: "smtp.gmail.com",
       port: 587,
-      user: 'email@clinica.com',
-      password: 'senha123'
-    }
-  })
+      user: "email@clinica.com",
+      password: "senha123",
+    },
+  }),
 });
 ```
 
 ### Gerar Relatório
+
 ```javascript
 // Gerar relatório financeiro
-const reportResponse = await fetch('/api/admin/relatorios/export', {
-  method: 'POST',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}` 
+const reportResponse = await fetch("/api/admin/relatorios/export", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   },
   body: JSON.stringify({
-    type: 'financeiro',
-    period: 'month',
-    startDate: '2025-09-01',
-    endDate: '2025-09-30',
-    format: 'pdf'
-  })
+    type: "financeiro",
+    period: "month",
+    startDate: "2025-09-01",
+    endDate: "2025-09-30",
+    format: "pdf",
+  }),
 });
 
 const { downloadUrl } = await reportResponse.json();
@@ -889,5 +969,5 @@ const { downloadUrl } = await reportResponse.json();
 
 ---
 
-*Documentação da API - Intranet Altclinic v1.0*  
-*Última atualização: 02/09/2025*
+_Documentação da API - Intranet Altclinic v1.0_  
+_Última atualização: 02/09/2025_

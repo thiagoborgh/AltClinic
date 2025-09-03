@@ -17,6 +17,7 @@ import DashboardLayout from './layouts/DashboardLayoutNew';
 import Login from './pages/Login';
 import OnboardingPage from './pages/OnboardingPage';
 import MultiTenantLogin from './pages/MultiTenantLogin';
+import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import Agendamentos from './pages/Agendamentos';
 import Pacientes from './pages/Pacientes';
@@ -56,10 +57,13 @@ const AppContent = () => {
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <Routes>
+        {/* Landing Page - rota pública */}
+        <Route path="/landing" element={<LandingPage />} />
+        
         {/* Rota raiz - redireciona baseado na autenticação */}
         <Route path="/" element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : 
-          <Navigate to="/login" replace />
+          <Navigate to="/landing" replace />
         } />
 
         {/* Rotas públicas */}

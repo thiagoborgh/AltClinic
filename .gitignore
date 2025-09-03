@@ -1,5 +1,7 @@
 node_modules/
 .env
+.env.local
+.env.production
 *.log
 logs/
 saee.db
@@ -15,3 +17,19 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Railway
+.railway/
+
+# Vercel
+.vercel/
+
+# Deploy artifacts
+public/static/
+
+# Backup files
+backup-*.db
+
+# Temporary files
+temp/
+tmp/

@@ -77,41 +77,56 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [token, logout]);
 
-  // Login unificado
-  const login = async (email, senha) => {
+  // Login unificado com controle de sessões
+  const login = async (email, senha, forceLogin = false, sessionsToRemove = []) => {
     try {
       setLoginLoading(true);
       
-      const response = await api.post('/auth/login', { email, senha });
+      const response = await api.post('/auth/login', { 
+        email, 
+        senha, 
+        forceLogin, 
+        sessionsToRemove 
+      });
       
       if (response.data.success) {
-        const { user: userData, licenses: userLicenses, token: authToken, singleLicense, multipleLicenses } = response.data;
+        const { user: userData, token: authToken, sessionId, sessionInfo } = response.data;
         
         setUser(userData);
+        setToken(authToken);
+        setTenant(response.data.tenant);
+        setLicense(response.data.license);
         
-        // Login direto com uma licença
-        if (singleLicense && authToken) {
-          setToken(authToken);
-          setTenant(response.data.tenant);
-          setLicense(response.data.license);
-          return { success: true, singleLicense: true };
-        }
+        // Armazenar informações da sessão
+        localStorage.setItem('sessionId', sessionId);
         
-        // Múltiplas licenças - mostrar seletor
-        if (multipleLicenses && userLicenses) {
-          setLicenses(userLicenses);
-          setShowLicenseSelector(true);
-          return { success: true, multipleLicenses: true, licenses: userLicenses };
-        }
+        return { 
+          success: true, 
+          singleLicense: true,
+          sessionInfo
+        };
       }
       
-      return response.data;
+      return { success: false, message: response.data.message };
       
     } catch (error) {
       console.error('Erro no login:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Erro no login'
+      
+      // Verificar se é conflito de sessão
+      if (error.response?.status === 409 && error.response?.data?.requireConfirmation) {
+        return {
+          success: false,
+          requireConfirmation: true,
+          message: error.response.data.message,
+          otherSessions: error.response.data.otherSessions,
+          currentIP: error.response.data.currentIP,
+          options: error.response.data.options
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Erro inesperado no login' 
       };
     } finally {
       setLoginLoading(false);

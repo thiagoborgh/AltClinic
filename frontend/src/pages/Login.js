@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 
 import { useAuth } from '../hooks/useAuth';
 import LicenseSelector from '../components/Auth/LicenseSelector';
+import SessionConflictDialog from '../components/Auth/SessionConflictDialog';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ const Login = () => {
     setShowLicenseSelector 
   } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState(null);
+  const [pendingLoginData, setPendingLoginData] = useState(null);
 
   const {
     control,
@@ -55,17 +58,87 @@ const Login = () => {
       
       if (result.success) {
         if (result.singleLicense) {
-          toast.success('Login realizado com sucesso!');
+          toast.success(`Login realizado com sucesso! ${result.sessionInfo?.message || ''}`);
           navigate('/dashboard');
         } else if (result.multipleLicenses) {
           toast.success('Selecione a clínica que deseja acessar');
         }
+      } else if (result.requireConfirmation) {
+        // Conflito de sessão detectado
+        setSessionConflict({
+          message: result.message,
+          otherSessions: result.otherSessions,
+          currentIP: result.currentIP,
+          options: result.options
+        });
+        setPendingLoginData(data);
       } else {
         toast.error(result.message || 'Erro ao fazer login');
       }
     } catch (error) {
       toast.error('Erro inesperado. Tente novamente.');
     }
+  };
+
+  const handleSessionConflictResolve = async (resolveData) => {
+    if (!pendingLoginData) return;
+
+    try {
+      let forceLogin = true;
+      let sessionsToRemove = [];
+
+      switch (resolveData.action) {
+        case 'force_login':
+          // Entrar normalmente, manter outras sessões
+          forceLogin = true;
+          sessionsToRemove = [];
+          break;
+        
+        case 'logout_selected':
+          // Encerrar sessões selecionadas
+          forceLogin = true;
+          sessionsToRemove = resolveData.selectedSessions;
+          break;
+        
+        case 'logout_all_others':
+          // Encerrar todas as outras sessões (será tratado no backend)
+          forceLogin = true;
+          sessionsToRemove = ['all_others'];
+          break;
+        
+        default:
+          return;
+      }
+
+      const result = await login(
+        pendingLoginData.email, 
+        pendingLoginData.senha, 
+        forceLogin, 
+        sessionsToRemove
+      );
+
+      if (result.success) {
+        setSessionConflict(null);
+        setPendingLoginData(null);
+        
+        let message = 'Login realizado com sucesso!';
+        if (sessionsToRemove.length > 0) {
+          message += ` ${sessionsToRemove.length} sessão(ões) encerrada(s).`;
+        }
+        
+        toast.success(message);
+        navigate('/dashboard');
+      } else {
+        toast.error(result.message || 'Erro ao fazer login');
+      }
+    } catch (error) {
+      toast.error('Erro inesperado. Tente novamente.');
+    }
+  };
+
+  const handleSessionConflictClose = () => {
+    setSessionConflict(null);
+    setPendingLoginData(null);
   };
 
   const handleSelectLicense = async (selectedLicense) => {
@@ -229,6 +302,15 @@ const Login = () => {
         licenses={licenses}
         user={user}
         onSelectLicense={handleSelectLicense}
+        loading={loginLoading}
+      />
+
+      {/* Diálogo de Conflito de Sessão */}
+      <SessionConflictDialog
+        open={!!sessionConflict}
+        onClose={handleSessionConflictClose}
+        conflictData={sessionConflict}
+        onResolve={handleSessionConflictResolve}
         loading={loginLoading}
       />
     </Box>

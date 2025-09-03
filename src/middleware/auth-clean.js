@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
+const sessionManager = require('./sessionManager');
 
 /**
- * Middleware de autenticação JWT (Sistema Atual)
+ * Middleware de autenticação JWT com controle de sessões
  */
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -18,12 +19,21 @@ const authenticateToken = (req, res, next) => {
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_change_in_production';
     const decoded = jwt.verify(token, jwtSecret);
     
+    // Verificar se a sessão ainda é válida
+    if (decoded.sessionId && !sessionManager.isSessionValid(decoded.id, decoded.sessionId)) {
+      return res.status(401).json({ 
+        error: 'Sessão expirada',
+        message: 'Sua sessão foi encerrada. Faça login novamente.'
+      });
+    }
+    
     // Adicionar informações do usuário ao request
     req.user = {
       id: decoded.id,
       email: decoded.email,
       tenantId: decoded.tenantId,
-      role: decoded.role
+      role: decoded.role,
+      sessionId: decoded.sessionId
     };
     
     next();

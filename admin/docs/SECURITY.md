@@ -9,36 +9,40 @@ A Intranet Altclinic implementa múltiplas camadas de segurança para proteger d
 ## 🔐 **AUTENTICAÇÃO E AUTORIZAÇÃO**
 
 ### Sistema de Autenticação
+
 - **JWT (JSON Web Tokens)** com expiração de 24 horas
 - **bcrypt** para hash de senhas (rounds: 12)
 - **Refresh tokens** não implementados (segurança adicional)
 - **Logout** invalida tokens no servidor
 
 ### Níveis de Acesso
+
 ```javascript
 const roles = {
-  'super_admin': {
-    permissions: ['*'], // Acesso total
-    description: 'Acesso completo, pode sincronizar dados'
+  super_admin: {
+    permissions: ["*"], // Acesso total
+    description: "Acesso completo, pode sincronizar dados",
   },
-  'admin': {
+  admin: {
     permissions: [
-      'licencas:read', 'licencas:write',
-      'configuracoes:read', 'configuracoes:write',
-      'relatorios:read', 'whatsapp:manage'
+      "licencas:read",
+      "licencas:write",
+      "configuracoes:read",
+      "configuracoes:write",
+      "relatorios:read",
+      "whatsapp:manage",
     ],
-    description: 'Acesso completo exceto operações críticas'
+    description: "Acesso completo exceto operações críticas",
   },
-  'viewer': {
-    permissions: [
-      'licencas:read', 'configuracoes:read', 'relatorios:read'
-    ],
-    description: 'Apenas visualização (futuro)'
-  }
+  viewer: {
+    permissions: ["licencas:read", "configuracoes:read", "relatorios:read"],
+    description: "Apenas visualização (futuro)",
+  },
 };
 ```
 
 ### Validação de Senhas
+
 ```javascript
 const passwordPolicy = {
   minLength: 8,
@@ -46,7 +50,7 @@ const passwordPolicy = {
   requireLowercase: true,
   requireNumbers: true,
   requireSpecialChars: true,
-  preventCommonPasswords: true
+  preventCommonPasswords: true,
 };
 ```
 
@@ -55,6 +59,7 @@ const passwordPolicy = {
 ## 🛡️ **PROTEÇÕES DE REDE**
 
 ### Rate Limiting
+
 ```nginx
 # Configurações Nginx
 limit_req_zone $binary_remote_addr zone=api:10m rate=30r/m;
@@ -71,6 +76,7 @@ location /api/admin/ {
 ```
 
 ### Headers de Segurança
+
 ```nginx
 # Headers obrigatórios em produção
 add_header Strict-Transport-Security "max-age=63072000" always;
@@ -82,6 +88,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsaf
 ```
 
 ### Firewall (UFW)
+
 ```bash
 # Configuração básica
 sudo ufw default deny incoming
@@ -100,59 +107,61 @@ sudo ufw deny 3000  # Frontend dev
 ## 🔒 **CRIPTOGRAFIA E DADOS SENSÍVEIS**
 
 ### Criptografia de Dados
+
 ```javascript
 // Exemplo de criptografia para dados sensíveis
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 class DataEncryption {
   static encrypt(text, key) {
-    const algorithm = 'aes-256-gcm';
+    const algorithm = "aes-256-gcm";
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipher(algorithm, key);
-    
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
+
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+
     const authTag = cipher.getAuthTag();
-    
+
     return {
       encrypted,
-      iv: iv.toString('hex'),
-      authTag: authTag.toString('hex')
+      iv: iv.toString("hex"),
+      authTag: authTag.toString("hex"),
     };
   }
-  
+
   static decrypt(encryptedData, key) {
-    const algorithm = 'aes-256-gcm';
+    const algorithm = "aes-256-gcm";
     const decipher = crypto.createDecipher(algorithm, key);
-    
-    decipher.setAuthTag(Buffer.from(encryptedData.authTag, 'hex'));
-    
-    let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
+
+    decipher.setAuthTag(Buffer.from(encryptedData.authTag, "hex"));
+
+    let decrypted = decipher.update(encryptedData.encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+
     return decrypted;
   }
 }
 ```
 
 ### Mascaramento de Dados
+
 ```javascript
 // Mascaramento de campos sensíveis na API
 const maskSensitiveData = (config) => {
-  const sensitiveFields = ['password', 'api_key', 'token', 'secret'];
-  
+  const sensitiveFields = ["password", "api_key", "token", "secret"];
+
   const masked = { ...config };
-  
-  Object.keys(masked).forEach(key => {
-    if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
+
+  Object.keys(masked).forEach((key) => {
+    if (sensitiveFields.some((field) => key.toLowerCase().includes(field))) {
       const value = masked[key];
-      if (typeof value === 'string' && value.length > 4) {
-        masked[key] = value.substring(0, 4) + '*'.repeat(value.length - 4);
+      if (typeof value === "string" && value.length > 4) {
+        masked[key] = value.substring(0, 4) + "*".repeat(value.length - 4);
       }
     }
   });
-  
+
   return masked;
 };
 ```
@@ -162,6 +171,7 @@ const maskSensitiveData = (config) => {
 ## 🗄️ **SEGURANÇA DO BANCO DE DADOS**
 
 ### Configurações SQLite Seguras
+
 ```sql
 -- Configurações de segurança no banco
 PRAGMA journal_mode = WAL;
@@ -174,6 +184,7 @@ PRAGMA auto_vacuum = FULL;
 ```
 
 ### Backup Seguro
+
 ```bash
 #!/bin/bash
 # Script de backup com criptografia
@@ -194,6 +205,7 @@ shred -vfz -n 3 /tmp/admin_temp.sqlite
 ```
 
 ### Auditoria Completa
+
 ```sql
 -- Tabela de logs de auditoria
 CREATE TABLE IF NOT EXISTS admin_logs (
@@ -220,6 +232,7 @@ CREATE INDEX idx_admin_logs_created_at ON admin_logs(created_at);
 ## 🔍 **MONITORAMENTO E DETECÇÃO**
 
 ### Log Security Events
+
 ```javascript
 // Sistema de logs de segurança
 class SecurityLogger {
@@ -228,71 +241,82 @@ class SecurityLogger {
       timestamp: new Date().toISOString(),
       type: type,
       ip: req.ip || req.connection.remoteAddress,
-      userAgent: req.headers['user-agent'],
-      user: req.user?.email || 'anonymous',
+      userAgent: req.headers["user-agent"],
+      user: req.user?.email || "anonymous",
       details: details,
-      severity: this.getSeverity(type)
+      severity: this.getSeverity(type),
     };
-    
+
     // Log para arquivo específico de segurança
-    console.log('SECURITY:', JSON.stringify(logEntry));
-    
+    console.log("SECURITY:", JSON.stringify(logEntry));
+
     // Alertas para eventos críticos
-    if (logEntry.severity === 'critical') {
+    if (logEntry.severity === "critical") {
       this.sendSecurityAlert(logEntry);
     }
   }
-  
+
   static getSeverity(type) {
     const severityMap = {
-      'failed_login': 'medium',
-      'suspicious_activity': 'high',
-      'privilege_escalation': 'critical',
-      'data_breach_attempt': 'critical',
-      'unauthorized_access': 'high'
+      failed_login: "medium",
+      suspicious_activity: "high",
+      privilege_escalation: "critical",
+      data_breach_attempt: "critical",
+      unauthorized_access: "high",
     };
-    
-    return severityMap[type] || 'low';
+
+    return severityMap[type] || "low";
   }
 }
 ```
 
 ### Detecção de Intrusão
+
 ```javascript
 // Middleware para detecção de atividades suspeitas
 const suspiciousActivityDetector = (req, res, next) => {
   const ip = req.ip;
-  const userAgent = req.headers['user-agent'];
-  
+  const userAgent = req.headers["user-agent"];
+
   // Detectar múltiplas tentativas de login
-  if (req.path === '/auth/login' && req.method === 'POST') {
+  if (req.path === "/auth/login" && req.method === "POST") {
     const attempts = getLoginAttempts(ip);
     if (attempts > 5) {
-      SecurityLogger.logSecurityEvent('suspicious_login_attempts', {
-        attempts: attempts,
-        timeWindow: '15 minutes'
-      }, req);
-      
+      SecurityLogger.logSecurityEvent(
+        "suspicious_login_attempts",
+        {
+          attempts: attempts,
+          timeWindow: "15 minutes",
+        },
+        req
+      );
+
       return res.status(429).json({
         success: false,
-        error: 'Too many login attempts. Please try again later.'
+        error: "Too many login attempts. Please try again later.",
       });
     }
   }
-  
+
   // Detectar User-Agents suspeitos
-  const suspiciousAgents = ['sqlmap', 'nikto', 'nessus', 'burp'];
-  if (suspiciousAgents.some(agent => userAgent.toLowerCase().includes(agent))) {
-    SecurityLogger.logSecurityEvent('suspicious_user_agent', {
-      userAgent: userAgent
-    }, req);
-    
+  const suspiciousAgents = ["sqlmap", "nikto", "nessus", "burp"];
+  if (
+    suspiciousAgents.some((agent) => userAgent.toLowerCase().includes(agent))
+  ) {
+    SecurityLogger.logSecurityEvent(
+      "suspicious_user_agent",
+      {
+        userAgent: userAgent,
+      },
+      req
+    );
+
     return res.status(403).json({
       success: false,
-      error: 'Access denied'
+      error: "Access denied",
     });
   }
-  
+
   next();
 };
 ```
@@ -304,6 +328,7 @@ const suspiciousActivityDetector = (req, res, next) => {
 ### Procedimentos de Emergência
 
 #### 1. Suspeita de Comprometimento
+
 ```bash
 # Script de emergência
 #!/bin/bash
@@ -328,55 +353,61 @@ echo "$(date): Emergency lockdown executed" >> /var/lib/altclinic/logs/security.
 ```
 
 #### 2. Rotação de Chaves de Emergência
+
 ```javascript
 // Script para rotação de JWT secret
 const rotateJWTSecret = async () => {
-  const newSecret = crypto.randomBytes(64).toString('hex');
-  
+  const newSecret = crypto.randomBytes(64).toString("hex");
+
   // Atualizar .env
-  const envPath = '/var/www/altclinic-admin/backend/.env';
-  const envContent = fs.readFileSync(envPath, 'utf8');
+  const envPath = "/var/www/altclinic-admin/backend/.env";
+  const envContent = fs.readFileSync(envPath, "utf8");
   const newContent = envContent.replace(
     /JWT_SECRET=.*/,
     `JWT_SECRET=${newSecret}`
   );
-  
+
   fs.writeFileSync(envPath, newContent);
-  
+
   // Reiniciar aplicação
-  exec('pm2 restart altclinic-admin-backend');
-  
-  console.log('JWT Secret rotated successfully');
+  exec("pm2 restart altclinic-admin-backend");
+
+  console.log("JWT Secret rotated successfully");
 };
 ```
 
 ### Plano de Resposta a Incidentes
 
 #### Fase 1: Detecção (0-15 minutos)
+
 1. **Alertas automáticos** disparam
 2. **Análise inicial** dos logs
 3. **Classificação** do incidente
 4. **Notificação** da equipe
 
 #### Fase 2: Contenção (15-60 minutos)
+
 1. **Isolamento** do sistema afetado
 2. **Backup de emergência**
 3. **Bloqueio** de IPs maliciosos
 4. **Preservação** de evidências
 
 #### Fase 3: Erradicação (1-4 horas)
+
 1. **Identificação** da vulnerabilidade
 2. **Aplicação** de patches
 3. **Remoção** de malware/intrusos
 4. **Fortalecimento** das defesas
 
 #### Fase 4: Recuperação (4-24 horas)
+
 1. **Restauração** dos serviços
 2. **Monitoramento** intensivo
 3. **Validação** da segurança
 4. **Comunicação** com clientes
 
 #### Fase 5: Lições Aprendidas (1-7 dias)
+
 1. **Análise** pós-incidente
 2. **Documentação** das lições
 3. **Melhoria** dos processos
@@ -389,30 +420,28 @@ const rotateJWTSecret = async () => {
 ### LGPD (Lei Geral de Proteção de Dados)
 
 #### Tratamento de Dados Pessoais
+
 ```javascript
 // Implementação de consentimento LGPD
 const lgpdConsent = {
-  purposes: [
-    'administracao_sistema',
-    'suporte_tecnico',
-    'melhorias_produto'
-  ],
-  
+  purposes: ["administracao_sistema", "suporte_tecnico", "melhorias_produto"],
+
   lawfulBases: [
-    'legitimate_interest',
-    'contract_execution',
-    'legal_obligation'
+    "legitimate_interest",
+    "contract_execution",
+    "legal_obligation",
   ],
-  
+
   dataRetention: {
-    logs: '2 years',
-    configurations: 'while license active',
-    user_data: 'while account active'
-  }
+    logs: "2 years",
+    configurations: "while license active",
+    user_data: "while account active",
+  },
 };
 ```
 
 #### Direitos dos Titulares
+
 ```javascript
 // Implementação dos direitos LGPD
 class LGPDRights {
@@ -422,23 +451,24 @@ class LGPDRights {
     return {
       personal_data: data.personal,
       configurations: data.configs,
-      logs: data.logs.filter(log => 
-        Date.now() - new Date(log.created_at) < 2 * 365 * 24 * 60 * 60 * 1000
-      )
+      logs: data.logs.filter(
+        (log) =>
+          Date.now() - new Date(log.created_at) < 2 * 365 * 24 * 60 * 60 * 1000
+      ),
     };
   }
-  
+
   // Direito de retificação
   static async updateUserData(licencaId, updates) {
     await db.updateLicense(licencaId, updates);
-    await this.logDataChange(licencaId, 'retification', updates);
+    await this.logDataChange(licencaId, "retification", updates);
   }
-  
+
   // Direito de exclusão
   static async deleteUserData(licencaId) {
     await db.deleteLicense(licencaId);
     await db.anonymizeLogs(licencaId);
-    await this.logDataChange(licencaId, 'deletion');
+    await this.logDataChange(licencaId, "deletion");
   }
 }
 ```
@@ -448,6 +478,7 @@ class LGPDRights {
 ## 🔧 **CONFIGURAÇÕES DE SEGURANÇA**
 
 ### Configuração de Produção (.env)
+
 ```env
 # Segurança
 NODE_ENV=production
@@ -477,39 +508,42 @@ ENCRYPTION_KEY=chave-para-dados-sensíveis-256-bits
 ```
 
 ### Middleware de Segurança
+
 ```javascript
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const mongoSanitize = require("express-mongo-sanitize");
 
 // Configuração de segurança
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false
-}));
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP',
+  message: "Too many requests from this IP",
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
 
-app.use('/api/', limiter);
+app.use("/api/", limiter);
 
 // Sanitização
 app.use(mongoSanitize());
@@ -520,6 +554,7 @@ app.use(mongoSanitize());
 ## 🧪 **TESTES DE SEGURANÇA**
 
 ### Checklist de Testes
+
 ```bash
 # 1. Teste de autenticação
 curl -X POST http://localhost:3001/api/admin/auth/login \
@@ -547,6 +582,7 @@ curl -X PUT http://localhost:3001/api/admin/licencas/1 \
 ```
 
 ### Ferramentas de Teste
+
 ```bash
 # OWASP ZAP
 docker run -t owasp/zap2docker-stable zap-baseline.py \
@@ -567,58 +603,60 @@ nmap -sV -sC admin.altclinic.com
 ## 📊 **MÉTRICAS DE SEGURANÇA**
 
 ### KPIs de Segurança
+
 ```javascript
 const securityMetrics = {
   // Autenticação
   failed_logins_per_day: 0,
   successful_logins_per_day: 0,
   blocked_ips_count: 0,
-  
+
   // Atividade suspeita
   suspicious_requests_per_day: 0,
   blocked_requests_per_day: 0,
-  
+
   // Sistema
   security_patches_applied: 0,
   vulnerabilities_found: 0,
   vulnerabilities_fixed: 0,
-  
+
   // Compliance
   data_requests_lgpd: 0,
   data_deletions_lgpd: 0,
-  consent_updates: 0
+  consent_updates: 0,
 };
 ```
 
 ### Dashboard de Segurança
+
 ```javascript
 // Endpoint para métricas de segurança
-app.get('/api/admin/security/metrics', authenticateToken, async (req, res) => {
+app.get("/api/admin/security/metrics", authenticateToken, async (req, res) => {
   try {
     const metrics = await SecurityMetrics.getDaily();
-    
+
     res.json({
       success: true,
       data: {
         authentication: {
           failed_logins: metrics.failed_logins,
           successful_logins: metrics.successful_logins,
-          blocked_ips: metrics.blocked_ips
+          blocked_ips: metrics.blocked_ips,
         },
         threats: {
           blocked_requests: metrics.blocked_requests,
-          suspicious_activity: metrics.suspicious_activity
+          suspicious_activity: metrics.suspicious_activity,
         },
         compliance: {
           lgpd_requests: metrics.lgpd_requests,
-          data_retention_compliance: metrics.retention_compliance
-        }
-      }
+          data_retention_compliance: metrics.retention_compliance,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch security metrics'
+      error: "Failed to fetch security metrics",
     });
   }
 });
@@ -629,18 +667,21 @@ app.get('/api/admin/security/metrics', authenticateToken, async (req, res) => {
 ## 📚 **RECURSOS E REFERÊNCIAS**
 
 ### Standards e Frameworks
+
 - **OWASP Top 10** - Vulnerabilidades web mais críticas
 - **NIST Cybersecurity Framework** - Framework de cibersegurança
 - **ISO 27001** - Gestão de segurança da informação
 - **LGPD** - Lei Geral de Proteção de Dados
 
 ### Ferramentas Recomendadas
+
 - **OWASP ZAP** - Teste de segurança
 - **Burp Suite** - Teste de penetração
 - **SSL Labs** - Teste de SSL/TLS
 - **Security Headers** - Análise de headers
 
 ### Treinamento da Equipe
+
 - Phishing awareness
 - Secure coding practices
 - Incident response procedures
@@ -651,6 +692,7 @@ app.get('/api/admin/security/metrics', authenticateToken, async (req, res) => {
 ## ✅ **CHECKLIST DE SEGURANÇA**
 
 ### Configuração Inicial
+
 - [ ] JWT secret forte configurado
 - [ ] Senhas padrão alteradas
 - [ ] Headers de segurança configurados
@@ -658,18 +700,21 @@ app.get('/api/admin/security/metrics', authenticateToken, async (req, res) => {
 - [ ] Firewall configurado
 
 ### Monitoramento
+
 - [ ] Logs de segurança ativos
 - [ ] Alertas configurados
 - [ ] Backup automático funcionando
 - [ ] Detecção de intrusão ativa
 
 ### Compliance
+
 - [ ] Política de privacidade implementada
 - [ ] Consentimento LGPD coletado
 - [ ] Retenção de dados configurada
 - [ ] Procedimentos de exclusão implementados
 
 ### Testes
+
 - [ ] Testes de penetração realizados
 - [ ] Vulnerabilidades corrigidas
 - [ ] SSL/TLS validado
@@ -677,5 +722,5 @@ app.get('/api/admin/security/metrics', authenticateToken, async (req, res) => {
 
 ---
 
-*Guia de Segurança - Intranet Altclinic v1.0*  
-*Última atualização: 02/09/2025*
+_Guia de Segurança - Intranet Altclinic v1.0_  
+_Última atualização: 02/09/2025_

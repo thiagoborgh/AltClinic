@@ -11,6 +11,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 > ⚙️ **Configurações técnicas e de infraestrutura que devem ser definidas pela equipe técnica da Altclinic**
 
 ### 🤖 **Seção AI - Inteligência Artificial**
+
 - ✅ `claude_api_key` - Chave da API do Claude AI
 - ✅ `claude_model` - Modelo do Claude a ser utilizado
 - ✅ `claude_max_tokens` - Limite máximo de tokens
@@ -22,6 +23,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### ⚙️ **Seção SISTEMA - Configurações Técnicas**
+
 - ✅ `ambiente` - Ambiente (desenvolvimento/produção)
 - ✅ `debug_mode` - Modo de debug ativo/inativo
 - ✅ `log_level` - Nível de logging do sistema
@@ -36,6 +38,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 📱 **Seção WHATSAPP - Configurações Técnicas**
+
 - ✅ `api_token` - Token da API do WhatsApp
 - ✅ `auto_init` - Inicialização automática
 - ✅ `qr_timeout` - Timeout do QR Code
@@ -47,6 +50,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 📧 **Seção EMAIL - Configurações SMTP**
+
 - ✅ `smtp_host` - Servidor SMTP
 - ✅ `smtp_port` - Porta do servidor SMTP
 - ✅ `smtp_secure` - Conexão segura (SSL/TLS)
@@ -58,6 +62,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 🔗 **Seção INTEGRAÇÕES - APIs Corporativas**
+
 - ✅ `twilio_account_sid` - SID da conta Twilio
 - ✅ `twilio_auth_token` - Token de autenticação Twilio
 - ✅ `telegram_bot_token` - Token do bot do Telegram
@@ -71,6 +76,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 > 🏥 **Configurações específicas da clínica/consultório que devem ser definidas pelo contratante**
 
 ### 👥 **Seção CRM - Gestão de Pacientes**
+
 - 🔵 `periodo_inatividade` - Período para considerar paciente inativo (em dias)
 
 **Justificativa**: Política específica de cada clínica sobre gestão de pacientes.
@@ -78,6 +84,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 🔒 **Seção LGPD - Conformidade Legal**
+
 - 🔵 `texto_consentimento` - Texto do termo de consentimento LGPD
 
 **Justificativa**: Cada clínica deve definir seu próprio termo de consentimento.
@@ -85,6 +92,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 💰 **Seção PIX - Dados Financeiros**
+
 - 🔵 `chave_pix` - Chave PIX da clínica
 - 🔵 `banco` - Nome do banco
 - 🔵 `nome_titular` - Nome do titular da conta
@@ -94,6 +102,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 ---
 
 ### 📧 **Seção INTEGRAÇÕES - Dados da Clínica**
+
 - 🔵 `mailchimp_from_email` - Email remetente para campanhas
 - 🔵 `mailchimp_from_name` - Nome remetente para campanhas
 - 🔵 `telegram_chat_id` - ID do chat do Telegram da clínica
@@ -108,6 +117,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 > ⚡ **Configurações que podem ser definidas em conjunto ou transferidas após setup inicial**
 
 ### 📧 **Seção INTEGRAÇÕES - Ativação de Serviços**
+
 - 🟡 `mailchimp_ativo` - Ativar/desativar Mailchimp
 - 🟡 `telegram_ativo` - Ativar/desativar Telegram
 - 🟡 `claude_ativo` - Ativar/desativar Claude AI
@@ -115,6 +125,7 @@ Este documento define claramente as responsabilidades de configuração do siste
 **Processo**: Altclinic configura, usuário decide quando ativar.
 
 ### 📧 **Seção INTEGRAÇÕES - Configurações Mailchimp**
+
 - 🟡 `mailchimp_api_key` - Chave da API (se cliente tiver conta própria)
 - 🟡 `mailchimp_server_prefix` - Prefixo do servidor
 - 🟡 `mailchimp_list_id` - ID da lista de contatos
@@ -126,16 +137,19 @@ Este documento define claramente as responsabilidades de configuração do siste
 ## 📝 **Processo de Configuração Recomendado**
 
 ### 1️⃣ **Fase de Setup Inicial** (Altclinic)
+
 - Configurar todas as APIs e integrações técnicas
 - Definir configurações de sistema e segurança
 - Preparar ambiente de produção
 
 ### 2️⃣ **Fase de Personalização** (Usuário + Altclinic)
+
 - Usuário fornece dados específicos da clínica
 - Altclinic implementa configurações personalizadas
 - Testes de integração em conjunto
 
 ### 3️⃣ **Fase de Operação** (Usuário)
+
 - Usuário gerencia ativação/desativação de serviços
 - Ajustes de políticas de negócio
 - Manutenção de dados da clínica
@@ -145,15 +159,18 @@ Este documento define claramente as responsabilidades de configuração do siste
 ## 🔐 **Considerações de Segurança**
 
 ### 🟥 **CRÍTICO - Apenas Altclinic**
+
 - Chaves de API
 - Tokens de autenticação
 - Configurações de servidor
 
 ### 🟨 **SENSÍVEL - Compartilhado**
+
 - Dados de integração
 - Configurações de ativação
 
 ### 🟩 **PÚBLICO - Usuário**
+
 - Dados da clínica
 - Políticas de negócio
 - Textos personalizados
@@ -168,6 +185,6 @@ Este documento define claramente as responsabilidades de configuração do siste
 
 ---
 
-*Documento criado em: Setembro 2025*  
-*Versão: 1.0*  
-*Última atualização: 02/09/2025*
+_Documento criado em: Setembro 2025_  
+_Versão: 1.0_  
+_Última atualização: 02/09/2025_

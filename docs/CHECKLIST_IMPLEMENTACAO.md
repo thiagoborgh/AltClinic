@@ -7,7 +7,9 @@
 ## 🚀 **FASE 1: SETUP INICIAL (ALTCLINIC)**
 
 ### 🤖 **Configurações de IA**
+
 - [ ] **Claude AI**
+
   - [ ] Obter API key da Anthropic
   - [ ] Configurar `claude_api_key`
   - [ ] Definir `claude_model` (recomendado: claude-3-sonnet-20240229)
@@ -15,6 +17,7 @@
   - [ ] Testar conexão com API
 
 - [ ] **Google Gemini**
+
   - [ ] Obter API key do Google Cloud
   - [ ] Configurar `gemini_api_key`
   - [ ] Testar requisições
@@ -25,6 +28,7 @@
   - [ ] Validar acesso aos modelos
 
 ### 📧 **Configurações de Email**
+
 - [ ] **SMTP Corporativo**
   - [ ] Configurar servidor SMTP
   - [ ] Definir `smtp_host`, `smtp_port`, `smtp_secure`
@@ -32,7 +36,9 @@
   - [ ] Testar envio de email
 
 ### 🔗 **Integrações Corporativas**
+
 - [ ] **Twilio**
+
   - [ ] Obter conta Twilio
   - [ ] Configurar `twilio_account_sid`
   - [ ] Configurar `twilio_auth_token`
@@ -44,7 +50,9 @@
   - [ ] Testar envio de mensagens
 
 ### ⚙️ **Configurações de Sistema**
+
 - [ ] **Ambiente**
+
   - [ ] Definir `ambiente` (production)
   - [ ] Configurar `debug_mode` (false)
   - [ ] Definir `log_level` (info)
@@ -57,6 +65,7 @@
   - [ ] Configurar `cron_verificacao_inativos`
 
 ### 📱 **WhatsApp Integration**
+
 - [ ] **API Setup**
   - [ ] Configurar WhatsApp Web.js
   - [ ] Definir `session_path`
@@ -69,7 +78,9 @@
 ## 👤 **FASE 2: DADOS DO CLIENTE (USUÁRIO)**
 
 ### 📋 **Informações Necessárias do Cliente**
+
 - [ ] **Dados da Clínica**
+
   - [ ] Nome completo da clínica
   - [ ] CNPJ
   - [ ] Endereço completo
@@ -77,12 +88,14 @@
   - [ ] Email principal
 
 - [ ] **Dados Financeiros (PIX)**
+
   - [ ] Chave PIX preferida
   - [ ] Nome do banco
   - [ ] Nome do titular da conta
   - [ ] Verificar se dados estão corretos
 
 - [ ] **Políticas da Clínica**
+
   - [ ] Período para considerar paciente inativo (dias)
   - [ ] Horários de funcionamento
   - [ ] Políticas de cancelamento
@@ -93,6 +106,7 @@
   - [ ] Email para campanhas Mailchimp
 
 ### 🔒 **LGPD - Termo de Consentimento**
+
 - [ ] **Elaboração do Termo**
   - [ ] Cliente elabora texto específico
   - [ ] Revisão jurídica recomendada
@@ -104,12 +118,15 @@
 ## 🤝 **FASE 3: CONFIGURAÇÃO COMPARTILHADA**
 
 ### 📧 **Mailchimp (Opcional)**
+
 - [ ] **Decisão de Implementação**
+
   - [ ] Cliente quer usar Mailchimp próprio?
   - [ ] Usar conta corporativa Altclinic?
   - [ ] Não usar Mailchimp?
 
 - [ ] **Se Conta Própria do Cliente:**
+
   - [ ] Cliente fornece `mailchimp_api_key`
   - [ ] Cliente fornece `mailchimp_server_prefix`
   - [ ] Cliente fornece `mailchimp_list_id`
@@ -121,6 +138,7 @@
   - [ ] Criar lista específica do cliente
 
 ### 🔄 **Ativação de Serviços**
+
 - [ ] **Definir quais serviços ativar:**
   - [ ] `claude_ativo` - IA para análises
   - [ ] `telegram_ativo` - Notificações Telegram
@@ -131,18 +149,22 @@
 ## 🔧 **FASE 4: TESTES E VALIDAÇÃO**
 
 ### ✅ **Testes de Sistema**
+
 - [ ] **WhatsApp**
+
   - [ ] Gerar QR Code
   - [ ] Conectar dispositivo
   - [ ] Enviar mensagem teste
   - [ ] Verificar recebimento
 
 - [ ] **Email/SMTP**
+
   - [ ] Enviar email teste
   - [ ] Verificar recebimento
   - [ ] Testar templates
 
 - [ ] **Integrações**
+
   - [ ] Testar Twilio (SMS)
   - [ ] Testar Telegram (se ativo)
   - [ ] Testar Mailchimp (se ativo)
@@ -153,7 +175,9 @@
   - [ ] Verificar limites e quotas
 
 ### 🔍 **Testes End-to-End**
+
 - [ ] **Fluxo Completo de Paciente**
+
   - [ ] Cadastrar paciente teste
   - [ ] Agendar consulta
   - [ ] Testar lembretes automáticos
@@ -170,7 +194,9 @@
 ## 📊 **FASE 5: DOCUMENTAÇÃO E ENTREGA**
 
 ### 📝 **Documentação para Cliente**
+
 - [ ] **Manual de Uso**
+
   - [ ] Como acessar configurações
   - [ ] Como conectar WhatsApp
   - [ ] Como alterar configurações permitidas
@@ -181,6 +207,7 @@
   - [ ] Contatos de suporte
 
 ### 🎓 **Treinamento**
+
 - [ ] **Sessão de Treinamento**
   - [ ] Apresentar interface de configurações
   - [ ] Demonstrar conexão WhatsApp
@@ -192,7 +219,9 @@
 ## 🚨 **CHECKLIST DE SEGURANÇA**
 
 ### 🔐 **Dados Sensíveis**
+
 - [ ] **Verificar Criptografia**
+
   - [ ] API keys criptografadas
   - [ ] Senhas criptografadas
   - [ ] Dados PIX criptografados
@@ -203,7 +232,9 @@
   - [ ] Backup das configurações
 
 ### 🛡️ **Validações**
+
 - [ ] **Inputs**
+
   - [ ] Validar formato de emails
   - [ ] Validar formato de chaves PIX
   - [ ] Validar números de telefone
@@ -218,31 +249,33 @@
 ## 📞 **CONTATOS DE SUPORTE**
 
 ### 🏢 **Altclinic**
+
 - **Técnico**: suporte-tecnico@altclinic.com
 - **Comercial**: suporte@altclinic.com
 - **Emergência**: +55 11 99999-9999
 
 ### 👤 **Cliente**
-- **Responsável**: ________________
-- **Email**: ________________
-- **Telefone**: ________________
+
+- **Responsável**: ******\_\_\_\_******
+- **Email**: ******\_\_\_\_******
+- **Telefone**: ******\_\_\_\_******
 
 ---
 
 ## 📅 **CRONOGRAMA SUGERIDO**
 
-| Fase | Responsável | Tempo Estimado |
-|------|-------------|----------------|
-| Setup Inicial | Altclinic | 2-3 dias |
-| Coleta de Dados | Cliente | 1 dia |
-| Configuração Compartilhada | Ambos | 1 dia |
-| Testes | Altclinic | 1 dia |
-| Treinamento | Altclinic | 2 horas |
+| Fase                       | Responsável | Tempo Estimado |
+| -------------------------- | ----------- | -------------- |
+| Setup Inicial              | Altclinic   | 2-3 dias       |
+| Coleta de Dados            | Cliente     | 1 dia          |
+| Configuração Compartilhada | Ambos       | 1 dia          |
+| Testes                     | Altclinic   | 1 dia          |
+| Treinamento                | Altclinic   | 2 horas        |
 
 **Total**: 5-6 dias úteis
 
 ---
 
-*Checklist de Implementação v1.0*  
-*Criado em: Setembro 2025*  
-*Última atualização: 02/09/2025*
+_Checklist de Implementação v1.0_  
+_Criado em: Setembro 2025_  
+_Última atualização: 02/09/2025_

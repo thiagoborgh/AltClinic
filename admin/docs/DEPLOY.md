@@ -9,6 +9,7 @@ Este guia aborda o deploy completo da Intranet Altclinic em ambiente de produç�
 ## 🖥️ **REQUISITOS DO SERVIDOR**
 
 ### Especificações Mínimas
+
 - **CPU**: 2 cores
 - **RAM**: 4GB
 - **Storage**: 20GB SSD
@@ -16,6 +17,7 @@ Este guia aborda o deploy completo da Intranet Altclinic em ambiente de produç�
 - **Network**: IP público com SSL
 
 ### Especificações Recomendadas
+
 - **CPU**: 4 cores
 - **RAM**: 8GB
 - **Storage**: 50GB SSD
@@ -26,11 +28,13 @@ Este guia aborda o deploy completo da Intranet Altclinic em ambiente de produç�
 ## 🔧 **PREPARAÇÃO DO SERVIDOR**
 
 ### 1. Atualização do Sistema
+
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
 
 ### 2. Instalação do Node.js
+
 ```bash
 # Instalar Node.js 18 LTS
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -42,11 +46,13 @@ npm --version
 ```
 
 ### 3. Instalação do PM2
+
 ```bash
 sudo npm install -g pm2
 ```
 
 ### 4. Instalação do Nginx
+
 ```bash
 sudo apt install nginx -y
 sudo systemctl enable nginx
@@ -54,6 +60,7 @@ sudo systemctl start nginx
 ```
 
 ### 5. Configuração do Firewall
+
 ```bash
 sudo ufw enable
 sudo ufw allow ssh
@@ -66,6 +73,7 @@ sudo ufw status
 ## 📂 **ESTRUTURA DE DIRETÓRIOS**
 
 ### Criar Estrutura de Produção
+
 ```bash
 # Criar diretório principal
 sudo mkdir -p /var/www/altclinic-admin
@@ -92,6 +100,7 @@ sudo chown -R $USER:$USER /var/lib/altclinic
 ## 📦 **DEPLOY DO BACKEND**
 
 ### 1. Upload dos Arquivos
+
 ```bash
 # Via SCP
 scp -r admin/backend user@server:/var/www/altclinic-admin/
@@ -102,12 +111,14 @@ git clone https://github.com/altclinic/saee-admin.git .
 ```
 
 ### 2. Instalação das Dependências
+
 ```bash
 cd /var/www/altclinic-admin/backend
 npm ci --production
 ```
 
 ### 3. Configuração do .env
+
 ```bash
 cd /var/www/altclinic-admin/backend
 cp .env.example .env
@@ -115,6 +126,7 @@ nano .env
 ```
 
 **Arquivo .env de Produção:**
+
 ```env
 # Ambiente
 NODE_ENV=production
@@ -140,39 +152,45 @@ BACKUP_RETENTION_DAYS=30
 ```
 
 ### 4. Inicialização do Banco
+
 ```bash
 npm run init-db
 ```
 
 ### 5. Configuração do PM2
+
 ```bash
 # Criar ecosystem file
 nano ecosystem.config.js
 ```
 
 **ecosystem.config.js:**
+
 ```javascript
 module.exports = {
-  apps: [{
-    name: 'altclinic-admin-backend',
-    script: 'server.js',
-    cwd: '/var/www/altclinic-admin/backend',
-    instances: 'max',
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3001
+  apps: [
+    {
+      name: "altclinic-admin-backend",
+      script: "server.js",
+      cwd: "/var/www/altclinic-admin/backend",
+      instances: "max",
+      exec_mode: "cluster",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3001,
+      },
+      error_file: "/var/lib/altclinic/logs/backend-error.log",
+      out_file: "/var/lib/altclinic/logs/backend-out.log",
+      log_file: "/var/lib/altclinic/logs/backend-combined.log",
+      max_memory_restart: "1G",
+      node_args: "--max_old_space_size=1024",
     },
-    error_file: '/var/lib/altclinic/logs/backend-error.log',
-    out_file: '/var/lib/altclinic/logs/backend-out.log',
-    log_file: '/var/lib/altclinic/logs/backend-combined.log',
-    max_memory_restart: '1G',
-    node_args: '--max_old_space_size=1024'
-  }]
+  ],
 };
 ```
 
 ### 6. Iniciar Backend
+
 ```bash
 pm2 start ecosystem.config.js
 pm2 save
@@ -184,6 +202,7 @@ pm2 startup
 ## 🎨 **DEPLOY DO FRONTEND**
 
 ### 1. Build Local (se necessário)
+
 ```bash
 cd admin/frontend
 npm ci
@@ -191,6 +210,7 @@ npm run build
 ```
 
 ### 2. Upload do Build
+
 ```bash
 # Upload da pasta build
 scp -r admin/frontend/build/* user@server:/var/www/altclinic-admin/frontend/
@@ -200,6 +220,7 @@ rsync -avz admin/frontend/build/ user@server:/var/www/altclinic-admin/frontend/
 ```
 
 ### 3. Configuração de Permissões
+
 ```bash
 sudo chown -R www-data:www-data /var/www/altclinic-admin/frontend
 sudo chmod -R 755 /var/www/altclinic-admin/frontend
@@ -210,11 +231,13 @@ sudo chmod -R 755 /var/www/altclinic-admin/frontend
 ## 🌐 **CONFIGURAÇÃO DO NGINX**
 
 ### 1. Configuração do Site
+
 ```bash
 sudo nano /etc/nginx/sites-available/admin.altclinic.com
 ```
 
 **Configuração Nginx:**
+
 ```nginx
 # Rate limiting
 limit_req_zone $binary_remote_addr zone=api:10m rate=30r/m;
@@ -229,7 +252,7 @@ upstream altclinic_backend {
 server {
     listen 80;
     server_name admin.altclinic.com;
-    
+
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -237,36 +260,36 @@ server {
 server {
     listen 443 ssl http2;
     server_name admin.altclinic.com;
-    
+
     # SSL Configuration
     ssl_certificate /etc/letsencrypt/live/admin.altclinic.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/admin.altclinic.com/privkey.pem;
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:50m;
     ssl_session_tickets off;
-    
+
     # Modern configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
-    
+
     # Security headers
     add_header Strict-Transport-Security "max-age=63072000" always;
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     add_header Referrer-Policy "strict-origin-when-cross-origin";
-    
+
     # Root directory
     root /var/www/altclinic-admin/frontend;
     index index.html;
-    
+
     # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-    
+
     # API routes com rate limiting
     location /api/admin/auth/login {
         limit_req zone=login burst=3 nodelay;
@@ -280,7 +303,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-    
+
     location /api/admin/ {
         limit_req zone=api burst=10 nodelay;
         proxy_pass http://altclinic_backend;
@@ -293,18 +316,18 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-    
+
     # Static files caching
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         access_log off;
     }
-    
+
     # Frontend routing
     location / {
         try_files $uri $uri/ /index.html;
-        
+
         # Security for HTML files
         location ~* \.html$ {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
@@ -312,12 +335,12 @@ server {
             add_header Expires "0";
         }
     }
-    
+
     # Admin route specific
     location /admin {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Health check
     location /health {
         access_log off;
@@ -328,6 +351,7 @@ server {
 ```
 
 ### 2. Ativar Site
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/admin.altclinic.com /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -339,16 +363,19 @@ sudo systemctl reload nginx
 ## 🔒 **CONFIGURAÇÃO SSL**
 
 ### 1. Instalar Certbot
+
 ```bash
 sudo apt install certbot python3-certbot-nginx -y
 ```
 
 ### 2. Obter Certificado SSL
+
 ```bash
 sudo certbot --nginx -d admin.altclinic.com
 ```
 
 ### 3. Auto-renovação
+
 ```bash
 sudo crontab -e
 # Adicionar linha:
@@ -360,6 +387,7 @@ sudo crontab -e
 ## 📊 **MONITORAMENTO E LOGS**
 
 ### 1. Configuração de Logs
+
 ```bash
 # Criar arquivos de log
 sudo touch /var/lib/altclinic/logs/{backend-access.log,backend-error.log,nginx-access.log,nginx-error.log}
@@ -367,11 +395,13 @@ sudo chown $USER:$USER /var/lib/altclinic/logs/*
 ```
 
 ### 2. Logrotate
+
 ```bash
 sudo nano /etc/logrotate.d/altclinic-admin
 ```
 
 **Configuração Logrotate:**
+
 ```
 /var/lib/altclinic/logs/*.log {
     daily
@@ -388,6 +418,7 @@ sudo nano /etc/logrotate.d/altclinic-admin
 ```
 
 ### 3. Monitoramento com PM2
+
 ```bash
 # Status dos processos
 pm2 status
@@ -404,11 +435,13 @@ pm2 monit
 ## 🔄 **BACKUP AUTOMATIZADO**
 
 ### 1. Script de Backup
+
 ```bash
 sudo nano /usr/local/bin/altclinic-backup.sh
 ```
 
 **Script de Backup:**
+
 ```bash
 #!/bin/bash
 
@@ -453,6 +486,7 @@ echo "Backup completed: $DATE"
 ```
 
 ### 2. Permissões e Cron
+
 ```bash
 sudo chmod +x /usr/local/bin/altclinic-backup.sh
 
@@ -467,11 +501,13 @@ sudo crontab -e
 ## 🚨 **MONITORAMENTO E ALERTAS**
 
 ### 1. Health Check Script
+
 ```bash
 sudo nano /usr/local/bin/altclinic-health.sh
 ```
 
 **Health Check Script:**
+
 ```bash
 #!/bin/bash
 
@@ -510,6 +546,7 @@ fi
 ```
 
 ### 2. Configurar Monitoramento
+
 ```bash
 sudo chmod +x /usr/local/bin/altclinic-health.sh
 
@@ -524,11 +561,13 @@ sudo crontab -e
 ## 🔧 **MANUTENÇÃO E ATUALIZAÇÕES**
 
 ### 1. Script de Atualização
+
 ```bash
 sudo nano /usr/local/bin/altclinic-update.sh
 ```
 
 **Update Script:**
+
 ```bash
 #!/bin/bash
 
@@ -566,6 +605,7 @@ echo "Update completed: $DATE"
 ```
 
 ### 2. Zero Downtime Deploy
+
 ```bash
 # Para deploys sem downtime
 pm2 reload altclinic-admin-backend
@@ -576,27 +616,31 @@ pm2 reload altclinic-admin-backend
 ## 📈 **OTIMIZAÇÃO DE PERFORMANCE**
 
 ### 1. Configuração do Node.js
+
 ```javascript
 // No ecosystem.config.js
 module.exports = {
-  apps: [{
-    name: 'altclinic-admin-backend',
-    script: 'server.js',
-    instances: 'max',
-    exec_mode: 'cluster',
-    max_memory_restart: '1G',
-    node_args: '--max_old_space_size=1024',
-    
-    // Environment
-    env: {
-      NODE_ENV: 'production',
-      UV_THREADPOOL_SIZE: 16
-    }
-  }]
+  apps: [
+    {
+      name: "altclinic-admin-backend",
+      script: "server.js",
+      instances: "max",
+      exec_mode: "cluster",
+      max_memory_restart: "1G",
+      node_args: "--max_old_space_size=1024",
+
+      // Environment
+      env: {
+        NODE_ENV: "production",
+        UV_THREADPOOL_SIZE: 16,
+      },
+    },
+  ],
 };
 ```
 
 ### 2. Otimização do SQLite
+
 ```bash
 # No backend/database/database.js adicionar:
 pragma journal_mode = WAL;
@@ -611,12 +655,14 @@ pragma temp_store = memory;
 ## ✅ **CHECKLIST DE DEPLOY**
 
 ### Pré-Deploy
+
 - [ ] Servidor configurado com Node.js, PM2, Nginx
 - [ ] Domínio apontando para o servidor
 - [ ] Certificado SSL configurado
 - [ ] Firewall configurado
 
 ### Deploy Backend
+
 - [ ] Código do backend enviado
 - [ ] Dependências instaladas
 - [ ] Arquivo .env configurado com chaves de produção
@@ -624,12 +670,14 @@ pragma temp_store = memory;
 - [ ] PM2 configurado e rodando
 
 ### Deploy Frontend
+
 - [ ] Build gerado em produção
 - [ ] Arquivos enviados para servidor
 - [ ] Nginx configurado
 - [ ] Routing funcionando
 
 ### Pós-Deploy
+
 - [ ] API respondendo corretamente
 - [ ] Frontend carregando
 - [ ] Login funcionando
@@ -639,6 +687,7 @@ pragma temp_store = memory;
 - [ ] Logs configurados
 
 ### Testes de Produção
+
 - [ ] Login com credenciais padrão
 - [ ] Alteração de senha
 - [ ] CRUD de licenças
@@ -654,6 +703,7 @@ pragma temp_store = memory;
 ### Problemas Comuns
 
 **1. API não responde**
+
 ```bash
 # Verificar status PM2
 pm2 status
@@ -666,6 +716,7 @@ pm2 restart altclinic-admin-backend
 ```
 
 **2. Nginx 502 Bad Gateway**
+
 ```bash
 # Verificar backend
 curl http://localhost:3001/api/admin/health
@@ -678,6 +729,7 @@ sudo tail -f /var/log/nginx/error.log
 ```
 
 **3. SSL não funcionando**
+
 ```bash
 # Verificar certificado
 sudo certbot certificates
@@ -690,6 +742,7 @@ openssl s_client -connect admin.altclinic.com:443
 ```
 
 **4. Banco de dados corrompido**
+
 ```bash
 # Verificar integridade
 sqlite3 /var/lib/altclinic/database/admin.sqlite "PRAGMA integrity_check;"
@@ -704,11 +757,13 @@ cp /var/lib/altclinic/backups/admin_YYYYMMDD_HHMMSS.sqlite \
 ## 📞 **SUPORTE PÓS-DEPLOY**
 
 ### Contatos de Emergência
+
 - **Técnico**: dev@altclinic.com
 - **DevOps**: ops@altclinic.com
 - **Emergência**: +55 11 99999-9999
 
 ### Documentação de Referência
+
 - Logs: `/var/lib/altclinic/logs/`
 - Configurações: `/var/www/altclinic-admin/backend/.env`
 - Nginx: `/etc/nginx/sites-available/admin.altclinic.com`
@@ -716,5 +771,5 @@ cp /var/lib/altclinic/backups/admin_YYYYMMDD_HHMMSS.sqlite \
 
 ---
 
-*Guia de Deploy - Intranet Altclinic v1.0*  
-*Última atualização: 02/09/2025*
+_Guia de Deploy - Intranet Altclinic v1.0_  
+_Última atualização: 02/09/2025_

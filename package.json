@@ -2,10 +2,11 @@
   "name": "saee-sistema-agendamento",
   "version": "1.0.0",
   "description": "Sistema de Agendamento Automatizado para Clínicas Estéticas",
+  "type": "commonjs",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "migrate": "node src/migrate.js run",
     "migrate:create": "node src/migrate.js create",
     "migrate:status": "node src/migrate.js status",
@@ -16,7 +17,8 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "build": "echo 'Build completed - ready for production'",
+    "build": "cd frontend && npm install && npm run build",
+    "heroku-postbuild": "cd frontend && npm install && npm run build",
     "docker:build": "docker build -t saee .",
     "docker:run": "docker run -p 3000:3000 saee",
     "docker:compose": "docker-compose up -d",
@@ -34,6 +36,10 @@
   ],
   "author": "SAEE Team",
   "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.7.1",
     "@huggingface/inference": "^2.8.1",

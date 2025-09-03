@@ -13,6 +13,7 @@ import {
   AttachMoney as MoneyIcon,
   TrendingUp as TrendingIcon
 } from '@mui/icons-material';
+import TrialBanner from '../components/TrialBanner';
 
 const Dashboard = () => {
   const stats = [
@@ -48,6 +49,9 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ width: '100%' }}>
+      {/* Trial Banner */}
+      <TrialBanner />
+      
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>

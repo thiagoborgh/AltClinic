@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 // const dbManager = require('../models/database');
 // const PacienteModel = require('../models/Paciente');
-// const authUtil = require('../utils/auth');
+const authUtil = require('../utils/auth');
 // const encryptionUtil = require('../utils/encryption');
 
 // Dados mock para desenvolvimento
@@ -86,16 +86,6 @@ router.get('/', async (req, res) => {
       error: error.message
     });
   }
-});
-
-    // Calcular estatísticas
-    const estatisticas = await pacienteModel.obterEstatisticas();
-
-    res.json({
-      success: true,
-      pacientes: result.pacientes || [],
-      total: result.total || 0,
-      totalPages: Math.ceil((result.total || 0) / parseInt(limit)),
 });
 
 /**

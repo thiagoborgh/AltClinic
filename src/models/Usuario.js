@@ -18,7 +18,7 @@ class UsuarioModel {
       const senhaHash = await authUtil.hashPassword(senha);
       
       const result = this.db.prepare(`
-        INSERT INTO usuario (clinica_id, nome, role, email, senha_hash)
+        INSERT INTO usuarios (clinica_id, nome, role, email, senha_hash)
         VALUES (?, ?, ?, ?, ?)
       `).run(clinica_id, nome, role, email, senhaHash);
       
@@ -40,8 +40,8 @@ class UsuarioModel {
   findById(id) {
     return this.db.prepare(`
       SELECT u.*, c.nome as clinica_nome
-      FROM usuario u
-      LEFT JOIN clinica c ON u.clinica_id = c.id
+      FROM usuarios u
+      LEFT JOIN clinicas c ON u.clinica_id = c.id
       WHERE u.id = ?
     `).get(id);
   }
@@ -54,8 +54,8 @@ class UsuarioModel {
   findByEmail(email) {
     return this.db.prepare(`
       SELECT u.*, c.nome as clinica_nome
-      FROM usuario u
-      LEFT JOIN clinica c ON u.clinica_id = c.id
+      FROM usuarios u
+      LEFT JOIN clinicas c ON u.clinica_id = c.id
       WHERE u.email = ?
     `).get(email);
   }

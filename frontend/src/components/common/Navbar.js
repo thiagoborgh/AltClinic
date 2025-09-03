@@ -8,6 +8,8 @@ import {
   Menu,
   MenuItem,
   Box,
+  Button,
+  Chip,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -15,18 +17,27 @@ import {
   Notifications,
   AccountCircle,
   Menu as MenuIcon,
-  Logout
+  Logout,
+  TrendingUp
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
+import { useAuth } from '../../hooks/useAuth';
 import Logo from './Logo';
+import UpgradeDialog from '../UpgradeDialog';
 
 const Navbar = ({ onMenuClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout } = useAuthStore();
+  const { user: authUser } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationCount] = useState(3); // Simular notificações
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+
+  // Verificar se é usuário trial
+  const isTrialUser = authUser?.singleLicense?.plan === 'trial' || 
+                     authUser?.tenant?.plano === 'trial';
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -84,6 +95,43 @@ const Navbar = ({ onMenuClick }) => {
           />
         </Box>
 
+        {/* Espaçamento flexível */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Botão de Upgrade para usuários trial */}
+        {isTrialUser && (
+          <Button
+            variant="contained"
+            color="warning"
+            size="small"
+            onClick={() => setUpgradeDialogOpen(true)}
+            startIcon={<TrendingUp />}
+            sx={{ 
+              mr: 2,
+              fontWeight: 'bold',
+              textTransform: 'none',
+              '&:hover': {
+                transform: 'scale(1.05)',
+                transition: 'transform 0.2s'
+              }
+            }}
+          >
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              Upgrade
+            </Box>
+            <Chip 
+              label="30% OFF" 
+              size="small" 
+              color="error"
+              sx={{ 
+                ml: 1, 
+                height: 20,
+                '& .MuiChip-label': { fontSize: '0.7rem', px: 1 }
+              }}
+            />
+          </Button>
+        )}
+
         {/* Notificações */}
         <IconButton color="inherit" sx={{ mr: 1 }}>
           <Badge badgeContent={notificationCount} color="error">
@@ -123,6 +171,13 @@ const Navbar = ({ onMenuClick }) => {
           </Menu>
         </Box>
       </Toolbar>
+
+      {/* Dialog de Upgrade */}
+      <UpgradeDialog 
+        open={upgradeDialogOpen}
+        onClose={() => setUpgradeDialogOpen(false)}
+        currentPlan={authUser?.singleLicense?.plan || authUser?.tenant?.plano || 'trial'}
+      />
     </AppBar>
   );
 };

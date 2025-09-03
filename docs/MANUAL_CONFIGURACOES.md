@@ -7,6 +7,7 @@
 ## 🤖 **SEÇÃO AI - INTELIGÊNCIA ARTIFICIAL**
 
 ### Claude AI (Anthropic)
+
 ```
 claude_api_key: sk-ant-xxxxx (Chave da API)
 claude_model: claude-3-sonnet-20240229 (Modelo recomendado)
@@ -15,23 +16,26 @@ claude_ativo: true/false (Ativar serviço)
 ```
 
 ### Google Gemini
+
 ```
 gemini_api_key: AIzaSyxxxxx (Chave da API do Google)
 ```
 
 ### Hugging Face
+
 ```
 huggingface_api_key: hf_xxxxx (Token de acesso)
 ```
 
 **🏢 Responsável**: Altclinic  
-**📋 Ação**: Configurar durante setup inicial  
+**📋 Ação**: Configurar durante setup inicial
 
 ---
 
 ## 👥 **SEÇÃO CRM - GESTÃO DE PACIENTES**
 
 ### Período de Inatividade
+
 ```
 periodo_inatividade: 90 (dias para considerar paciente inativo)
 ```
@@ -45,6 +49,7 @@ periodo_inatividade: 90 (dias para considerar paciente inativo)
 ## 📧 **SEÇÃO EMAIL**
 
 ### Configurações SMTP
+
 ```
 smtp_host: smtp.gmail.com (Servidor SMTP)
 smtp_port: 587 (Porta padrão TLS)
@@ -54,6 +59,7 @@ smtp_password: sua-senha-app (Senha de aplicativo)
 ```
 
 ### Mailchimp
+
 ```
 mailchimp_api_key: xxxxx-us1 (Chave da API)
 mailchimp_server_prefix: us1 (Prefixo do servidor)
@@ -72,6 +78,7 @@ mailchimp_ativo: true/false (Ativar serviço)
 ## 🔗 **SEÇÃO INTEGRAÇÕES**
 
 ### Twilio (SMS/WhatsApp Business)
+
 ```
 twilio_account_sid: ACxxxxx (SID da conta)
 twilio_auth_token: xxxxx (Token de autenticação)
@@ -79,6 +86,7 @@ twilio_whatsapp_number: +5511999999999 (Número da clínica)
 ```
 
 ### Telegram
+
 ```
 telegram_bot_token: 123456:ABCxxxxx (Token do bot)
 telegram_chat_id: -100xxxxxx (ID do chat da clínica)
@@ -93,6 +101,7 @@ telegram_ativo: true/false (Ativar serviço)
 ## 🔒 **SEÇÃO LGPD**
 
 ### Termo de Consentimento
+
 ```
 texto_consentimento: "Eu autorizo o tratamento dos meus dados pessoais..."
 ```
@@ -106,6 +115,7 @@ texto_consentimento: "Eu autorizo o tratamento dos meus dados pessoais..."
 ## 💰 **SEÇÃO PIX**
 
 ### Configurações Financeiras
+
 ```
 chave_pix: contato@clinica.com (Chave PIX)
 banco: Banco do Brasil (Nome do banco)
@@ -121,6 +131,7 @@ nome_titular: Clínica XYZ Ltda (Nome do titular)
 ## ⚙️ **SEÇÃO SISTEMA**
 
 ### Configurações Técnicas
+
 ```
 ambiente: production (development/production)
 debug_mode: false (true/false)
@@ -129,6 +140,7 @@ max_upload_size: 10485760 (10MB em bytes)
 ```
 
 ### Agendamentos (Cron Jobs)
+
 ```
 cron_confirmacao: 0 8 * * * (Todo dia às 8h)
 cron_lembretes: 0 18 * * * (Todo dia às 18h)
@@ -145,6 +157,7 @@ cron_verificacao_inativos: 0 2 * * 0 (Domingo às 2h)
 ## 📱 **SEÇÃO WHATSAPP**
 
 ### Configurações da API
+
 ```
 api_token: xxxxx (Token da API)
 auto_init: true (Inicialização automática)
@@ -162,6 +175,7 @@ webhook_url: https://api.clinica.com/webhook (URL do webhook)
 ## 📊 **Checklist de Configuração**
 
 ### ✅ **Setup Inicial (Altclinic)**
+
 - [ ] Configurar APIs de IA (Claude, Gemini, Hugging Face)
 - [ ] Configurar SMTP corporativo
 - [ ] Configurar Twilio e Telegram
@@ -170,6 +184,7 @@ webhook_url: https://api.clinica.com/webhook (URL do webhook)
 - [ ] Testar todas as integrações
 
 ### ✅ **Personalização (Usuário)**
+
 - [ ] Definir período de inatividade de pacientes
 - [ ] Elaborar termo de consentimento LGPD
 - [ ] Fornecer dados PIX da clínica
@@ -177,6 +192,7 @@ webhook_url: https://api.clinica.com/webhook (URL do webhook)
 - [ ] Testar recebimento de mensagens
 
 ### ✅ **Ativação (Compartilhado)**
+
 - [ ] Ativar serviços desejados
 - [ ] Configurar Mailchimp (se aplicável)
 - [ ] Conectar WhatsApp via QR Code
@@ -187,16 +203,19 @@ webhook_url: https://api.clinica.com/webhook (URL do webhook)
 ## 🚨 **Troubleshooting Comum**
 
 ### WhatsApp não conecta
+
 1. Gerar novo QR Code
 2. Verificar timeout (padrão 60s)
 3. Limpar sessões antigas
 
 ### Emails não enviados
+
 1. Verificar configurações SMTP
 2. Testar credenciais
 3. Verificar firewall/portas
 
 ### APIs não respondem
+
 1. Verificar chaves de API
 2. Verificar limites de uso
 3. Verificar status dos serviços
@@ -205,12 +224,12 @@ webhook_url: https://api.clinica.com/webhook (URL do webhook)
 
 ## 📞 **Suporte por Seção**
 
-| Seção | Responsável | Contato |
-|-------|-------------|---------|
-| AI, SISTEMA, WHATSAPP | Altclinic | suporte-tecnico@altclinic.com |
-| CRM, LGPD, PIX | Usuário | suporte@altclinic.com |
-| INTEGRAÇÕES | Compartilhado | suporte@altclinic.com |
+| Seção                 | Responsável   | Contato                       |
+| --------------------- | ------------- | ----------------------------- |
+| AI, SISTEMA, WHATSAPP | Altclinic     | suporte-tecnico@altclinic.com |
+| CRM, LGPD, PIX        | Usuário       | suporte@altclinic.com         |
+| INTEGRAÇÕES           | Compartilhado | suporte@altclinic.com         |
 
 ---
 
-*Manual Técnico v1.0 - Setembro 2025*
+_Manual Técnico v1.0 - Setembro 2025_

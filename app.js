@@ -21,6 +21,7 @@ const propostasRoutes = require('./src/routes/propostas');
 const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
 const pacientesRoutes = require('./src/routes/pacientes');
+const trialRoutes = require('./src/routes/trial');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,6 +82,7 @@ app.use((req, res, next) => {
 
 // === ROTAS PÚBLICAS (sem tenant) ===
 app.use('/api/tenants', tenantsRoutes);
+app.use('/api/trial', trialRoutes);
 
 // === ROTAS COM TENANT ===
 // Aplicar middleware de tenant em todas as rotas protegidas
@@ -115,11 +117,20 @@ app.get('/api/health', (req, res) => {
 
 // Rota para servir frontend em produção
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'frontend/build')));
+  app.use(express.static(path.join(__dirname, 'public')));
   
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
+} else {
+  // Para desenvolvimento, servir também da pasta public se existir
+  if (require('fs').existsSync(path.join(__dirname, 'public'))) {
+    app.use(express.static(path.join(__dirname, 'public')));
+    
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+  }
 }
 
 // Middleware de erro global
