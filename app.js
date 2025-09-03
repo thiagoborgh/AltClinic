@@ -22,6 +22,7 @@ const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
 const pacientesRoutes = require('./src/routes/pacientes');
 const trialRoutes = require('./src/routes/trial');
+const multiTenantDbDirect = require('./src/models/MultiTenantDatabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,7 +91,22 @@ app.use((req, res, next) => {
     if (isStatic) return; // reduzir ruído de logs
     const duration = Date.now() - start;
     const timestamp = new Date().toISOString();
-    console.log(`${timestamp} [${tenant}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms - ${req.ip}`);
+
+    if ((process.env.LOG_FORMAT || '').toLowerCase() === 'json') {
+      const entry = {
+        ts: timestamp,
+        tenant,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        duration_ms: duration,
+        ip: req.ip,
+        ua: req.get('User-Agent') || ''
+      };
+      console.log(JSON.stringify(entry));
+    } else {
+      console.log(`${timestamp} [${tenant}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms - ${req.ip}`);
+    }
   });
 
   next();
@@ -111,6 +127,25 @@ app.use('/api/t/:tenantSlug/agendamentos', agendamentosRoutes);
 app.use('/api/t/:tenantSlug/propostas', propostasRoutes);
 app.use('/api/t/:tenantSlug/crm', crmRoutes);
 app.use('/api/t/:tenantSlug/pacientes', pacientesRoutes);
+
+// Status rápido por tenant
+app.get('/api/t/:tenantSlug/status', extractTenant, (req, res) => {
+  try {
+    const tenant = req.tenant;
+    const tenantDb = multiTenantDbDirect.getTenantDb(tenant.id);
+    const usuarios = tenantDb.prepare("SELECT COUNT(*) as c FROM usuarios WHERE status='active'").get().c;
+    const pacientes = tenantDb.prepare("SELECT COUNT(*) as c FROM pacientes WHERE status='ativo'").get().c;
+    const agendamentosHoje = tenantDb.prepare("SELECT COUNT(*) as c FROM agendamentos WHERE date(data_agendamento)=date('now')").get().c;
+    res.json({
+      success: true,
+      tenant: { id: tenant.id, slug: tenant.slug, nome: tenant.nome },
+      stats: { usuarios, pacientes, agendamentosHoje },
+      ts: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Erro ao obter status', error: err.message });
+  }
+});
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
