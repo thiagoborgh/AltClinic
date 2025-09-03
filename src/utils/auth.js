@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 
 class AuthUtil {
   constructor() {
@@ -15,7 +15,7 @@ class AuthUtil {
    */
   async hashPassword(password) {
     try {
-      return await bcrypt.hash(password, this.saltRounds);
+      return await bcryptjs.hash(password, this.saltRounds);
     } catch (error) {
       console.error('❌ Erro ao gerar hash da senha:', error.message);
       throw new Error('Erro interno do servidor');
@@ -30,7 +30,7 @@ class AuthUtil {
    */
   async verifyPassword(password, hashedPassword) {
     try {
-      return await bcrypt.compare(password, hashedPassword);
+      return await bcryptjs.compare(password, hashedPassword);
     } catch (error) {
       console.error('❌ Erro ao verificar senha:', error.message);
       return false;

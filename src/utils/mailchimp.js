@@ -1,4 +1,4 @@
-const mailchimp = require('@mailchimp/mailchimp_marketing');
+// const mailchimp = require('@mailchimp/mailchimp_marketing');
 
 class MailchimpService {
   constructor() {

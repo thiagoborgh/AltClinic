@@ -1,10 +1,10 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const { Telegraf } = require('telegraf');
-const qrcode = require('qrcode-terminal');
+// const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+// const { Telegraf } = require('telegraf');
+// const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
 const aiService = require('./ai'); // Nova integração com Gemini/HuggingFace
-const twilioService = require('./twilio');
+// const twilioService = require('./twilio');
 
 class BotManager {
   constructor() {

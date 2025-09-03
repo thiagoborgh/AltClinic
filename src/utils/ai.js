@@ -1,5 +1,5 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { HfInference } = require('@huggingface/inference');
+// const { GoogleGenerativeAI } = require('@google/generative-ai');
+// const { HfInference } = require('@huggingface/inference');
 
 class AIService {
   constructor() {

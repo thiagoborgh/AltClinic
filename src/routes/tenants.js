@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multiTenantDb = require('../models/MultiTenantDatabase');
 const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 /**
@@ -108,7 +108,7 @@ router.post('/register', async (req, res) => {
     `);
 
     // Hash da senha
-    const senhaHash = await bcrypt.hash(ownerSenha, 12);
+    const senhaHash = await bcryptjs.hash(ownerSenha, 12);
 
     // Executar transação
     const transaction = masterDb.transaction(() => {
@@ -296,7 +296,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Verificar senha
-    const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+    const senhaValida = await bcryptjs.compare(senha, usuario.senha_hash);
     if (!senhaValida) {
       return res.status(401).json({
         error: 'Credenciais inválidas',
