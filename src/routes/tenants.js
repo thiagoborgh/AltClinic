@@ -547,6 +547,47 @@ async function seedTenantData(tenantDb, tenantId) {
     insertServico.run(tenantId, servico.nome, servico.descricao, servico.duracao, servico.valor);
   }
 
+  // Pacientes iniciais (fakes)
+  const pacientes = [
+    { nome: 'Maria Silva', email: 'maria.silva@example.com', telefone: '(11) 98888-1111', cpf: '123.456.789-00', data_nascimento: '1988-03-15', status: 'ativo' },
+    { nome: 'João Santos', email: 'joao.santos@example.com', telefone: '(11) 97777-2222', cpf: '987.654.321-00', data_nascimento: '1982-07-22', status: 'ativo' },
+    { nome: 'Ana Costa', email: 'ana.costa@example.com', telefone: '(11) 96666-3333', cpf: '111.222.333-44', data_nascimento: '1992-11-08', status: 'ativo' }
+  ];
+
+  const insertPaciente = tenantDb.prepare(`
+    INSERT INTO pacientes (tenant_id, nome, email, telefone, cpf, data_nascimento, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const pacienteIds = [];
+  for (const p of pacientes) {
+    const res = insertPaciente.run(tenantId, p.nome, p.email, p.telefone, p.cpf, p.data_nascimento, p.status);
+    pacienteIds.push(res.lastInsertRowid);
+  }
+
+  // Agendamentos iniciais (fakes) nos próximos dias
+  const now = Date.now();
+  function inDays(days, hour = 10) {
+    const d = new Date(now + days * 24 * 60 * 60 * 1000);
+    d.setHours(hour, 0, 0, 0);
+    return d.toISOString();
+  }
+
+  const agendamentos = [
+    { paciente_id: pacienteIds[0], data_agendamento: inDays(1, 10), duracao: 60, servico: 'Consulta Médica', status: 'agendado', valor: 150.00 },
+    { paciente_id: pacienteIds[1], data_agendamento: inDays(2, 11), duracao: 30, servico: 'Retorno', status: 'agendado', valor: 80.00 },
+    { paciente_id: pacienteIds[2], data_agendamento: inDays(3, 14), duracao: 30, servico: 'Exame de Rotina', status: 'agendado', valor: 100.00 }
+  ];
+
+  const insertAgendamento = tenantDb.prepare(`
+    INSERT INTO agendamentos (tenant_id, paciente_id, medico_id, data_agendamento, duracao, servico, status, valor)
+    VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
+  `);
+
+  for (const a of agendamentos) {
+    insertAgendamento.run(tenantId, a.paciente_id, a.data_agendamento, a.duracao, a.servico, a.status, a.valor);
+  }
+
   console.log(`✅ Dados iniciais inseridos para tenant: ${tenantId}`);
 }
 

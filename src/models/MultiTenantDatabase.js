@@ -364,7 +364,9 @@ class MultiTenantDatabaseManager {
     // Fechar conexões dos tenants
     for (const [tenantId, db] of this.tenantConnections) {
       try {
-        db.close();
+        if (db && typeof db.close === 'function') {
+          db.close();
+        }
         console.log(`🔒 Conexão fechada para tenant: ${tenantId}`);
       } catch (error) {
         console.error(`❌ Erro ao fechar conexão do tenant ${tenantId}:`, error);
@@ -375,7 +377,9 @@ class MultiTenantDatabaseManager {
     // Fechar conexão master
     if (this.masterDb) {
       try {
-        this.masterDb.close();
+        if (typeof this.masterDb.close === 'function') {
+          this.masterDb.close();
+        }
         console.log('🔒 Conexão master fechada');
       } catch (error) {
         console.error('❌ Erro ao fechar conexão master:', error);

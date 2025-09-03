@@ -48,9 +48,18 @@ class DatabaseManager {
 
   close() {
     if (this.db) {
-      this.db.close();
-      this.db = null;
-      console.log('🔒 Conexão com banco fechada');
+      try {
+        if (typeof this.db.close === 'function') {
+          this.db.close();
+        } else {
+          console.warn('⚠️  Objeto de banco não possui método close(); ignorando.');
+        }
+      } catch (err) {
+        console.error('❌ Erro ao fechar banco:', err.message || err);
+      } finally {
+        this.db = null;
+        console.log('🔒 Conexão com banco fechada');
+      }
     }
   }
 
