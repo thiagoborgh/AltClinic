@@ -166,7 +166,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Rota para servir frontend em produção
+// Servir arquivos estáticos do frontend (sempre antes do catch-all)
 if (process.env.NODE_ENV === 'production') {
   // Ativar cache agressivo para assets estáticos
   app.use(express.static(path.join(__dirname, 'public'), {
@@ -179,20 +179,28 @@ if (process.env.NODE_ENV === 'production') {
       }
     }
   }));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
 } else {
   // Para desenvolvimento, servir também da pasta public se existir
   if (require('fs').existsSync(path.join(__dirname, 'public'))) {
     app.use(express.static(path.join(__dirname, 'public')));
-    
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
   }
 }
+
+// Catch-all para SPA (DEVE vir após static files e antes do erro 404)
+app.get('*', (req, res, next) => {
+  // Ignorar rotas da API
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Servir index.html para SPA routing
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (require('fs').existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next(); // Deixar o middleware 404 lidar
+  }
+});
 
 // Middleware de erro global
 app.use((err, req, res, next) => {
