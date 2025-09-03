@@ -72,11 +72,27 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Middleware de log - melhorado para multi-tenant
+// Middleware de log - melhorado para multi-tenant (com duração e status, ignora assets)
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
+  const start = Date.now();
+  const url = req.originalUrl || req.url || '';
+  const isStatic =
+    url.startsWith('/static/') ||
+    url.startsWith('/favicon.ico') ||
+    url.startsWith('/manifest.json') ||
+    url.startsWith('/assets/') ||
+    url.startsWith('/images/') ||
+    url.startsWith('/uploads/');
+
   const tenant = req.headers['x-tenant-slug'] || 'no-tenant';
-  console.log(`${timestamp} [${tenant}] ${req.method} ${req.path} - ${req.ip}`);
+
+  res.on('finish', () => {
+    if (isStatic) return; // reduzir ruído de logs
+    const duration = Date.now() - start;
+    const timestamp = new Date().toISOString();
+    console.log(`${timestamp} [${tenant}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms - ${req.ip}`);
+  });
+
   next();
 });
 
@@ -117,7 +133,17 @@ app.get('/api/health', (req, res) => {
 
 // Rota para servir frontend em produção
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'public')));
+  // Ativar cache agressivo para assets estáticos
+  app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '7d',
+    etag: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        // HTML sem cache para evitar servir versões antigas
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
+  }));
   
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
