@@ -1,0 +1,71 @@
+# 🚀 RENDER ENVIRONMENT VARIABLES - CONFIGURAÇÃO COMPLETA
+# Copie e configure estas variáveis no painel do Render
+
+# ===========================================
+# ESSENCIAL PARA FUNCIONAMENTO BÁSICO
+# ===========================================
+NODE_ENV=production
+JWT_SECRET=altclinic_saas_2025_super_secret_key_for_multi_tenant_system_b8f0c7e3a2d5f8e4c1b7a9f2e6d4c8b5
+SESSION_SECRET=AltClinicSession2024!
+FRONTEND_URL=https://alt-clinic.onrender.com
+
+# ===========================================
+# BANCO DE DADOS (SQLite local)
+# ===========================================
+DATABASE_PATH=./data/saee.db
+DB_PATH=./saee.db
+
+# ===========================================
+# AUTENTICAÇÃO E SEGURANÇA
+# ===========================================
+JWT_EXPIRATION=24h
+ENCRYPTION_KEY=a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+
+# ===========================================
+# EMAIL CONFIGURATION (SMTP GMAIL) - CONFIGURAR AQUI!
+# ===========================================
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=thiagoborgh@gmail.com
+SMTP_PASS=mxdzvyiftxucoipc
+EMAIL_FROM=AltClinic SaaS <thiagoborgh@gmail.com>
+
+# ===========================================
+# STRIPE PAYMENT CONFIGURATION
+# ===========================================
+STRIPE_PUBLISHABLE_KEY=pk_test_51S2UtgHl94Az3wsCSW53TGm0pz37xk5CmwtGenk42FziE6CyGGRREkQRoTn2sqJT33zw752BAr2hYWcxVyFOFruI00DJOH4AKr
+STRIPE_SECRET_KEY=sk_test_51S2UtgHl94Az3wsCGq53oLMr47g4Yl9sE5bh8xyqCZIwyleN1g9Ql7pxmTNH4Vay8XhukPcEhMGy1stLbEXiIxx200w3EtFVXf
+STRIPE_WEBHOOK_SECRET=whsec_development_webhook_secret
+
+# ===========================================
+# MULTI-TENANT CONFIGURATION
+# ===========================================
+DEFAULT_TENANT_PLAN=trial
+MAX_TENANTS_PER_USER=10
+INVITE_TOKEN_EXPIRY=7d
+TRIAL_USERS_LIMIT=2
+STARTER_USERS_LIMIT=5
+PROFESSIONAL_USERS_LIMIT=15
+ENTERPRISE_USERS_LIMIT=50
+
+# ===========================================
+# APIs EXTERNAS
+# ===========================================
+GEMINI_API_KEY=AIzaSyBHdKnbhfetf1pnHf2fAex2I-DgYkFsUZw
+HUGGINGFACE_API_KEY=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
+
+# ===========================================
+# WHATSAPP CONFIGURATION
+# ===========================================
+WHATSAPP_AUTO_INIT=false
+WHATSAPP_SESSION_PATH=./whatsapp-session
+
+# ===========================================
+# OUTRAS CONFIGURAÇÕES
+# ===========================================
+DIAS_INATIVO=90
+DIAS_SPAM_PROTECTION=30
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=10485760
+TZ=America/Sao_Paulo
