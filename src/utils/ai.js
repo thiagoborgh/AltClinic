@@ -3,26 +3,47 @@
 
 class AIService {
   constructor() {
+    // Desabilitar IA em ambiente de teste ou quando explicitamente desativado
+    const isTest = (process.env.NODE_ENV || '').toLowerCase() === 'test';
+    if (isTest || process.env.AI_DISABLED === 'true') {
+      this.provider = 'disabled';
+      this.geminiApiKey = null;
+      this.huggingfaceApiKey = null;
+      console.log('🧪 IA desabilitada para testes');
+      return;
+    }
     this.geminiApiKey = process.env.GEMINI_API_KEY;
     this.huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
     this.provider = process.env.AI_PROVIDER || 'gemini';
     
-    // Inicializar Google Gemini
-    if (this.geminiApiKey) {
+    // Inicializar Google Gemini (só se módulo e chave existirem)
+    let GoogleGenerativeAI;
+    try {
+      GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI;
+    } catch (err) {
+      GoogleGenerativeAI = null;
+    }
+    if (this.geminiApiKey && GoogleGenerativeAI) {
       this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
       this.geminiModel = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
       this.geminiVisionModel = this.genAI.getGenerativeModel({ model: 'gemini-pro-vision' });
-      console.log('✅ Google Gemini configurado');
+  console.log('✅ Google Gemini configurado');
     } else {
-      console.warn('⚠️  GEMINI_API_KEY não configurada');
+      console.warn('⚠️  GEMINI_API_KEY ou módulo GoogleGenerativeAI não configurados');
     }
     
-    // Inicializar Hugging Face
-    if (this.huggingfaceApiKey) {
+    // Inicializar Hugging Face (só se módulo e chave existirem)
+    let HfInference;
+    try {
+      HfInference = require('@huggingface/inference').HfInference;
+    } catch (err) {
+      HfInference = null;
+    }
+    if (this.huggingfaceApiKey && HfInference) {
       this.hf = new HfInference(this.huggingfaceApiKey);
-      console.log('✅ Hugging Face configurado');
+  console.log('✅ Hugging Face configurado');
     } else {
-      console.warn('⚠️  HUGGINGFACE_API_KEY não configurada');
+      console.warn('⚠️  HUGGINGFACE_API_KEY ou módulo HfInference não configurados');
     }
   }
 

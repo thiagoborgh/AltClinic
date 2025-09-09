@@ -9,12 +9,15 @@ const extractTenant = async (req, res, next) => {
     // Extrair tenant do subdomínio ou header
     let tenantSlug = null;
     
-    // Opção 1: Subdomínio (clinica-abc.altclinic.com)
-    const host = req.get('host') || '';
-    const subdomain = host.split('.')[0];
-    
-    if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
-      tenantSlug = subdomain;
+    // Opção 1: Subdomínio (clinica-abc.altclinic.com) — ignorar em hosts locais/IP
+    const host = (req.get('host') || '').toLowerCase();
+    const isLocalHost = host.includes('localhost') || host.startsWith('127.0.0.1') || host.startsWith('::1');
+    const looksLikeIp = /^\d+\.\d+\.\d+\.\d+(?::\d+)?$/.test(host);
+    if (!isLocalHost && !looksLikeIp && host.split('.').length >= 3) {
+      const subdomain = host.split('.')[0];
+      if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
+        tenantSlug = subdomain;
+      }
     }
     
     // Opção 2: Header personalizado (para desenvolvimento/API)
@@ -22,7 +25,7 @@ const extractTenant = async (req, res, next) => {
       tenantSlug = req.headers['x-tenant-slug'];
     }
     
-    // Opção 3: Parâmetro na URL (/api/tenant/:slug/...)
+  // Opção 3: Parâmetro na URL (/api/tenant/:slug/...)
     if (!tenantSlug && req.params.tenantSlug) {
       tenantSlug = req.params.tenantSlug;
     }

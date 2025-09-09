@@ -4,7 +4,13 @@
 const fs = require('fs');
 const path = require('path');
 const aiService = require('./ai'); // Nova integração com Gemini/HuggingFace
-// const twilioService = require('./twilio');
+// Carregar Twilio de forma opcional
+let twilioService = null;
+try {
+  twilioService = require('./twilio');
+} catch (_) {
+  twilioService = null;
+}
 
 class BotManager {
   constructor() {
@@ -19,10 +25,15 @@ class BotManager {
     
     console.log(`🤖 Bot Manager iniciado - Twilio: ${this.useTwilio ? 'Sim' : 'Não'}`);
     
-    if (!this.useTwilio) {
-      this.setupWhatsApp();
+    const isTest = (process.env.NODE_ENV || '').toLowerCase() === 'test';
+    if (!isTest) {
+      if (!this.useTwilio) {
+        this.setupWhatsApp();
+      }
+      this.setupTelegram();
+    } else {
+      console.log('🧪 Ambiente de teste: Bots não serão inicializados');
     }
-    this.setupTelegram();
   }
 
   /**
@@ -281,7 +292,7 @@ Digite sua mensagem e eu te ajudo! 😊
    */
   async sendWhatsAppMessage(telefone, mensagem) {
     // Priorizar Twilio se configurado (mais confiável)
-    if (this.useTwilio) {
+    if (this.useTwilio && twilioService && typeof twilioService.sendWhatsAppMessage === 'function') {
       return await twilioService.sendWhatsAppMessage(telefone, mensagem);
     }
     
@@ -374,7 +385,7 @@ Digite sua mensagem e eu te ajudo! 😊
         ready: this.isWhatsAppReady,
         connected: this.whatsappClient ? true : false,
         twilio_enabled: this.useTwilio,
-        twilio_status: twilioService.getStatus()
+  twilio_status: twilioService && typeof twilioService.getStatus === 'function' ? twilioService.getStatus() : { enabled: false }
       },
       telegram: {
         ready: this.isTelegramReady,

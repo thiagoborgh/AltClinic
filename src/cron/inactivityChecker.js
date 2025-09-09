@@ -4,6 +4,7 @@ const PacienteModel = require('../models/Paciente');
 const AgendamentoModel = require('../models/Agendamento');
 const { sendWhatsAppMessage, sendTelegramMessage } = require('../utils/bot');
 const { sendEmail } = require('../utils/mailchimp');
+// Evitar carregar IA em ambiente de teste para reduzir efeitos colaterais
 const aiService = require('../utils/ai'); // Nova integração
 
 class CronJobManager {

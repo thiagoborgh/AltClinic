@@ -8,8 +8,9 @@ require('dotenv').config();
 // Importar utilitários
 const dbManager = require('./src/models/database');
 const multiTenantDb = require('./src/models/MultiTenantDatabase');
-const cronManager = require('./src/cron/inactivityChecker');
-const { botManager } = require('./src/utils/bot');
+// Adiar carga de cron/bots para evitar efeitos colaterais em testes
+let cronManager = null;
+let botManager = null;
 
 // Importar middlewares multi-tenant
 const { extractTenant, tenantRateLimit } = require('./src/middleware/tenant');
@@ -22,7 +23,6 @@ const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
 const pacientesRoutes = require('./src/routes/pacientes');
 const trialRoutes = require('./src/routes/trial');
-const multiTenantDbDirect = require('./src/models/MultiTenantDatabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +75,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware de log - melhorado para multi-tenant (com duração e status, ignora assets)
 app.use((req, res, next) => {
+  // Silenciar logs em ambiente de teste para estabilidade dos testes
+  if ((process.env.NODE_ENV || '').toLowerCase() === 'test') {
+    return next();
+  }
   const start = Date.now();
   const url = req.originalUrl || req.url || '';
   const isStatic =
@@ -132,7 +136,7 @@ app.use('/api/t/:tenantSlug/pacientes', pacientesRoutes);
 app.get('/api/t/:tenantSlug/status', extractTenant, (req, res) => {
   try {
     const tenant = req.tenant;
-    const tenantDb = multiTenantDbDirect.getTenantDb(tenant.id);
+  const tenantDb = multiTenantDb.getTenantDb(tenant.id);
     const usuarios = tenantDb.prepare("SELECT COUNT(*) as c FROM usuarios WHERE status='active'").get().c;
     const pacientes = tenantDb.prepare("SELECT COUNT(*) as c FROM pacientes WHERE status='ativo'").get().c;
     const agendamentosHoje = tenantDb.prepare("SELECT COUNT(*) as c FROM agendamentos WHERE date(data_agendamento)=date('now')").get().c;
@@ -150,8 +154,12 @@ app.get('/api/t/:tenantSlug/status', extractTenant, (req, res) => {
 // Rota de health check
 app.get('/api/health', (req, res) => {
   const dbStatus = dbManager.getDb() ? 'connected' : 'disconnected';
-  const cronStatus = cronManager.getStatus();
-  const botStatus = botManager.getStatus();
+  const cronStatus = cronManager && typeof cronManager.getStatus === 'function'
+    ? cronManager.getStatus()
+    : { running: false, jobs: [] };
+  const botStatus = botManager && typeof botManager.getStatus === 'function'
+    ? botManager.getStatus()
+    : { whatsapp: { ready: false, connected: false, twilio_enabled: false }, telegram: { ready: false, configured: false }, ai: { provider: 'disabled' } };
   
   res.json({
     success: true,
@@ -237,9 +245,14 @@ async function startServer() {
     const db = dbManager.getDb();
     console.log('✅ Banco de dados conectado');
     
-    // Iniciar cron jobs
-    cronManager.start();
-    console.log('⏰ Cron jobs iniciados');
+    // Iniciar cron jobs e bots apenas fora de testes
+    const isTest = (process.env.NODE_ENV || '').toLowerCase() === 'test';
+    if (!isTest) {
+      cronManager = require('./src/cron/inactivityChecker');
+      ({ botManager } = require('./src/utils/bot'));
+      cronManager.start();
+      console.log('⏰ Cron jobs iniciados');
+    }
     
     // Iniciar servidor
     const server = app.listen(PORT, () => {
@@ -256,8 +269,8 @@ async function startServer() {
     process.on('SIGTERM', () => {
       console.log('🛑 Recebido SIGTERM, encerrando servidor graciosamente...');
       
-      cronManager.stop();
-      botManager.stop();
+      if (cronManager && typeof cronManager.stop === 'function') cronManager.stop();
+      if (botManager && typeof botManager.stop === 'function') botManager.stop();
       dbManager.close();
       
       server.close(() => {
@@ -269,8 +282,8 @@ async function startServer() {
     process.on('SIGINT', () => {
       console.log('🛑 Recebido SIGINT, encerrando servidor graciosamente...');
       
-      cronManager.stop();
-      botManager.stop();
+      if (cronManager && typeof cronManager.stop === 'function') cronManager.stop();
+      if (botManager && typeof botManager.stop === 'function') botManager.stop();
       dbManager.close();
       
       server.close(() => {
