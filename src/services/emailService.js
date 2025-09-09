@@ -365,6 +365,15 @@ class EmailService {
         console.log(`📧 Assunto: ${subject}`);
         console.log(`📧 Template: ${template}`);
         console.log(`📧 Dados:`, data);
+        
+        // Mostrar conteúdo do template processado
+        if (template) {
+          let simulatedHtml = this.loadTemplate(template);
+          simulatedHtml = this.replaceVariables(simulatedHtml, data);
+          console.log('📧 Conteúdo HTML processado (primeiras 500 chars):');
+          console.log(simulatedHtml.substring(0, 500));
+        }
+        
         console.log('📧 --- FIM DO EMAIL SIMULADO ---');
 
         return {

@@ -408,7 +408,7 @@ router.post('/send-first-access-email', async (req, res) => {
       to: email,
       subject: `Bem-vindo à ${clinicaNome} - Suas credenciais de acesso`,
       template: 'first-access',
-      templateData: templateData
+      data: templateData
     });
 
     if (emailResult.success) {
@@ -480,7 +480,7 @@ router.post('/recovery', async (req, res) => {
         to: email,
         subject: `Primeiro Acesso - ${tenant.nome}`,
         template: 'first-access-reminder',
-        templateData: templateData
+        data: templateData
       });
 
       if (emailResult.success) {
@@ -514,7 +514,7 @@ router.post('/recovery', async (req, res) => {
         to: email,
         subject: `Redefinição de Senha - ${tenant.nome}`,
         template: 'password-reset',
-        templateData: templateData
+        data: templateData
       });
 
       if (emailResult.success) {
