@@ -18,7 +18,7 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "build": "cd frontend && npm install && npm run build && cd .. && cp -r frontend/build/* public/ && npm install",
+    "build": "cd frontend && npm install && npm run build && cd .. && powershell -ExecutionPolicy Bypass -File copy-build.ps1 && npm install",
     "heroku-postbuild": "cd frontend && npm install && npm run build && cd .. && cp -r frontend/build/* public/ && npm install",
     "docker:build": "docker build -t saee .",
     "docker:run": "docker run -p 3000:3000 saee",

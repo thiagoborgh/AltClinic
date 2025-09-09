@@ -17,7 +17,7 @@ cd ..
 echo "📁 Preparando pasta public..."
 mkdir -p public
 
-# Copiar arquivos do build para public
+# Copiar arquivos do build para public (usando cp do Linux)
 echo "📋 Copiando arquivos do frontend..."
 cp -r frontend/build/* public/
 
