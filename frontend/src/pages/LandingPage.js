@@ -191,25 +191,106 @@ const LandingPage = () => {
 
   const handleTrialSubmit = async () => {
     try {
-      // Aqui você faria a chamada para criar o trial
-      console.log('Criando trial:', trialForm);
+      // Gerar senha temporária
+      const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!';
       
-      // Simular criação de tenant trial
-      const response = await fetch('/api/tenants/trial', {
+      // Gerar slug baseado no nome da clínica
+      const baseSlug = trialForm.clinica
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+        .replace(/\s+/g, '-') // Substitui espaços por hífen
+        .substring(0, 30);
+
+      let slug = baseSlug;
+      let counter = 1;
+
+      // Tentar slugs únicos (simples verificação no frontend)
+      while (counter < 10) {
+        try {
+          const checkResponse = await fetch(`/api/tenants/check-slug?slug=${slug}`);
+          if (checkResponse.ok) {
+            const data = await checkResponse.json();
+            if (!data.exists) break;
+          }
+        } catch (error) {
+          // Se não conseguir verificar, continua
+          break;
+        }
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      // Preparar dados para a API
+      const registerData = {
+        clinicaNome: trialForm.clinica,
+        slug: slug,
+        ownerNome: trialForm.nome,
+        ownerEmail: trialForm.email,
+        ownerSenha: tempPassword,
+        telefone: trialForm.telefone,
+        plano: 'trial'
+      };
+
+      console.log('Criando trial:', registerData);
+      
+      // Fazer chamada para criar o tenant
+      const response = await fetch('/api/tenants/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(trialForm)
+        body: JSON.stringify(registerData)
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        // Redirecionar para o sistema com credenciais
-        navigate(`/login?tenant=${data.slug}&trial=true`);
+        console.log('Trial criado com sucesso:', data);
+        
+        // Enviar email de primeiro acesso
+        try {
+          await fetch('/api/auth/send-first-access-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: data.owner.email,
+              tenantSlug: data.tenant.slug,
+              clinicaNome: data.tenant.nome,
+              tempPassword: tempPassword,
+              trialExpireAt: data.tenant.trialExpireAt
+            })
+          });
+          console.log('Email de primeiro acesso enviado');
+        } catch (emailError) {
+          console.warn('Erro ao enviar email de primeiro acesso:', emailError);
+        }
+        
+        // Fechar dialog
+        setOpenTrialDialog(false);
+        
+        // Resetar formulário
+        setTrialForm({
+          nome: '',
+          email: '',
+          telefone: '',
+          clinica: '',
+          especialidade: ''
+        });
+        
+        // Redirecionar para login com parâmetros
+        navigate(`/login?trial=true&email=${encodeURIComponent(data.owner.email)}&tenant=${data.tenant.slug}`);
+        
+      } else {
+        console.error('Erro na resposta:', data);
+        alert(`Erro ao criar conta: ${data.message || data.error || 'Erro desconhecido'}`);
       }
     } catch (error) {
       console.error('Erro ao criar trial:', error);
+      alert('Erro ao criar conta de teste. Tente novamente.');
     }
   };
 

@@ -20,7 +20,6 @@ import {
   Logout,
   TrendingUp
 } from '@mui/icons-material';
-import { useAuthStore } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import Logo from './Logo';
 import UpgradeDialog from '../UpgradeDialog';
@@ -28,7 +27,7 @@ import UpgradeDialog from '../UpgradeDialog';
 const Navbar = ({ onMenuClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useAuth();
   const { user: authUser } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState(null);

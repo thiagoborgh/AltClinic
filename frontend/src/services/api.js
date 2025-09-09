@@ -13,19 +13,30 @@ const api = axios.create({
 // Interceptor para requisições
 api.interceptors.request.use(
   (config) => {
-    // Adicionar token de autenticação se existir
-    const token = localStorage.getItem('saee-auth');
-    if (token) {
-      try {
-        const authData = JSON.parse(token);
-        if (authData.state?.token) {
-          config.headers.Authorization = `Bearer ${authData.state.token}`;
+    // Verificar se já existe Authorization header (definido pelo useAuth)
+    if (!config.headers.Authorization) {
+      // Adicionar token de autenticação se existir (fallback)
+      const token = localStorage.getItem('saee-auth');
+      if (token) {
+        try {
+          const authData = JSON.parse(token);
+          if (authData.state?.token) {
+            // Verificar se o token não é muito grande (limite aproximado de 4KB para headers)
+            const tokenSize = `Bearer ${authData.state.token}`.length;
+            if (tokenSize > 4000) {
+              console.warn('Token muito grande detectado, limpando localStorage');
+              localStorage.removeItem('saee-auth');
+              return config;
+            }
+            config.headers.Authorization = `Bearer ${authData.state.token}`;
+          }
+        } catch (error) {
+          console.error('Erro ao carregar token:', error);
+          localStorage.removeItem('saee-auth');
         }
-      } catch (error) {
-        console.error('Erro ao carregar token:', error);
       }
     }
-    
+
     return config;
   },
   (error) => {

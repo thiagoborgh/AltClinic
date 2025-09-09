@@ -11,6 +11,13 @@ class EmailService {
   // Inicializar transporter SMTP
   initializeTransporter() {
     try {
+      // Para desenvolvimento, usar console se SMTP não estiver configurado
+      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || process.env.SMTP_PASS === 'sua_senha_de_app_do_gmail') {
+        console.log('⚠️ SMTP não configurado completamente. Emails serão logados no console.');
+        this.transporter = null;
+        return;
+      }
+
       this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
@@ -27,14 +34,17 @@ class EmailService {
       console.log('✅ Serviço de email inicializado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao inicializar serviço de email:', error);
+      this.transporter = null;
     }
   }
 
   // Verificar conexão SMTP
   async verifyConnection() {
     try {
+      // Se não há transporter configurado, retornar false
       if (!this.transporter) {
-        throw new Error('Transporter não inicializado');
+        console.log('⚠️ SMTP não configurado - emails serão simulados no console');
+        return false;
       }
 
       await this.transporter.verify();
@@ -210,6 +220,115 @@ class EmailService {
           </div>
         </body>
         </html>
+      `,
+
+      'first-access': `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Bem-vindo à {tenantName} - Suas Credenciais</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .credentials { background: #fff; border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .button { display: inline-block; background: #1976d2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Bem-vindo à {tenantName}!</h1>
+            </div>
+            <div class="content">
+              <h2>Olá, {userName}!</h2>
+              <p>Sua conta foi criada com sucesso na plataforma AltClinic. Aqui estão suas credenciais de acesso:</p>
+              
+              <div class="credentials">
+                <h3>🔐 Suas Credenciais</h3>
+                <p><strong>Email:</strong> {email}</p>
+                <p><strong>Senha Temporária:</strong> {tempPassword}</p>
+                <p style="color: #d32f2f;"><strong>⚠️ Importante:</strong> Altere sua senha no primeiro acesso!</p>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="{loginUrl}" class="button">Acessar Plataforma</a>
+              </div>
+              
+              <h3>🚀 Próximos passos:</h3>
+              <ol>
+                <li>Clique no botão acima para fazer login</li>
+                <li>Altere sua senha temporária</li>
+                <li>Complete seu perfil</li>
+                <li>Configure sua clínica</li>
+              </ol>
+              
+              {trialExpireAt}
+              
+              <p>Se precisar de ajuda, nossa equipe está à disposição!</p>
+              
+              <p><strong>📞 Suporte:</strong> suporte@altclinic.com.br</p>
+            </div>
+            <div class="footer">
+              <p>© 2025 AltClinic - Plataforma SaaS para Clínicas</p>
+              <p>altclinic.com.br</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+
+      'first-access-reminder': `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Lembrete de Primeiro Acesso - {tenantName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background: #1976d2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔑 Primeiro Acesso</h1>
+            </div>
+            <div class="content">
+              <h2>Olá, {userName}!</h2>
+              <p>Recebemos sua solicitação de primeiro acesso à {tenantName}.</p>
+              
+              <p>Para acessar sua conta, siga estes passos:</p>
+              
+              <ol>
+                <li>Clique no botão abaixo para ir à tela de login</li>
+                <li>Use seu email cadastrado</li>
+                <li>Use a senha que foi enviada no email de boas-vindas</li>
+                <li>Altere sua senha no primeiro acesso</li>
+              </ol>
+              
+              <div style="text-align: center;">
+                <a href="{loginUrl}" class="button">Ir para Login</a>
+              </div>
+              
+              <p><strong>Não lembra sua senha?</strong> Entre em contato conosco em {supportEmail}</p>
+              
+              <p>Se você não solicitou este acesso, ignore este email.</p>
+            </div>
+            <div class="footer">
+              <p>© 2025 AltClinic - Plataforma SaaS para Clínicas</p>
+              <p>altclinic.com.br</p>
+            </div>
+          </div>
+        </body>
+        </html>
       `
     };
 
@@ -239,8 +358,20 @@ class EmailService {
     text = null
   }) {
     try {
+      // Se não há transporter configurado, logar no console
       if (!this.transporter) {
-        throw new Error('Serviço de email não configurado');
+        console.log('📧 [EMAIL SIMULADO - SMTP não configurado]');
+        console.log(`📧 Para: ${to}`);
+        console.log(`📧 Assunto: ${subject}`);
+        console.log(`📧 Template: ${template}`);
+        console.log(`📧 Dados:`, data);
+        console.log('📧 --- FIM DO EMAIL SIMULADO ---');
+
+        return {
+          success: true,
+          messageId: 'simulated-' + Date.now(),
+          simulated: true
+        };
       }
 
       let emailHtml = html;
@@ -326,6 +457,35 @@ class EmailService {
     });
   }
 
+  // Enviar email de primeiro acesso (trial)
+  async sendFirstAccessEmail({
+    email,
+    userName,
+    tenantName,
+    tempPassword,
+    trialExpireAt,
+    loginUrl
+  }) {
+    return await this.sendEmail({
+      to: email,
+      subject: `Bem-vindo à ${tenantName} - Suas Credenciais de Acesso`,
+      template: 'first-access',
+      data: {
+        userName,
+        tenantName,
+        email,
+        tempPassword,
+        loginUrl: loginUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
+        supportEmail: process.env.SUPPORT_EMAIL || 'suporte@altclinic.com.br',
+        trialExpireAt: new Date(trialExpireAt).toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      }
+    });
+  }
+
   // Enviar email de redefinição de senha
   async sendPasswordReset({
     email,
@@ -357,6 +517,7 @@ module.exports = {
   sendEmail: getEmailService().sendEmail.bind(getEmailService()),
   sendUserInvite: getEmailService().sendUserInvite.bind(getEmailService()),
   sendWelcomeEmail: getEmailService().sendWelcomeEmail.bind(getEmailService()),
+  sendFirstAccessEmail: getEmailService().sendFirstAccessEmail.bind(getEmailService()),
   sendPasswordReset: getEmailService().sendPasswordReset.bind(getEmailService()),
   verifyConnection: getEmailService().verifyConnection.bind(getEmailService())
 };

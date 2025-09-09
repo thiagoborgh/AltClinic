@@ -591,4 +591,61 @@ async function seedTenantData(tenantDb, tenantId) {
   console.log(`✅ Dados iniciais inseridos para tenant: ${tenantId}`);
 }
 
+/**
+ * Verificar se slug já existe
+ * GET /api/tenants/check-slug
+ */
+router.get('/check-slug', async (req, res) => {
+  try {
+    const { slug } = req.query;
+
+    if (!slug) {
+      return res.status(400).json({
+        error: 'Slug é obrigatório',
+        exists: false
+      });
+    }
+
+    const masterDb = multiTenantDb.getMasterDb();
+    const existingTenant = masterDb.prepare(`
+      SELECT id FROM tenants WHERE slug = ?
+    `).get(slug);
+
+    res.json({
+      exists: !!existingTenant,
+      slug: slug
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar slug:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      exists: false
+    });
+  }
+});
+
 module.exports = router;
+
+/**
+ * Configurações dos planos
+ */
+function getPlansConfig() {
+  return {
+    starter: {
+      maxUsuarios: 3,
+      maxPacientes: 500,
+      valor: 97
+    },
+    professional: {
+      maxUsuarios: 10,
+      maxPacientes: 2000,
+      valor: 197
+    },
+    enterprise: {
+      maxUsuarios: -1, // ilimitado
+      maxPacientes: -1, // ilimitado
+      valor: 397
+    }
+  };
+}

@@ -27,16 +27,23 @@ export const AuthProvider = ({ children }) => {
 
   console.log('AuthProvider estado inicial:', { token, user, loading });
 
-  // Configurar token no axios
-  useEffect(() => {
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      localStorage.setItem('authToken', token);
-    } else {
-      delete api.defaults.headers.common['Authorization'];
-      localStorage.removeItem('authToken');
+  // Função para limpar dados problemáticos do localStorage
+  const cleanupLocalStorage = useCallback(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('saee-') || key.includes('auth')) {
+          const value = localStorage.getItem(key);
+          if (value && value.length > 5000) { // Dados muito grandes
+            console.warn(`Removendo dados grandes do localStorage: ${key}`);
+            localStorage.removeItem(key);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao limpar localStorage:', error);
     }
-  }, [token]);
+  }, []);
 
   // Função logout separada para evitar dependências circulares
   const logout = useCallback(() => {
@@ -48,13 +55,43 @@ export const AuthProvider = ({ children }) => {
     setShowLicenseSelector(false);
     localStorage.removeItem('authToken');
     localStorage.removeItem('agenda_profissionais_selecionados');
-    delete api.defaults.headers.common['Authorization'];
   }, []);
+
+  // Configurar token no axios
+  useEffect(() => {
+    if (token) {
+      // Verificar tamanho do token antes de configurar
+      const tokenSize = `Bearer ${token}`.length;
+      if (tokenSize > 4000) {
+        console.warn('Token muito grande detectado, fazendo logout');
+        logout();
+        return;
+      }
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      localStorage.setItem('authToken', token);
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+      localStorage.removeItem('authToken');
+    }
+  }, [token, logout]);
+
+  // Limpar dados problemáticos ao inicializar
+  useEffect(() => {
+    cleanupLocalStorage();
+  }, [cleanupLocalStorage]);
 
   // Verificar autenticação ao carregar
   useEffect(() => {
     const checkAuth = async () => {
       if (token) {
+        // Verificar tamanho do token antes de usar
+        const tokenSize = `Bearer ${token}`.length;
+        if (tokenSize > 4000) {
+          console.warn('Token muito grande detectado no checkAuth, fazendo logout');
+          logout();
+          return;
+        }
+
         setLoading(true);
         try {
           const response = await api.get('/auth/me');

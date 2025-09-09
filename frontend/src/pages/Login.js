@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   TextField,
@@ -11,6 +11,15 @@ import {
   Alert,
   Divider,
   Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  FormControl,
+  FormLabel
 } from '@mui/material';
 import {
   Email,
@@ -18,6 +27,7 @@ import {
   Visibility,
   VisibilityOff,
   Login as LoginIcon,
+  HelpOutline
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -40,17 +50,38 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [sessionConflict, setSessionConflict] = useState(null);
   const [pendingLoginData, setPendingLoginData] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [trialEmail, setTrialEmail] = useState('');
+  const [isFirstAccess, setIsFirstAccess] = useState(false);
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [recoveryType, setRecoveryType] = useState('forgot-password');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
+    setValue
   } = useForm({
     defaultValues: {
       email: '',
       senha: '',
     },
   });
+
+  // Capturar parâmetros da URL
+  useEffect(() => {
+    const trial = searchParams.get('trial');
+    const email = searchParams.get('email');
+
+    if (trial === 'true' && email) {
+      setIsFirstAccess(true);
+      setTrialEmail(email);
+      // Preencher o email no formulário
+      setValue('email', email);
+    }
+  }, [searchParams, setValue]);
 
   const onSubmit = async (data) => {
     try {
@@ -141,6 +172,41 @@ const Login = () => {
     setPendingLoginData(null);
   };
 
+  const handleRecoverySubmit = async () => {
+    if (!recoveryEmail) {
+      toast.error('Por favor, informe seu email');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const response = await fetch('/api/auth/recovery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: recoveryEmail,
+          type: recoveryType
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || 'Email enviado com sucesso!');
+        setShowRecoveryDialog(false);
+        setRecoveryEmail('');
+      } else {
+        toast.error(data.message || 'Erro ao enviar email');
+      }
+    } catch (error) {
+      toast.error('Erro ao processar solicitação');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
   const handleSelectLicense = async (selectedLicense) => {
     try {
       const result = await selectLicense(selectedLicense);
@@ -171,6 +237,17 @@ const Login = () => {
       >
         Entrar no Sistema
       </Typography>
+
+      {/* Mensagem de primeiro acesso */}
+      {isFirstAccess && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            🎉 <strong>Conta criada com sucesso!</strong><br />
+            Verifique seu email ({trialEmail}) para obter suas credenciais de acesso.<br />
+            Use a senha temporária enviada para fazer login pela primeira vez.
+          </Typography>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={3}>
@@ -280,14 +357,14 @@ const Login = () => {
 
       <Box mt={3} textAlign="center">
         <Typography variant="body2" color="text.secondary">
-          Esqueceu sua senha?{' '}
+          Esqueceu sua senha ou é seu primeiro acesso?{' '}
           <Link 
             href="#" 
             color="primary" 
-            sx={{ textDecoration: 'none' }}
+            sx={{ textDecoration: 'none', cursor: 'pointer' }}
             onClick={(e) => {
               e.preventDefault();
-              toast.info('Entre em contato com o administrador');
+              setShowRecoveryDialog(true);
             }}
           >
             Clique aqui
@@ -313,6 +390,73 @@ const Login = () => {
         onResolve={handleSessionConflictResolve}
         loading={loginLoading}
       />
+
+      {/* Modal de Recuperação de Senha/Primeiro Acesso */}
+      <Dialog 
+        open={showRecoveryDialog} 
+        onClose={() => setShowRecoveryDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <HelpOutline sx={{ mr: 1, verticalAlign: 'middle' }} />
+          Recuperação de Acesso
+        </DialogTitle>
+        <DialogContent>
+          <Typography paragraph color="text.secondary">
+            Escolha a opção que melhor descreve sua situação:
+          </Typography>
+          
+          <FormControl component="fieldset" sx={{ mb: 3 }}>
+            <FormLabel component="legend">Tipo de solicitação</FormLabel>
+            <RadioGroup
+              value={recoveryType}
+              onChange={(e) => setRecoveryType(e.target.value)}
+            >
+              <FormControlLabel 
+                value="forgot-password" 
+                control={<Radio />} 
+                label="Esqueci minha senha" 
+              />
+              <FormControlLabel 
+                value="first-access" 
+                control={<Radio />} 
+                label="Primeiro acesso (nova conta)" 
+              />
+            </RadioGroup>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            value={recoveryEmail}
+            onChange={(e) => setRecoveryEmail(e.target.value)}
+            placeholder="Digite seu email cadastrado"
+            margin="normal"
+            required
+          />
+          
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {recoveryType === 'forgot-password' 
+              ? 'Você receberá um email com instruções para redefinir sua senha.'
+              : 'Você receberá um email com suas credenciais de acesso.'
+            }
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setShowRecoveryDialog(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleRecoverySubmit}
+            disabled={!recoveryEmail || recoveryLoading}
+          >
+            {recoveryLoading ? 'Enviando...' : 'Enviar Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

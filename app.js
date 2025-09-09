@@ -70,6 +70,20 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Configurar limite de headers para evitar erro 431
+app.use((req, res, next) => {
+  // Verificar tamanho total dos headers
+  const headerSize = JSON.stringify(req.headers).length;
+  if (headerSize > 8000) { // 8KB limite aproximado
+    console.warn(`Headers muito grandes detectados: ${headerSize} bytes`);
+    return res.status(431).json({
+      success: false,
+      error: 'Request headers too large'
+    });
+  }
+  next();
+});
+
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -119,6 +133,17 @@ app.use((req, res, next) => {
 // === ROTAS PÚBLICAS (sem tenant) ===
 app.use('/api/tenants', tenantsRoutes);
 app.use('/api/trial', trialRoutes);
+app.use('/api/auth', authRoutes);
+
+// Inicializar serviço de email
+const { verifyConnection } = require('./src/services/emailService');
+verifyConnection().then(result => {
+  if (result) {
+    console.log('✅ Serviço de email inicializado com sucesso');
+  } else {
+    console.log('⚠️ Serviço de email não configurado - verifique as variáveis SMTP');
+  }
+});
 
 // === ROTAS COM TENANT ===
 // Aplicar middleware de tenant em todas as rotas protegidas
@@ -126,7 +151,6 @@ app.use('/api/t/:tenantSlug/*', extractTenant);
 app.use('/api/t/:tenantSlug/', tenantRateLimit());
 
 // Rotas da API com tenant
-app.use('/api/t/:tenantSlug/auth', authRoutes);
 app.use('/api/t/:tenantSlug/agendamentos', agendamentosRoutes);
 app.use('/api/t/:tenantSlug/propostas', propostasRoutes);
 app.use('/api/t/:tenantSlug/crm', crmRoutes);

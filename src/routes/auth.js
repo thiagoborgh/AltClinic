@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const UsuarioModel = require('../models/Usuario');
-const { sendEmail } = require('../services/emailService');
+const { sendEmail, sendFirstAccessEmail } = require('../services/emailService');
 const sessionManager = require('../middleware/sessionManager');
 const multiTenantDb = require('../models/MultiTenantDatabase');
 const router = express.Router();
@@ -363,6 +363,243 @@ router.get('/session-stats', async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// 📧 ENVIAR EMAIL DE PRIMEIRO ACESSO
+router.post('/send-first-access-email', async (req, res) => {
+  try {
+    const { email, tenantSlug, clinicaNome, tempPassword, trialExpireAt } = req.body;
+
+    if (!email || !tenantSlug || !clinicaNome || !tempPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dados obrigatórios não fornecidos'
+      });
+    }
+
+    // Buscar tenant no master DB
+    const masterDb = multiTenantDb.getMasterDb();
+    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE slug = ?').get(tenantSlug);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant não encontrado'
+      });
+    }
+
+    // Preparar dados para o template
+    const templateData = {
+      userName: tenant.owner_name || 'Usuário',
+      tenantName: clinicaNome,
+      email: email,
+      tempPassword: tempPassword,
+      loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login/${tenantSlug}`,
+      trialExpireAt: trialExpireAt ? `<p><strong>📅 Período de teste:</strong> Expira em ${new Date(trialExpireAt).toLocaleDateString('pt-BR')}</p>` : ''
+    };
+
+    // Enviar email usando o serviço
+    const emailResult = await sendEmail({
+      to: email,
+      subject: `Bem-vindo à ${clinicaNome} - Suas credenciais de acesso`,
+      template: 'first-access',
+      templateData: templateData
+    });
+
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        message: 'Email de primeiro acesso enviado com sucesso'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao enviar email de primeiro acesso'
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro ao enviar email de primeiro acesso:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// 🔐 RECUPERAÇÃO DE SENHA / PRIMEIRO ACESSO
+router.post('/recovery', async (req, res) => {
+  try {
+    const { email, type } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email é obrigatório'
+      });
+    }
+
+    // Buscar usuário no master DB (para encontrar o tenant)
+    const masterDb = multiTenantDb.getMasterDb();
+    const masterUser = masterDb.prepare('SELECT * FROM master_users WHERE email = ?').get(email);
+
+    if (!masterUser) {
+      // Se não encontrou no master, pode ser um usuário de tenant
+      // Por simplicidade, vamos assumir que é um usuário de tenant e procurar em todos
+      return res.status(404).json({
+        success: false,
+        message: 'Email não encontrado em nosso sistema'
+      });
+    }
+
+    // Buscar tenant
+    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(masterUser.tenant_id);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant não encontrado'
+      });
+    }
+
+    if (type === 'first-access') {
+      // Para primeiro acesso, enviar email com credenciais
+      const templateData = {
+        userName: masterUser.name || 'Usuário',
+        tenantName: tenant.nome,
+        loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login/${tenant.slug}`,
+        supportEmail: process.env.SUPPORT_EMAIL || 'suporte@altclinic.com.br'
+      };
+
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `Primeiro Acesso - ${tenant.nome}`,
+        template: 'first-access-reminder',
+        templateData: templateData
+      });
+
+      if (emailResult.success) {
+        res.json({
+          success: true,
+          message: 'Email de primeiro acesso enviado com sucesso'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Erro ao enviar email de primeiro acesso'
+        });
+      }
+
+    } else if (type === 'forgot-password') {
+      // Para recuperação de senha, gerar token e enviar email
+      const resetToken = crypto.randomBytes(32).hex();
+      const resetExpires = new Date(Date.now() + 3600000); // 1 hora
+
+      // Salvar token no banco (simplificado - em produção usar Redis ou similar)
+      // Por enquanto, vamos apenas enviar o email
+
+      const templateData = {
+        userName: masterUser.name || 'Usuário',
+        tenantName: tenant.nome,
+        resetUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${email}`,
+        supportEmail: process.env.SUPPORT_EMAIL || 'suporte@altclinic.com.br'
+      };
+
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `Redefinição de Senha - ${tenant.nome}`,
+        template: 'password-reset',
+        templateData: templateData
+      });
+
+      if (emailResult.success) {
+        res.json({
+          success: true,
+          message: 'Email de recuperação de senha enviado com sucesso'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Erro ao enviar email de recuperação'
+        });
+      }
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Tipo de recuperação inválido'
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro na recuperação:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// 📧 Enviar email de primeiro acesso (trial)
+router.post('/send-first-access-email', async (req, res) => {
+  try {
+    const {
+      email,
+      tenantSlug,
+      clinicaNome,
+      tempPassword,
+      trialExpireAt
+    } = req.body;
+
+    if (!email || !tenantSlug || !clinicaNome || !tempPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dados obrigatórios não fornecidos'
+      });
+    }
+
+    // Buscar informações do tenant
+    const masterDb = multiTenantDb.getMasterDb();
+    const tenant = masterDb.prepare(`
+      SELECT nome, email FROM tenants WHERE slug = ?
+    `).get(tenantSlug);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant não encontrado'
+      });
+    }
+
+    // Enviar email de primeiro acesso
+    const emailResult = await sendFirstAccessEmail({
+      email,
+      userName: email.split('@')[0], // Nome simples baseado no email
+      tenantName: clinicaNome,
+      tempPassword,
+      trialExpireAt,
+      loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?trial=true&email=${encodeURIComponent(email)}&tenant=${tenantSlug}`
+    });
+
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        message: 'Email de primeiro acesso enviado com sucesso'
+      });
+    } else {
+      console.error('Erro ao enviar email:', emailResult.error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao enviar email de primeiro acesso'
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro no envio de email de primeiro acesso:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
