@@ -1,0 +1,46 @@
+# Render Configuration - Environment Variables
+# Copie e cole estas variáveis no painel do Render
+
+# ===========================================
+# ESSENCIAL PARA FUNCIONAMENTO BÁSICO
+# ===========================================
+NODE_ENV=production
+JWT_SECRET=AltClinic2024SuperSeguro!
+SESSION_SECRET=AltClinicSession2024!
+FRONTEND_URL=https://alt-clinic.onrender.com
+
+# ===========================================
+# BANCO DE DADOS (SQLite local)
+# ===========================================
+DATABASE_PATH=./data/saee.db
+DB_PATH=./saee.db
+
+# ===========================================
+# AUTENTICAÇÃO E SEGURANÇA
+# ===========================================
+JWT_EXPIRATION=24h
+ENCRYPTION_KEY=a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+
+# ===========================================
+# EMAIL CONFIGURATION (SMTP GMAIL)
+# ===========================================
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu_email@gmail.com
+SMTP_PASS=sua_senha_de_app_do_gmail
+EMAIL_FROM=AltClinic SaaS <seu_email@gmail.com>
+
+# ===========================================
+# PAGAMENTO (STRIPE)
+# ===========================================
+STRIPE_PUBLISHABLE_KEY=pk_test_51S2UtgHl94Az3wsCSW53TGm0pz37xk5CmwtGenk42FziE6CyGGRREkQRoTn2sqJT33zw752BAr2hYWcxVyFOFruI00DJOH4AKr
+STRIPE_SECRET_KEY=sk_test_51S2UtgHl94Az3wsCGq53oLMr47g4Yl9sE5bh8xyqCZIwyleN1g9Ql7pxmTNH4Vay8XhukPcEhMGy1stLbEXiIxx200w3EtFVXf
+
+# ===========================================
+# APIs EXTERNAS (OPCIONAIS)
+# ===========================================
+# CLAUDE_API_KEY=sk-ant-api03-seu_token_claude_aqui
+# TWILIO_ACCOUNT_SID=seu_sid
+# TWILIO_AUTH_TOKEN=seu_token
+# TELEGRAM_BOT_TOKEN=seu_token

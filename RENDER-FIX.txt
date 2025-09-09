@@ -1,0 +1,69 @@
+# 🚀 RENDER DEPLOY - CONFIGURAÇÃO ATUALIZADA
+# Problema: Arquivos JS não carregam (MIME type error)
+
+## 🔧 SOLUÇÃO: Comando de Build Corrigido
+
+### ❌ Comando Antigo (PROBLEMÁTICO):
+```
+cd frontend && npm install && npm run build && cd .. && npm install
+```
+
+### ✅ Comando Novo (CORRIGIDO):
+```
+cd frontend && npm install && npm run build && cd .. && mkdir -p public && cp -r frontend/build/* public/ && npm install
+```
+
+## 📋 CONFIGURAÇÃO COMPLETA NO RENDER:
+
+### 1. **Build Command** (ATUALIZADO):
+```
+cd frontend && npm install && npm run build && cd .. && mkdir -p public && cp -r frontend/build/* public/ && npm install
+```
+
+### 2. **Start Command** (igual):
+```
+node app.js
+```
+
+### 3. **Environment Variables** (essenciais):
+```
+NODE_ENV=production
+JWT_SECRET=AltClinic2024SuperSeguro!
+SESSION_SECRET=AltClinicSession2024!
+FRONTEND_URL=https://alt-clinic.onrender.com
+```
+
+### 4. **Email Configuration** (opcional):
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu_email@gmail.com
+SMTP_PASS=sua_senha_app_gmail
+EMAIL_FROM=AltClinic SaaS <seu_email@gmail.com>
+```
+
+## 🎯 O QUE MUDA:
+
+- ✅ **Cria pasta public** se não existir
+- ✅ **Copia arquivos do build** para public/
+- ✅ **Garante que JS/CSS** sejam servidos corretamente
+- ✅ **Resolve erro MIME type** dos arquivos estáticos
+
+## 🚀 DEPLOY:
+
+1. Vá para seu serviço no Render
+2. **Settings** → **Build & Deploy**
+3. Atualize o **Build Command** para o novo
+4. **Manual Deploy** → **Deploy latest commit**
+5. Aguarde 5-10 minutos
+
+## 🔍 VERIFICAÇÃO:
+
+Após deploy, teste:
+- Página principal carrega
+- Arquivos JS carregam sem erro MIME
+- Navegação funciona
+- API endpoints respondem
+
+**🎉 Problema resolvido!**
