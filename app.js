@@ -35,10 +35,12 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https:"] // Para APIs externas
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Adicionado 'unsafe-inline' para scripts locais
+      connectSrc: ["'self'", "https:"],
+      objectSrc: ["'none'"]
     },
   },
+  crossOriginEmbedderPolicy: false // Desabilitar para permitir scripts externos se necessário
 }));
 
 // Rate limiting global
@@ -86,6 +88,16 @@ app.use((req, res, next) => {
 
 // Servir arquivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Middleware adicional para garantir MIME types corretos
+app.use('/static', (req, res, next) => {
+  if (req.path.endsWith('.js')) {
+    res.setHeader('Content-Type', 'application/javascript');
+  } else if (req.path.endsWith('.css')) {
+    res.setHeader('Content-Type', 'text/css');
+  }
+  next();
+});
 
 // Middleware de log - melhorado para multi-tenant (com duração e status, ignora assets)
 app.use((req, res, next) => {
@@ -208,13 +220,27 @@ if (process.env.NODE_ENV === 'production') {
       if (filePath.endsWith('.html')) {
         // HTML sem cache para evitar servir versões antigas
         res.setHeader('Cache-Control', 'no-cache');
+      } else if (filePath.endsWith('.js')) {
+        // Garantir MIME type correto para JavaScript
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        // Garantir MIME type correto para CSS
+        res.setHeader('Content-Type', 'text/css');
       }
     }
   }));
 } else {
   // Para desenvolvimento, servir também da pasta public se existir
   if (require('fs').existsSync(path.join(__dirname, 'public'))) {
-    app.use(express.static(path.join(__dirname, 'public')));
+    app.use(express.static(path.join(__dirname, 'public'), {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript');
+        } else if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css');
+        }
+      }
+    }));
   }
 }
 
@@ -224,7 +250,13 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return next();
   }
-  
+
+  // Ignorar arquivos estáticos (CSS, JS, imagens, etc.)
+  const staticExtensions = /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/i;
+  if (staticExtensions.test(req.path)) {
+    return next();
+  }
+
   // Servir index.html para SPA routing
   const indexPath = path.join(__dirname, 'public', 'index.html');
   if (require('fs').existsSync(indexPath)) {
