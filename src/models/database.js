@@ -4,9 +4,10 @@ let useMock = false;
 
 try {
   Database = require('better-sqlite3');
+  console.log('✅ SQLite (better-sqlite3) carregado com sucesso');
 } catch (error) {
-  console.log('🔄 SQLite not available, using mock database for deployment');
-  const { MockDatabase } = require('../utils/mockDatabase');
+  console.log('⚠️ SQLite não disponível, usando mock database:', error.message);
+  console.log('💡 Para produção, considere usar PostgreSQL ou MySQL');
   useMock = true;
 }
 
