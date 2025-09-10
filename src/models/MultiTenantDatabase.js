@@ -87,6 +87,8 @@ class MultiTenantDatabaseManager {
         email TEXT NOT NULL,
         senha_hash TEXT NOT NULL,
         role TEXT DEFAULT 'owner',
+        name TEXT,
+        firstAccessCompleted BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (tenant_id) REFERENCES tenants(id),
         UNIQUE(email, tenant_id)

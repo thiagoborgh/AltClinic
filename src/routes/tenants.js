@@ -4,6 +4,7 @@ const multiTenantDb = require('../models/MultiTenantDatabase');
 const { v4: uuidv4 } = require('uuid');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const userService = require('../services/userService');
 
 /**
  * Criar novo tenant (Self-service onboarding)
@@ -51,16 +52,48 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Verificar se email já existe
-    const existingEmail = masterDb.prepare(`
-      SELECT id FROM master_users WHERE email = ?
-    `).get(ownerEmail);
+    // Verificar se email já existe e determinar ação
+    const existingUserCheck = await userService.checkExistingUser(ownerEmail);
 
-    if (existingEmail) {
-      return res.status(409).json({
-        error: 'Email já cadastrado',
-        message: 'Este email já está em uso'
-      });
+    if (existingUserCheck.exists) {
+      // Email já existe, determinar ação baseada no status do usuário
+      if (existingUserCheck.action === 'resend-first-access') {
+        // Reenviar email de primeiro acesso
+        try {
+          await userService.resendFirstAccessEmail(existingUserCheck.user, existingUserCheck.tenant);
+          return res.status(409).json({
+            success: false,
+            error: 'Email já cadastrado',
+            message: 'Este email já está em uso, mas o primeiro acesso não foi feito. Email reenviado com instruções.',
+            action: 'first-access-resent'
+          });
+        } catch (emailError) {
+          console.error('Erro ao reenviar email:', emailError);
+          return res.status(500).json({
+            success: false,
+            error: 'Erro interno',
+            message: 'Erro ao reenviar email de primeiro acesso'
+          });
+        }
+      } else if (existingUserCheck.action === 'send-password-recovery') {
+        // Enviar email de recuperação de senha
+        try {
+          await userService.sendPasswordRecoveryEmail(existingUserCheck.user, existingUserCheck.tenant);
+          return res.status(409).json({
+            success: false,
+            error: 'Email já cadastrado',
+            message: 'Este email já está em uso. Email de recuperação de senha enviado.',
+            action: 'password-recovery-sent'
+          });
+        } catch (emailError) {
+          console.error('Erro ao enviar email de recuperação:', emailError);
+          return res.status(500).json({
+            success: false,
+            error: 'Erro interno',
+            message: 'Erro ao enviar email de recuperação'
+          });
+        }
+      }
     }
 
     // Gerar IDs
@@ -103,8 +136,8 @@ router.post('/register', async (req, res) => {
     `);
 
     const insertOwner = masterDb.prepare(`
-      INSERT INTO master_users (tenant_id, email, senha_hash, role)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO master_users (tenant_id, email, senha_hash, role, name, firstAccessCompleted)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     // Hash da senha
@@ -129,7 +162,7 @@ router.post('/register', async (req, res) => {
       );
 
       // Inserir owner no master
-      insertOwner.run(tenantId, ownerEmail, senhaHash, 'owner');
+      insertOwner.run(tenantId, ownerEmail, senhaHash, 'owner', ownerNome, 0);
     });
 
     transaction();

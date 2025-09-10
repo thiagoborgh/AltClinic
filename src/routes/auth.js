@@ -100,6 +100,19 @@ router.post('/login', async (req, res) => {
       sessionId: sessionId
     }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
+    // Marcar primeiro acesso como completo
+    try {
+      const masterDb = multiTenantDb.getMasterDb();
+      masterDb.prepare(`
+        UPDATE master_users 
+        SET firstAccessCompleted = 1 
+        WHERE email = ?
+      `).run(email);
+    } catch (error) {
+      console.error('Erro ao marcar primeiro acesso:', error);
+      // Não falhar o login por causa disso
+    }
+
     res.json({
       success: true,
       message: 'Login realizado com sucesso',
