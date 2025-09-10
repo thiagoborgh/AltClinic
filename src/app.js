@@ -19,6 +19,9 @@ const prontuarioRoutes = require('./routes/prontuario-simple');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 
+// Importar middlewares
+const { extractTenant } = require('./middleware/tenant');
+
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
 const { botManager } = require('./utils/bot');
@@ -119,6 +122,8 @@ class SaeeApp {
    * Configura rotas da aplicação
    */
   setupRoutes() {
+    console.log('🔧 Configurando rotas da aplicação...');
+    
     // Health check
     this.app.get('/health', (req, res) => {
       res.json({
@@ -135,16 +140,28 @@ class SaeeApp {
     this.app.use('/api/tenants', tenantsRoutes);
     this.app.use('/api/billing', billingRoutes);
     
+    // Rotas que precisam de tenant (exceto login que já tem o middleware interno)
+    // this.app.use('/api/auth/login', extractTenant); // Removido - middleware aplicado internamente
+    this.app.use('/api/auth/me', extractTenant);
+    this.app.use('/api/auth/send-first-access-email', extractTenant);
+    // /api/auth/recovery não precisa de tenant - ela encontra o tenant pelo email
+    
+    this.app.use('/api/pacientes', extractTenant);
+    this.app.use('/api/prontuario', extractTenant);
+    this.app.use('/api/prontuario/imagem', extractTenant);
+    this.app.use('/api/prontuario-completo', extractTenant);
+    this.app.use('/api/ai', extractTenant);
+    this.app.use('/api/automacao', extractTenant);
+    this.app.use('/api/agendamentos', extractTenant);
+    this.app.use('/api/propostas', extractTenant);
+    this.app.use('/api/crm', extractTenant);
+    this.app.use('/api/prontuarios', extractTenant);
+    this.app.use('/api/financeiro', extractTenant);
+    this.app.use('/api/configuracoes', extractTenant);
+    
+    // Rotas de auth (SOMENTE as que não precisam de tenant)
+    console.log('🔧 Configurando rota /api/auth...');
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/pacientes', pacientesRoutes);
-    this.app.use('/api/prontuario', prontuarioRoutes);
-    this.app.use('/api/prontuario/imagem', prontuarioImagemRoutes);
-    this.app.use('/api/prontuario-completo', require('./routes/prontuario-completo')); // Nova rota do prontuário
-    this.app.use('/api/ai', prontuarioRoutes); // Para rotas de IA
-    this.app.use('/api/automacao', prontuarioRoutes); // Para automações
-    this.app.use('/api/agendamentos', agendamentosRoutes);
-    this.app.use('/api/propostas', propostasRoutes);
-    this.app.use('/api/crm', crmRoutes);
     this.app.use('/api/prontuarios', prontuariosRoutes);
     this.app.use('/api/financeiro', financeiroRoutes);
     this.app.use('/api/configuracoes', configuracoesRoutes);

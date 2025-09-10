@@ -116,6 +116,21 @@ class MultiTenantDatabaseManager {
    * Obter conexão do database master
    */
   getMasterDb() {
+    // Verificar se a conexão ainda está ativa
+    if (!this.masterDb) {
+      console.error('❌ Master DB não inicializado');
+      throw new Error('Master database not initialized');
+    }
+    
+    // Tentar executar uma query simples para verificar se a conexão está ativa
+    try {
+      this.masterDb.prepare('SELECT 1').get();
+    } catch (error) {
+      console.error('❌ Master DB connection lost:', error.message);
+      // Tentar reconectar
+      this.masterDb = this.connectMasterDb();
+    }
+    
     return this.masterDb;
   }
 

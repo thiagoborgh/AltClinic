@@ -6,6 +6,10 @@ const crypto = require('crypto');
  */
 const extractTenant = async (req, res, next) => {
   try {
+    console.log('🏥 MIDDLEWARE TENANT: Iniciando extração de tenant');
+    console.log('🏥 MIDDLEWARE TENANT: Headers:', req.headers);
+    console.log('🏥 MIDDLEWARE TENANT: URL:', req.url);
+    
     // Extrair tenant do subdomínio ou header
     let tenantSlug = null;
     
@@ -23,17 +27,22 @@ const extractTenant = async (req, res, next) => {
     // Opção 2: Header personalizado (para desenvolvimento/API)
     if (!tenantSlug && req.headers['x-tenant-slug']) {
       tenantSlug = req.headers['x-tenant-slug'];
+      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no header:', tenantSlug);
     }
     
   // Opção 3: Parâmetro na URL (/api/tenant/:slug/...)
     if (!tenantSlug && req.params.tenantSlug) {
       tenantSlug = req.params.tenantSlug;
+      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado nos params:', tenantSlug);
     }
     
     // Opção 4: Query parameter (?tenant=clinica-abc)
     if (!tenantSlug && req.query.tenant) {
       tenantSlug = req.query.tenant;
+      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado na query:', tenantSlug);
     }
+    
+    console.log('🏥 MIDDLEWARE TENANT: Tenant final:', tenantSlug);
     
     if (!tenantSlug) {
       return res.status(400).json({
@@ -44,13 +53,20 @@ const extractTenant = async (req, res, next) => {
     
     // Buscar tenant no database master
     const masterDb = multiTenantDb.getMasterDb();
+    console.log('🏥 MIDDLEWARE TENANT: Master DB obtido');
+    
     const tenant = masterDb.prepare(`
       SELECT id, slug, nome, plano, status, config, billing, theme, trial_expire_at
       FROM tenants 
       WHERE slug = ? AND status IN ('active', 'trial')
     `).get(tenantSlug);
     
+    console.log('🏥 MIDDLEWARE TENANT: Query executada para slug:', tenantSlug);
+    
+    console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no DB:', !!tenant);
+    
     if (!tenant) {
+      console.log('🏥 MIDDLEWARE TENANT: Tenant não encontrado:', tenantSlug);
       return res.status(404).json({
         error: 'Clínica não encontrada',
         message: `Tenant '${tenantSlug}' não existe ou está inativo`
@@ -77,6 +93,8 @@ const extractTenant = async (req, res, next) => {
     // Adicionar tenant ao request
     req.tenant = tenant;
     req.tenantId = tenant.id;
+    
+    console.log('🏥 MIDDLEWARE TENANT: Tenant ID definido:', req.tenantId);
     
     // Log da requisição (opcional)
     console.log(`🏥 Request para tenant: ${tenant.nome} (${tenantSlug})`);

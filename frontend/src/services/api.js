@@ -37,6 +37,12 @@ api.interceptors.request.use(
       }
     }
 
+    // Adicionar header X-Tenant-Slug se existir no localStorage
+    const tenantSlug = localStorage.getItem('tenantSlug');
+    if (tenantSlug && !config.headers['X-Tenant-Slug']) {
+      config.headers['X-Tenant-Slug'] = tenantSlug;
+    }
+
     return config;
   },
   (error) => {

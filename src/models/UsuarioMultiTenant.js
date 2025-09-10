@@ -1,5 +1,9 @@
 const dbManager = require('./database');
+const multiTenantDb = require('./MultiTenantDatabase');
 const authUtil = require('../utils/auth');
+
+console.log('🔧 UsuarioMultiTenant: authUtil loaded:', typeof authUtil);
+console.log('🔧 UsuarioMultiTenant: authUtil.verifyPassword:', typeof authUtil.verifyPassword);
 
 class UsuarioMultiTenantModel {
   constructor() {
@@ -12,7 +16,7 @@ class UsuarioMultiTenantModel {
    */
   getTenantDb(tenantId) {
     if (!this.tenantConnections.has(tenantId)) {
-      const tenantDb = dbManager.getTenantDb(tenantId);
+      const tenantDb = multiTenantDb.getTenantDb(tenantId);
       this.tenantConnections.set(tenantId, tenantDb);
     }
     return this.tenantConnections.get(tenantId);
@@ -54,14 +58,16 @@ class UsuarioMultiTenantModel {
   }
 
   /**
-   * Buscar usuário por ID (multi-tenant)
+   * Busca usuário por ID (multi-tenant)
+   * @param {number} id - ID do usuário
+   * @param {string} tenantId - ID do tenant
+   * @returns {Object|null} - Usuário encontrado
    */
-  async findById(id, tenantId) {
+  findById(id, tenantId) {
     const tenantDb = this.getTenantDb(tenantId);
     const usuario = tenantDb.prepare(`
-      SELECT id, tenant_id, nome, role, email, permissions, avatar, telefone, 
-             crm, especialidade, status, last_login, email_verified_at, 
-             created_at, updated_at
+      SELECT id, tenant_id, nome, email, role, permissions, avatar, telefone, 
+             crm, especialidade, status, last_login, created_at, updated_at
       FROM usuarios 
       WHERE id = ? AND tenant_id = ?
     `).get(id, tenantId);
@@ -74,21 +80,57 @@ class UsuarioMultiTenantModel {
   }
 
   /**
-   * Buscar usuário por email e tenant
+   * Busca usuário por email (multi-tenant)
+   * @param {string} email - Email do usuário
+   * @param {string} tenantId - ID do tenant
+   * @returns {Object|null} - Usuário encontrado
    */
-  async findByEmailAndTenant(email, tenantId) {
+  findByEmail(email, tenantId) {
     const tenantDb = this.getTenantDb(tenantId);
     const usuario = tenantDb.prepare(`
-      SELECT id, tenant_id, nome, role, email, senha_hash, permissions, 
-             avatar, telefone, crm, especialidade, status, last_login
+      SELECT id, tenant_id, nome, email, senha_hash, role, permissions, avatar, telefone, 
+             crm, especialidade, status, last_login, created_at, updated_at
       FROM usuarios 
-      WHERE email = ? AND tenant_id = ? AND status = 'active'
+      WHERE email = ? AND tenant_id = ?
     `).get(email, tenantId);
     
     if (usuario) {
       usuario.permissions = JSON.parse(usuario.permissions || '{}');
     }
     
+    return usuario;
+  }
+
+  /**
+   * Autentica usuário (multi-tenant)
+   * @param {string} email - Email do usuário
+   * @param {string} senha - Senha do usuário
+   * @param {string} tenantId - ID do tenant
+   * @returns {Object|null} - Dados do usuário autenticado
+   */
+  authenticate(email, senha, tenantId) {
+    console.log('🔧 UsuarioMultiTenant.authenticate called with:', email, tenantId);
+    const usuario = this.findByEmail(email, tenantId);
+    
+    if (!usuario) {
+      console.log('🔧 UsuarioMultiTenant.authenticate: User not found');
+      return null;
+    }
+    
+    console.log('🔧 UsuarioMultiTenant.authenticate: User found, verifying password');
+    // Por enquanto, verificar senha de forma síncrona
+    const bcrypt = require('bcryptjs');
+    const senhaValida = bcrypt.compareSync(senha, usuario.senha_hash);
+    
+    if (!senhaValida) {
+      console.log('🔧 UsuarioMultiTenant.authenticate: Invalid password');
+      return null;
+    }
+    
+    // Remover hash da senha do retorno
+    delete usuario.senha_hash;
+    
+    console.log('🔧 UsuarioMultiTenant.authenticate: Authentication successful');
     return usuario;
   }
 
