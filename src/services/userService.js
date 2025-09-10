@@ -25,8 +25,8 @@ class UserService {
       // Verificar se fez primeiro acesso
       const firstAccessCompleted = user.firstAccessCompleted || false;
 
-      // Se não fez primeiro acesso, reenviar email de primeiro acesso
       if (!firstAccessCompleted) {
+        // Primeiro acesso nunca foi feito, reenviar email completo de boas-vindas
         return {
           exists: true,
           action: 'resend-first-access',
@@ -38,31 +38,17 @@ class UserService {
         };
       }
 
-      // Se fez primeiro acesso, verificar se senha foi alterada
-      // Para simplificar, vamos considerar que se fez primeiro acesso, a senha foi alterada
-      // Em produção, seria melhor armazenar um hash da senha temporária para comparação
-      if (firstAccessCompleted) {
-        return {
-          exists: true,
-          action: 'send-password-recovery',
-          user: user,
-          tenant: {
-            nome: user.tenantNome,
-            slug: user.tenantSlug
-          }
-        };
-      } else {
-        // Primeiro acesso não foi feito, reenviar email de primeiro acesso
-        return {
-          exists: true,
-          action: 'resend-first-access',
-          user: user,
-          tenant: {
-            nome: user.tenantNome,
-            slug: user.tenantSlug
-          }
-        };
-      }
+      // Se fez primeiro acesso, significa que a senha foi alterada
+      // Enviar email de recuperação de senha
+      return {
+        exists: true,
+        action: 'send-password-recovery',
+        user: user,
+        tenant: {
+          nome: user.tenantNome,
+          slug: user.tenantSlug
+        }
+      };
 
     } catch (error) {
       console.error('Erro ao verificar usuário existente:', error);
@@ -75,19 +61,34 @@ class UserService {
    */
   async resendFirstAccessEmail(user, tenant) {
     try {
-      // Para usuários existentes, vamos enviar um lembrete de primeiro acesso
-      // sem mostrar a senha por segurança
+      // Para usuários que nunca fizeram primeiro acesso, reenviar email completo
+      // Gerar nova senha temporária para segurança
+      const tempPassword = require('crypto').randomBytes(8).toString('hex');
+
+      // Atualizar senha no banco com a nova temporária
+      const masterDb = require('../models/MultiTenantDatabase').getMasterDb();
+      const bcrypt = require('bcryptjs');
+      const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+      masterDb.prepare(`
+        UPDATE master_users
+        SET senha_hash = ?
+        WHERE id = ?
+      `).run(hashedPassword, user.id);
+
       const templateData = {
         userName: user.name || 'Usuário',
         tenantName: tenant.nome,
+        email: user.email,
+        tempPassword: tempPassword,
         loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login/${tenant.slug}`,
-        supportEmail: process.env.SUPPORT_EMAIL || 'suporte@altclinic.com.br'
+        trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR')}</p>`
       };
 
       const emailResult = await sendEmail({
         to: user.email,
-        subject: `Lembrete de Primeiro Acesso - ${tenant.nome}`,
-        template: 'first-access-reminder',
+        subject: `Bem-vindo à ${tenant.nome} - Suas credenciais de acesso`,
+        template: 'first-access',
         data: templateData
       });
 
