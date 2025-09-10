@@ -46,6 +46,9 @@ class SaeeApp {
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
           imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: process.env.NODE_ENV === 'production' 
+            ? ["'self'", "https:"] 
+            : ["'self'", "http://localhost:3000", "http://localhost:3001", "https:"],
         },
       },
     }));
@@ -54,7 +57,7 @@ class SaeeApp {
     this.app.use(cors({
       origin: process.env.NODE_ENV === 'production' 
         ? ['https://yourdomain.com'] 
-        : true,
+        : ['http://localhost:3000', 'http://localhost:3001'],
       credentials: true
     }));
 
