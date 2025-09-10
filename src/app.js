@@ -25,6 +25,7 @@ const { extractTenant } = require('./middleware/tenant');
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
 const { botManager } = require('./utils/bot');
+const ProductionInitializer = require('./utils/productionInitializer');
 
 class SaeeApp {
   constructor() {
@@ -382,6 +383,9 @@ class SaeeApp {
         console.log('💡 Execute as migrations primeiro: npm run migrate');
         process.exit(1);
       }
+
+      // Inicializar primeiro acesso em produção (se necessário)
+      await ProductionInitializer.checkAndInitialize();
 
       // Iniciar cron jobs
       if (process.env.NODE_ENV !== 'test') {

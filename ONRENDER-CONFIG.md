@@ -37,7 +37,15 @@ Após o deploy, teste os seguintes endpoints:
 
 1. **Health Check**: `https://your-app.onrender.com/health`
 2. **API Status**: `https://your-app.onrender.com/api/status`
-3. **Login**: `https://your-app.onrender.com/api/auth/login`
+3. **Inicialização**: `https://your-app.onrender.com/api/auth/init-status`
+4. **Login**: `https://your-app.onrender.com/api/auth/login`
+
+## Credenciais de Primeiro Acesso
+
+O sistema cria automaticamente em produção:
+- **Email**: `admin@clinica.com`
+- **Senha**: `123456`
+- **Tenant**: `demo-clinic`
 
 ## Teste de Login
 
@@ -45,6 +53,21 @@ Após o deploy, teste os seguintes endpoints:
 curl -X POST https://your-app.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@clinica.com","senha":"123456"}'
+```
+
+## Inicialização Manual (Emergência)
+
+Se o sistema não inicializar automaticamente:
+
+```bash
+curl -X POST https://your-app.onrender.com/api/auth/init-system \
+  -H "Content-Type: application/json"
+```
+
+Ou verifique o status:
+
+```bash
+curl https://your-app.onrender.com/api/auth/init-status
 ```
 
 ## Solução de Problemas

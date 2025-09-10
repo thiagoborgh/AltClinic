@@ -101,6 +101,7 @@ app.use('/static', (req, res, next) => {
 
 // Middleware de log - melhorado para multi-tenant (com duração e status, ignora assets)
 app.use((req, res, next) => {
+  console.log(`📨 REQUEST RECEIVED: ${req.method} ${req.path}`);
   // Silenciar logs em ambiente de teste para estabilidade dos testes
   if ((process.env.NODE_ENV || '').toLowerCase() === 'test') {
     return next();
@@ -143,8 +144,11 @@ app.use((req, res, next) => {
 });
 
 // === ROTAS PÚBLICAS (sem tenant) ===
+console.log('🔧 Registrando rota /api/tenants...');
 app.use('/api/tenants', tenantsRoutes);
+console.log('🔧 Registrando rota /api/trial...');
 app.use('/api/trial', trialRoutes);
+console.log('🔧 Registrando rota /api/auth...');
 app.use('/api/auth', authRoutes);
 
 // Inicializar serviço de email
@@ -269,8 +273,11 @@ app.get('*', (req, res, next) => {
 // Middleware de erro global
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
+  console.error('Erro type:', err.type);
+  console.error('Erro message:', err.message);
   
   if (err.type === 'entity.parse.failed') {
+    console.error('Erro de parsing JSON detectado');
     return res.status(400).json({
       success: false,
       message: 'JSON inválido'

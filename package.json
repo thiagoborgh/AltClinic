@@ -13,6 +13,7 @@
     "migrate:create": "node src/migrate.js create",
     "migrate:status": "node src/migrate.js status",
     "setup": "node setup.js",
+    "init:production": "node -e \"const init = require('./src/utils/productionInitializer'); init.createFirstAccess().then(() => process.exit(0)).catch(e => {console.error(e); process.exit(1);})\"",
     "seed:tenants": "node scripts/seed-tenants.js",
     "test:apis": "node test-apis.js",
     "health": "node health-check.js",
