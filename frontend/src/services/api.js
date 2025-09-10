@@ -1,9 +1,26 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Função para detectar a URL da API baseada no ambiente
+const getApiBaseURL = () => {
+  // Se estiver definido explicitamente nas variáveis de ambiente
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Se estiver em produção (OnRender ou outro provedor)
+  if (process.env.NODE_ENV === 'production') {
+    // Usar a mesma URL do frontend, mas com /api
+    return `${window.location.origin}/api`;
+  }
+  
+  // Fallback para desenvolvimento
+  return 'http://localhost:3001/api';
+};
+
 // Configuração base da API
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: getApiBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

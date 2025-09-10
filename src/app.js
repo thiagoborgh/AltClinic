@@ -59,7 +59,7 @@ class SaeeApp {
     // CORS
     this.app.use(cors({
       origin: process.env.NODE_ENV === 'production' 
-        ? ['https://yourdomain.com'] 
+        ? true // Aceitar qualquer origem em produção (necessário para OnRender)
         : ['http://localhost:3000', 'http://localhost:3001'],
       credentials: true
     }));
