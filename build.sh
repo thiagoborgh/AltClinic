@@ -3,6 +3,11 @@
 
 echo "🏗️ Iniciando build para produção..."
 
+# Limpar package-lock.json para forçar reinstalação limpa
+echo "🧹 Limpando cache e lock files..."
+rm -f package-lock.json
+rm -rf node_modules
+
 # Instalar dependências do backend
 echo "📦 Instalando dependências do backend..."
 npm install
@@ -40,6 +45,10 @@ mkdir -p public/admin
 echo "📋 Copiando arquivos do build..."
 cp -r frontend/build/* public/
 cp -r admin/frontend/build/* public/admin/
+
+# Rebuildar módulos nativos para a plataforma atual
+echo "🔧 Rebuilding native modules..."
+npm rebuild
 
 echo "✅ Build concluído com sucesso!"
 echo "📊 Arquivos no diretório público:"
