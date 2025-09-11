@@ -54,11 +54,23 @@ robocopy "admin/frontend/build" "public/admin" /E /IS /IT /NFL /NDL /NJH /NJS
 
 ```
 Build Command:
-cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install
+./build.sh
 
 Start Command:
 node src/app.js
 ```
+
+**Nota**: O script `build.sh` agora inclui:
+- Limpeza de cache e lock files
+- Build dos dois frontends (principal + admin)
+- Rebuild automático de módulos nativos (better-sqlite3, sharp)
+
+#### **Node.js Version:**
+
+O projeto está configurado para usar Node.js 20.17.0 através de:
+- `package.json` → `engines.node: ">=20.3.0"`
+- `.nvmrc` → `20.17.0`
+- `.node-version` → `20.17.0`
 
 #### **Environment Variables:**
 
