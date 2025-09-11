@@ -13,6 +13,7 @@ const crmRoutes = require('./routes/crm');
 const prontuariosRoutes = require('./routes/prontuarios');
 const financeiroRoutes = require('./routes/financeiro');
 const tenantsRoutes = require('./routes/tenants');
+const tenantsAdminRoutes = require('./routes/tenants-admin');
 const billingRoutes = require('./routes/billing');
 const pacientesRoutes = require('./routes/pacientes-simple');
 const prontuarioRoutes = require('./routes/prontuario-simple');
@@ -139,6 +140,7 @@ class SaeeApp {
     // Rotas da API
     // Rotas multi-tenant (devem vir ANTES das outras)
     this.app.use('/api/tenants', tenantsRoutes);
+    this.app.use('/api/tenants/admin', tenantsAdminRoutes);
     this.app.use('/api/billing', billingRoutes);
     
     // Rotas que precisam de tenant (exceto login que já tem o middleware interno)

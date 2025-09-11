@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './pages/Dashboard';
 import Licencas from './pages/Licencas';
+import Financeiro from './pages/Financeiro';
+import CRM from './pages/CRM';
+import Automacao from './pages/Automacao';
 import Configuracoes from './pages/Configuracoes';
 import Relatorios from './pages/Relatorios';
 import Layout from './components/Layout';
@@ -35,6 +38,9 @@ function AppContent() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/licencas" element={<Licencas />} />
+        <Route path="/financeiro" element={<Financeiro />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/automacao" element={<Automacao />} />
         <Route path="/configuracoes/:licencaId" element={<Configuracoes />} />
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

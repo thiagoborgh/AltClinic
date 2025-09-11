@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -21,155 +20,124 @@ import {
   Alert,
   IconButton,
   Tooltip,
-  Fab
+  Snackbar
 } from '@mui/material';
 import {
-  Add,
   Search,
-  FilterList,
   Settings,
-  Edit,
   Delete,
-  Business,
   CheckCircle,
   Warning,
   Error as ErrorIcon,
-  Refresh
+  Refresh,
+  Restore,
+  Upgrade
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
 
 const Licencas = () => {
-  const [licencas, setLicencas] = useState([]);
+  const [tenants, setTenants] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todas');
+  const [planoFilter, setPlanoFilter] = useState('todos');
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedLicenca, setSelectedLicenca] = useState(null);
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [dialogType, setDialogType] = useState(''); // 'reset-trial', 'change-plan', 'change-status'
   const [formData, setFormData] = useState({
-    cliente: '',
-    email: '',
-    telefone: '',
+    dias: 30,
     plano: '',
-    dataVencimento: '',
-    status: 'ativa',
-    observacoes: ''
+    status: ''
   });
-  const navigate = useNavigate();
-
-  // Dados mock para desenvolvimento
-  const licencasMock = [
-    {
-      id: 'LIC001',
-      cliente: 'Clínica São Paulo Ltda',
-      email: 'contato@clinicasp.com.br',
-      telefone: '(11) 3333-4444',
-      plano: 'Premium',
-      dataVencimento: '2025-12-15',
-      status: 'ativa',
-      ultimoAcesso: '2025-09-01',
-      observacoes: 'Cliente há 2 anos'
-    },
-    {
-      id: 'LIC002',
-      cliente: 'Consultório Dr. Silva',
-      email: 'dr.silva@email.com',
-      telefone: '(11) 2222-3333',
-      plano: 'Básico',
-      dataVencimento: '2025-09-20',
-      status: 'vencendo',
-      ultimoAcesso: '2025-08-30',
-      observacoes: 'Renovação pendente'
-    },
-    {
-      id: 'LIC003',
-      cliente: 'Clínica Odonto Plus',
-      email: 'contato@odontoplus.com',
-      telefone: '(11) 4444-5555',
-      plano: 'Premium',
-      dataVencimento: '2026-01-10',
-      status: 'ativa',
-      ultimoAcesso: '2025-09-02',
-      observacoes: 'Novo cliente'
-    },
-    {
-      id: 'LIC004',
-      cliente: 'Centro Médico ABC',
-      email: 'admin@centroabc.com.br',
-      telefone: '(11) 5555-6666',
-      plano: 'Empresarial',
-      dataVencimento: '2025-08-30',
-      status: 'vencida',
-      ultimoAcesso: '2025-08-25',
-      observacoes: 'Contatar urgente'
-    },
-    {
-      id: 'LIC005',
-      cliente: 'Clínica Dermatologia',
-      email: 'info@dermaclinica.com',
-      telefone: '(11) 6666-7777',
-      plano: 'Premium',
-      dataVencimento: '2025-11-25',
-      status: 'ativa',
-      ultimoAcesso: '2025-09-01',
-      observacoes: 'Cliente premium'
-    }
-  ];
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
-    fetchLicencas();
+    fetchTenants();
+    fetchStats();
   }, []);
 
-  const fetchLicencas = async () => {
+  const fetchTenants = async () => {
     try {
-      // const response = await axios.get('/licencas');
-      // setLicencas(response.data);
-      
-      // Usando dados mock por enquanto
-      setLicencas(licencasMock);
+      setLoading(true);
+      const response = await axios.get('/tenants/admin/list');
+      if (response.data.success) {
+        setTenants(response.data.tenants);
+      }
     } catch (error) {
-      console.error('Erro ao carregar licenças:', error);
+      console.error('Erro ao carregar tenants:', error);
+      setSnackbar({
+        open: true,
+        message: 'Erro ao carregar tenants',
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get('/tenants/admin/stats');
+      if (response.data.success) {
+        setStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ativa': return 'success';
-      case 'vencendo': return 'warning';
-      case 'vencida': return 'error';
-      case 'suspensa': return 'default';
+      case 'active': return 'success';
+      case 'trial': return 'warning';
+      case 'suspended': return 'error';
+      case 'cancelled': return 'default';
       default: return 'default';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'ativa': return <CheckCircle fontSize="small" />;
-      case 'vencendo': return <Warning fontSize="small" />;
-      case 'vencida': return <ErrorIcon fontSize="small" />;
+      case 'active': return <CheckCircle fontSize="small" />;
+      case 'trial': return <Warning fontSize="small" />;
+      case 'suspended': return <ErrorIcon fontSize="small" />;
+      case 'cancelled': return <Delete fontSize="small" />;
       default: return <ErrorIcon fontSize="small" />;
+    }
+  };
+
+  const getPlanoColor = (plano) => {
+    switch (plano) {
+      case 'premium': return 'primary';
+      case 'basic': return 'secondary';
+      case 'trial': return 'warning';
+      default: return 'default';
     }
   };
 
   const columns = [
     {
       field: 'id',
-      headerName: 'ID Licença',
-      width: 120,
+      headerName: 'ID Tenant',
+      width: 150,
       renderCell: (params) => (
-        <Chip label={params.value} variant="outlined" size="small" />
+        <Chip label={params.value.substring(0, 8)} variant="outlined" size="small" />
       )
     },
     {
-      field: 'cliente',
-      headerName: 'Cliente',
+      field: 'nome',
+      headerName: 'Nome da Clínica',
       width: 200,
       renderCell: (params) => (
         <Box display="flex" alignItems="center">
           <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32, mr: 1, fontSize: 14 }}>
-            {params.row.cliente.charAt(0)}
+            {params.row.nome.charAt(0)}
           </Avatar>
           {params.value}
         </Box>
@@ -181,23 +149,34 @@ const Licencas = () => {
       width: 200
     },
     {
+      field: 'owner',
+      headerName: 'Proprietário',
+      width: 180,
+      renderCell: (params) => (
+        <Box>
+          <Typography variant="body2">{params.value?.nome || params.value?.email}</Typography>
+          <Typography variant="caption" color="text.secondary">{params.value?.email}</Typography>
+        </Box>
+      )
+    },
+    {
       field: 'plano',
       headerName: 'Plano',
       width: 120,
       renderCell: (params) => (
-        <Chip 
-          label={params.value} 
-          color={params.value === 'Premium' ? 'primary' : params.value === 'Empresarial' ? 'secondary' : 'default'}
+        <Chip
+          label={params.value?.toUpperCase() || 'TRIAL'}
+          color={getPlanoColor(params.value)}
           size="small"
         />
       )
     },
     {
-      field: 'dataVencimento',
-      headerName: 'Vencimento',
-      width: 120,
+      field: 'trial_expire_at',
+      headerName: 'Vencimento Trial',
+      width: 140,
       renderCell: (params) => (
-        new Date(params.value).toLocaleDateString('pt-BR')
+        params.value ? new Date(params.value).toLocaleDateString('pt-BR') : 'N/A'
       )
     },
     {
@@ -207,44 +186,61 @@ const Licencas = () => {
       renderCell: (params) => (
         <Chip
           icon={getStatusIcon(params.value)}
-          label={params.value.toUpperCase()}
+          label={params.value?.toUpperCase() || 'TRIAL'}
           color={getStatusColor(params.value)}
           size="small"
         />
       )
     },
     {
+      field: 'created_at',
+      headerName: 'Criado em',
+      width: 120,
+      renderCell: (params) => (
+        new Date(params.value).toLocaleDateString('pt-BR')
+      )
+    },
+    {
       field: 'acoes',
       headerName: 'Ações',
-      width: 150,
+      width: 200,
       sortable: false,
       renderCell: (params) => (
         <Box>
-          <Tooltip title="Configurações">
+          <Tooltip title="Resetar Trial">
             <IconButton
               size="small"
-              onClick={() => navigate(`/configuracoes/${params.row.id}`)}
+              onClick={() => handleOpenDialog('reset-trial', params.row)}
+              color="warning"
+            >
+              <Restore />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Alterar Plano">
+            <IconButton
+              size="small"
+              onClick={() => handleOpenDialog('change-plan', params.row)}
               color="primary"
+            >
+              <Upgrade />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Alterar Status">
+            <IconButton
+              size="small"
+              onClick={() => handleOpenDialog('change-status', params.row)}
+              color="secondary"
             >
               <Settings />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Editar">
+          <Tooltip title="Inativar Licença">
             <IconButton
               size="small"
-              onClick={() => handleEditLicenca(params.row)}
-              color="primary"
-            >
-              <Edit />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Excluir">
-            <IconButton
-              size="small"
-              onClick={() => handleDeleteLicenca(params.row.id)}
+              onClick={() => handleDeleteTenant(params.row.id)}
               color="error"
             >
-              <Delete />
+              <ErrorIcon />
             </IconButton>
           </Tooltip>
         </Box>
@@ -252,87 +248,177 @@ const Licencas = () => {
     }
   ];
 
-  const handleEditLicenca = (licenca) => {
-    setSelectedLicenca(licenca);
+  const handleOpenDialog = (type, tenant) => {
+    setDialogType(type);
+    setSelectedTenant(tenant);
     setFormData({
-      cliente: licenca.cliente,
-      email: licenca.email,
-      telefone: licenca.telefone,
-      plano: licenca.plano,
-      dataVencimento: licenca.dataVencimento,
-      status: licenca.status,
-      observacoes: licenca.observacoes || ''
+      dias: 30,
+      plano: tenant.plano || '',
+      status: tenant.status || ''
     });
     setOpenDialog(true);
   };
 
-  const handleDeleteLicenca = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta licença?')) {
+  const handleDeleteTenant = async (tenantId) => {
+    if (window.confirm('Tem certeza que deseja inativar esta licença? O tenant será marcado como cancelado e poderá ser reativado posteriormente.')) {
       try {
-        // await axios.delete(`/licencas/${id}`);
-        setLicencas(licencas.filter(l => l.id !== id));
-        console.log(`Licença ${id} excluída`);
+        const response = await axios.delete(`/tenants/admin/${tenantId}`);
+        if (response.data.success) {
+          // Atualizar o status do tenant na lista local
+          setTenants(tenants.map(t => 
+            t.id === tenantId ? { ...t, status: 'cancelled' } : t
+          ));
+          setSnackbar({
+            open: true,
+            message: 'Licença inativada com sucesso',
+            severity: 'success'
+          });
+          fetchStats();
+        }
       } catch (error) {
-        console.error('Erro ao excluir licença:', error);
+        console.error('Erro ao inativar licença:', error);
+        setSnackbar({
+          open: true,
+          message: 'Erro ao inativar licença',
+          severity: 'error'
+        });
       }
     }
   };
 
-  const handleSaveLicenca = async () => {
+  const handleSaveAction = async () => {
     try {
-      if (selectedLicenca) {
-        // Editar licença existente
-        // await axios.put(`/licencas/${selectedLicenca.id}`, formData);
-        setLicencas(licencas.map(l => 
-          l.id === selectedLicenca.id 
-            ? { ...l, ...formData } 
-            : l
-        ));
-      } else {
-        // Criar nova licença
-        const newId = `LIC${String(licencas.length + 1).padStart(3, '0')}`;
-        // await axios.post('/licencas', { ...formData, id: newId });
-        setLicencas([...licencas, { ...formData, id: newId, ultimoAcesso: new Date().toISOString().split('T')[0] }]);
+      let response;
+      let message = '';
+
+      switch (dialogType) {
+        case 'reset-trial':
+          response = await axios.put(`/tenants/admin/${selectedTenant.id}/reset-trial`, {
+            dias: formData.dias
+          });
+          message = `Período de teste extendido por ${formData.dias} dias`;
+          break;
+
+        case 'change-plan':
+          response = await axios.put(`/tenants/admin/${selectedTenant.id}/change-plan`, {
+            plano: formData.plano
+          });
+          message = `Plano alterado para ${formData.plano}`;
+          break;
+
+        case 'change-status':
+          response = await axios.put(`/tenants/admin/${selectedTenant.id}/change-status`, {
+            status: formData.status
+          });
+          message = `Status alterado para ${formData.status}`;
+          break;
+
+        default:
+          return;
       }
-      
-      setOpenDialog(false);
-      setSelectedLicenca(null);
-      setFormData({
-        cliente: '',
-        email: '',
-        telefone: '',
-        plano: '',
-        dataVencimento: '',
-        status: 'ativa',
-        observacoes: ''
-      });
+
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: message,
+          severity: 'success'
+        });
+        setOpenDialog(false);
+        setSelectedTenant(null);
+        fetchTenants();
+        fetchStats();
+      }
     } catch (error) {
-      console.error('Erro ao salvar licença:', error);
+      console.error('Erro ao executar ação:', error);
+      setSnackbar({
+        open: true,
+        message: 'Erro ao executar ação',
+        severity: 'error'
+      });
     }
   };
 
-  const filteredLicencas = licencas.filter(licenca => {
-    const matchesSearch = licenca.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         licenca.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         licenca.id.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'todas' || licenca.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+  const filteredTenants = tenants.filter(tenant => {
+    const matchesSearch = tenant.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tenant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tenant.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (tenant.owner?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'todas' || tenant.status === statusFilter;
+    const matchesPlano = planoFilter === 'todos' || tenant.plano === planoFilter;
+
+    return matchesSearch && matchesStatus && matchesPlano;
   });
 
   return (
     <Box>
+      {/* Estatísticas */}
+      {stats && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" color="primary">
+                  {stats.total_tenants}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total de Tenants
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" color="warning.main">
+                  {stats.por_status?.trial || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Em Trial
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" color="success.main">
+                  {stats.por_status?.active || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Ativos
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" color="error.main">
+                  {stats.por_status?.suspended || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Suspensos
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">
-          Gerenciamento de Licenças
+          Gerenciamento de Licenças/Tenants
         </Typography>
         <Button
           variant="contained"
-          startIcon={<Add />}
-          onClick={() => setOpenDialog(true)}
+          startIcon={<Refresh />}
+          onClick={() => {
+            fetchTenants();
+            fetchStats();
+          }}
         >
-          Nova Licença
+          Atualizar
         </Button>
       </Box>
 
@@ -343,7 +429,7 @@ const Licencas = () => {
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Buscar por cliente, email ou ID..."
+                placeholder="Buscar por nome, email ou ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -360,10 +446,25 @@ const Licencas = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <MenuItem value="todas">Todas</MenuItem>
-                  <MenuItem value="ativa">Ativas</MenuItem>
-                  <MenuItem value="vencendo">Vencendo</MenuItem>
-                  <MenuItem value="vencida">Vencidas</MenuItem>
-                  <MenuItem value="suspensa">Suspensas</MenuItem>
+                  <MenuItem value="trial">Trial</MenuItem>
+                  <MenuItem value="active">Ativo</MenuItem>
+                  <MenuItem value="suspended">Suspenso</MenuItem>
+                  <MenuItem value="cancelled">Cancelado</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Plano</InputLabel>
+                <Select
+                  value={planoFilter}
+                  label="Plano"
+                  onChange={(e) => setPlanoFilter(e.target.value)}
+                >
+                  <MenuItem value="todos">Todos</MenuItem>
+                  <MenuItem value="trial">Trial</MenuItem>
+                  <MenuItem value="basic">Básico</MenuItem>
+                  <MenuItem value="premium">Premium</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -372,7 +473,10 @@ const Licencas = () => {
                 fullWidth
                 variant="outlined"
                 startIcon={<Refresh />}
-                onClick={fetchLicencas}
+                onClick={() => {
+                  fetchTenants();
+                  fetchStats();
+                }}
               >
                 Atualizar
               </Button>
@@ -381,19 +485,19 @@ const Licencas = () => {
         </CardContent>
       </Card>
 
-      {/* Tabela de Licenças */}
+      {/* Tabela de Tenants */}
       <Card>
         <CardContent>
           <Box sx={{ height: 600, width: '100%' }}>
             <DataGrid
-              rows={filteredLicencas}
+              rows={filteredTenants}
               columns={columns}
               pageSize={10}
               rowsPerPageOptions={[5, 10, 20]}
               loading={loading}
               disableSelectionOnClick
               localeText={{
-                noRowsLabel: 'Nenhuma licença encontrada',
+                noRowsLabel: 'Nenhum tenant encontrado',
                 toolbarFilters: 'Filtros',
                 toolbarDensity: 'Densidade',
                 toolbarColumns: 'Colunas',
@@ -404,101 +508,97 @@ const Licencas = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog para Criar/Editar Licença */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      {/* Dialog para Ações */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedLicenca ? 'Editar Licença' : 'Nova Licença'}
+          {dialogType === 'reset-trial' && 'Resetar Período de Teste'}
+          {dialogType === 'change-plan' && 'Alterar Plano'}
+          {dialogType === 'change-status' && 'Alterar Status'}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Nome do Cliente"
-                value={formData.cliente}
-                onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Telefone"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Plano</InputLabel>
-                <Select
-                  value={formData.plano}
-                  label="Plano"
-                  onChange={(e) => setFormData({ ...formData, plano: e.target.value })}
-                >
-                  <MenuItem value="Básico">Básico</MenuItem>
-                  <MenuItem value="Premium">Premium</MenuItem>
-                  <MenuItem value="Empresarial">Empresarial</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Data de Vencimento"
-                type="date"
-                value={formData.dataVencimento}
-                onChange={(e) => setFormData({ ...formData, dataVencimento: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={formData.status}
-                  label="Status"
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <MenuItem value="ativa">Ativa</MenuItem>
-                  <MenuItem value="vencendo">Vencendo</MenuItem>
-                  <MenuItem value="vencida">Vencida</MenuItem>
-                  <MenuItem value="suspensa">Suspensa</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Observações"
-                multiline
-                rows={3}
-                value={formData.observacoes}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-              />
-            </Grid>
+            {dialogType === 'reset-trial' && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Extender o período de teste para o tenant: <strong>{selectedTenant?.nome}</strong>
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Dias adicionais"
+                  type="number"
+                  value={formData.dias}
+                  onChange={(e) => setFormData({ ...formData, dias: parseInt(e.target.value) })}
+                  helperText="Número de dias para adicionar ao período de teste"
+                />
+              </Grid>
+            )}
+
+            {dialogType === 'change-plan' && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Alterar plano para o tenant: <strong>{selectedTenant?.nome}</strong>
+                </Typography>
+                <FormControl fullWidth>
+                  <InputLabel>Novo Plano</InputLabel>
+                  <Select
+                    value={formData.plano}
+                    label="Novo Plano"
+                    onChange={(e) => setFormData({ ...formData, plano: e.target.value })}
+                  >
+                    <MenuItem value="trial">Trial</MenuItem>
+                    <MenuItem value="basic">Básico</MenuItem>
+                    <MenuItem value="premium">Premium</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
+            {dialogType === 'change-status' && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Alterar status para o tenant: <strong>{selectedTenant?.nome}</strong>
+                </Typography>
+                <FormControl fullWidth>
+                  <InputLabel>Novo Status</InputLabel>
+                  <Select
+                    value={formData.status}
+                    label="Novo Status"
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  >
+                    <MenuItem value="trial">Trial</MenuItem>
+                    <MenuItem value="active">Ativo</MenuItem>
+                    <MenuItem value="suspended">Suspenso</MenuItem>
+                    <MenuItem value="cancelled">Cancelado</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSaveLicenca} variant="contained">
-            {selectedLicenca ? 'Atualizar' : 'Criar'}
+          <Button onClick={handleSaveAction} variant="contained">
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar para notificações */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

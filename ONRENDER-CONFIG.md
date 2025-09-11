@@ -3,16 +3,19 @@
 ## Configurações no OnRender
 
 ### Build Command
+
 ```bash
 chmod +x build.sh && ./build.sh
 ```
 
 ### Start Command
+
 ```bash
 npm start
 ```
 
 ### Environment Variables
+
 Adicione as seguintes variáveis de ambiente no painel do OnRender:
 
 ```bash
@@ -22,11 +25,13 @@ JWT_SECRET=your-super-secret-jwt-key-here
 ```
 
 ### Root Directory
+
 ```
 .
 ```
 
 ### Build Directory (se necessário)
+
 ```
 public
 ```
@@ -43,6 +48,7 @@ Após o deploy, teste os seguintes endpoints:
 ## Credenciais de Primeiro Acesso
 
 O sistema cria automaticamente em produção:
+
 - **Email**: `admin@clinica.com`
 - **Senha**: `123456`
 - **Tenant**: `demo-clinic`
@@ -73,19 +79,25 @@ curl https://your-app.onrender.com/api/auth/init-status
 ## Solução de Problemas
 
 ### CSP Error
+
 Se encontrar erros de Content Security Policy, verifique se:
+
 - O frontend está usando a URL correta da API
 - As configurações de CORS estão corretas
 - O Node.js está definido como `production`
 
 ### 404 em rotas do frontend
+
 Certifique-se de que:
+
 - O build do frontend foi executado corretamente
 - Os arquivos estão no diretório `public/`
 - O catchall route está funcionando
 
 ### Problemas de autenticação
+
 Verifique se:
+
 - O usuário admin foi criado
 - O banco de dados está sendo inicializado
 - As credenciais estão corretas
@@ -93,6 +105,7 @@ Verifique se:
 ## Logs Úteis
 
 Para verificar os logs no OnRender:
+
 1. Acesse o painel do seu serviço
 2. Vá na aba "Logs"
 3. Procure por mensagens de erro ou sucesso

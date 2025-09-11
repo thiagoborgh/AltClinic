@@ -1,8 +1,33 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const UsuarioModel = require('../models/UsuarioMultiTenant');
 const multiTenantDb = require('../models/MultiTenantDatabase');
 const router = express.Router();
+
+// Middleware para autenticar token JWT
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Token de acesso requerido'
+    });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'saee-development-secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({
+        success: false,
+        message: 'Token inválido'
+      });
+    }
+    req.user = user;
+    next();
+  });
+}
 
 // 📧 LOGIN COM DETECÇÃO AUTOMÁTICA DE TENANT
 router.post('/login', (req, res) => {
@@ -65,29 +90,61 @@ router.post('/login', (req, res) => {
       });
     }
 
+    // Verificar se é primeiro acesso
+    const isFirstAccess = usuario.status === 'pending_first_access' || 
+                         usuario.email_verified_at === null;
+
     // Gerar JWT token
     const token = jwt.sign({
       id: usuario.id,
       email: usuario.email,
       role: usuario.role,
-      tenantId: tenantId
+      tenantId: tenantId,
+      firstAccess: isFirstAccess
     }, process.env.JWT_SECRET || 'saee-development-secret', { 
       expiresIn: '24h' 
     });
 
+    // Se é primeiro acesso, marcar como verificado
+    if (isFirstAccess) {
+      try {
+        const tenantDb = multiTenantDb.getTenantDb(tenantId);
+        tenantDb.prepare(`
+          UPDATE usuarios 
+          SET email_verified_at = datetime('now'), status = 'active', last_login = datetime('now')
+          WHERE id = ? AND tenant_id = ?
+        `).run(usuario.id, tenantId);
+
+        // Atualizar master_users também
+        const masterDb = multiTenantDb.getMasterDb();
+        // Note: master_users não tem colunas firstAccessCompleted ou updated_at
+        // Essas informações são controladas na tabela do tenant
+        console.log('✅ Primeiro acesso registrado no tenant para:', usuario.email);
+
+        console.log('✅ Primeiro acesso registrado para:', usuario.email);
+      } catch (updateError) {
+        console.error('⚠️ Erro ao marcar primeiro acesso:', updateError);
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Login realizado com sucesso',
+      message: isFirstAccess ? 'Primeiro acesso realizado com sucesso!' : 'Login realizado com sucesso',
       token: token,
       user: {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        role: usuario.role
+        role: usuario.role,
+        firstAccess: isFirstAccess
       },
       tenant: {
         id: tenantId
-      }
+      },
+      ...(isFirstAccess && {
+        passwordChangeRequired: true,
+        instructions: 'Por segurança, altere sua senha temporária na próxima tela.'
+      })
     });
 
   } catch (error) {
@@ -162,6 +219,99 @@ router.post('/init-system', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao inicializar sistema: ' + error.message
+    });
+  }
+});
+
+// Rota para trocar senha no primeiro acesso
+router.put('/change-first-password', authenticateToken, async (req, res) => {
+  console.log('🔄 CHANGE PASSWORD: Rota chamada');
+  console.log('👤 User do token:', req.user);
+  
+  try {
+    const { newPassword, confirmPassword } = req.body;
+    const userId = req.user.id;
+    const tenantId = req.user.tenantId;
+
+    console.log('📝 Dados recebidos:', { userId, tenantId, hasNewPassword: !!newPassword, hasConfirmPassword: !!confirmPassword });
+
+    if (!newPassword || !confirmPassword) {
+      console.log('❌ Senha não fornecida');
+      return res.status(400).json({
+        success: false,
+        message: 'Nova senha e confirmação são obrigatórias'
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      console.log('❌ Senhas não coincidem');
+      return res.status(400).json({
+        success: false,
+        message: 'Nova senha e confirmação não coincidem'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      console.log('❌ Senha muito curta');
+      return res.status(400).json({
+        success: false,
+        message: 'Nova senha deve ter pelo menos 6 caracteres'
+      });
+    }
+
+    console.log('✅ Validações passaram, gerando hash...');
+
+    // Hash da nova senha
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log('✅ Hash gerado com sucesso');
+
+    // Atualizar senha no banco do tenant
+    console.log('🔄 Atualizando senha no banco do tenant...');
+    const tenantDb = multiTenantDb.getTenantDb(tenantId);
+    const updateResult = tenantDb.prepare(`
+      UPDATE usuarios 
+      SET senha_hash = ?, 
+          status = 'active',
+          updated_at = datetime('now')
+      WHERE id = ? AND tenant_id = ?
+    `).run(hashedPassword, userId, tenantId);
+
+    console.log('📊 Resultado da atualização tenant:', updateResult);
+
+    if (updateResult.changes === 0) {
+      console.log('❌ Nenhum usuário foi atualizado no tenant DB');
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado'
+      });
+    }
+
+    console.log('✅ Usuário atualizado no tenant DB');
+
+    // Atualizar master_users também
+    console.log('🔄 Atualizando senha no master DB...');
+    const masterDb = multiTenantDb.getMasterDb();
+    const masterUpdateResult = masterDb.prepare(`
+      UPDATE master_users 
+      SET senha_hash = ?
+      WHERE email = ? AND tenant_id = ?
+    `).run(hashedPassword, req.user.email, tenantId);
+
+    console.log('📊 Resultado da atualização master:', masterUpdateResult);
+
+    console.log('✅ Senha alterada com sucesso para usuário:', userId);
+
+    res.json({
+      success: true,
+      message: 'Senha alterada com sucesso! Você já pode fazer login normalmente.',
+      passwordChanged: true
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao trocar senha:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
     });
   }
 });

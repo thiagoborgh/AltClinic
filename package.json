@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon app.js",
-    "build": "cd frontend && npm install && npm run build && cd .. && powershell -ExecutionPolicy Bypass -File copy-build.ps1 && npm install",
-    "build:linux": "cd frontend && npm install && npm run build && cd .. && mkdir -p public && cp -r frontend/build/* public/",
+    "build": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && powershell -ExecutionPolicy Bypass -File copy-build.ps1 && npm install",
+    "build:linux": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install",
     "migrate": "node src/migrate.js run",
     "migrate:create": "node src/migrate.js create",
     "migrate:status": "node src/migrate.js status",
@@ -21,7 +21,7 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "heroku-postbuild": "cd frontend && npm install && npm run build && cd .. && cp -r frontend/build/* public/ && npm install",
+    "heroku-postbuild": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install",
     "docker:build": "docker build -t saee .",
     "docker:run": "docker run -p 3000:3000 saee",
     "docker:compose": "docker-compose up -d",
@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",

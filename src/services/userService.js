@@ -22,8 +22,25 @@ class UserService {
         return { exists: false };
       }
 
-      // Verificar se fez primeiro acesso
-      const firstAccessCompleted = user.firstAccessCompleted || false;
+      // Verificar se fez primeiro acesso checando no banco do tenant
+      let firstAccessCompleted = false;
+      
+      try {
+        const tenantDb = multiTenantDb.getTenantDb(user.tenant_id);
+        const tenantUser = tenantDb.prepare(`
+          SELECT email_verified_at, status 
+          FROM usuarios 
+          WHERE email = ? AND tenant_id = ?
+        `).get(user.email, user.tenant_id);
+        
+        firstAccessCompleted = tenantUser && 
+                              tenantUser.email_verified_at && 
+                              tenantUser.status === 'active';
+      } catch (error) {
+        console.error('⚠️ Erro ao verificar primeiro acesso:', error);
+        // Se não conseguir verificar, assume que não completou
+        firstAccessCompleted = false;
+      }
 
       if (!firstAccessCompleted) {
         // Primeiro acesso nunca foi feito, reenviar email completo de boas-vindas

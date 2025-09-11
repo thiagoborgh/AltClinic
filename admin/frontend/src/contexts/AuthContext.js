@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Configurar axios para incluir token em todas as requisições
-  axios.defaults.baseURL = '/api/admin';
+  axios.defaults.baseURL = '/api';
   axios.interceptors.request.use((config) => {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/auth/login', { email, password });
+      const response = await axios.post('/auth/login', { email, senha: password });
       const { token, user: userData } = response.data;
       
       localStorage.setItem('admin_token', token);

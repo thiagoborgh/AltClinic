@@ -11,6 +11,9 @@ const userService = require('../services/userService');
  * POST /api/tenants/register
  */
 router.post('/register', async (req, res) => {
+  console.log('🚀 REGISTRO: Rota /register chamada');
+  console.log('📝 Body recebido:', req.body);
+  
   try {
     const {
       clinicaNome,
@@ -22,38 +25,53 @@ router.post('/register', async (req, res) => {
       plano = 'trial'
     } = req.body;
 
+    console.log('🔍 Dados extraídos:', { clinicaNome, slug, ownerNome, ownerEmail, telefone, plano });
+
     // Validações básicas
     if (!clinicaNome || !slug || !ownerNome || !ownerEmail || !ownerSenha) {
+      console.log('❌ Validação falhou - dados obrigatórios');
       return res.status(400).json({
         error: 'Dados obrigatórios não fornecidos',
         required: ['clinicaNome', 'slug', 'ownerNome', 'ownerEmail', 'ownerSenha']
       });
     }
 
+    console.log('✅ Validações básicas passaram');
+
     // Validar formato do slug
     if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
+      console.log('❌ Slug inválido:', slug);
       return res.status(400).json({
         error: 'Slug inválido',
         message: 'Use apenas letras minúsculas, números e hífens (3-50 caracteres)'
       });
     }
 
+    console.log('✅ Slug válido:', slug);
+
     const masterDb = multiTenantDb.getMasterDb();
+    console.log('✅ Master DB obtido');
 
     // Verificar se slug já existe
     const existingTenant = masterDb.prepare(`
       SELECT id FROM tenants WHERE slug = ?
     `).get(slug);
 
+    console.log('🔍 Verificação de slug existente:', existingTenant ? 'EXISTE' : 'LIVRE');
+
     if (existingTenant) {
+      console.log('❌ Slug já existe:', slug);
       return res.status(409).json({
         error: 'Slug já existe',
         message: 'Escolha outro nome para sua clínica'
       });
     }
 
+    console.log('✅ Slug disponível, verificando usuário existente...');
+
     // Verificar se email já existe e determinar ação
     const existingUserCheck = await userService.checkExistingUser(ownerEmail);
+    console.log('🔍 Verificação de usuário existente:', existingUserCheck);
 
     if (existingUserCheck.exists) {
       // Email já existe, determinar ação baseada no status do usuário
@@ -136,8 +154,8 @@ router.post('/register', async (req, res) => {
     `);
 
     const insertOwner = masterDb.prepare(`
-      INSERT INTO master_users (tenant_id, email, senha_hash, role, name, firstAccessCompleted)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO master_users (tenant_id, email, senha_hash, role)
+      VALUES (?, ?, ?, ?)
     `);
 
     // Hash da senha
@@ -162,7 +180,7 @@ router.post('/register', async (req, res) => {
       );
 
       // Inserir owner no master
-      insertOwner.run(tenantId, ownerEmail, senhaHash, 'owner', ownerNome, 0);
+      insertOwner.run(tenantId, ownerEmail, senhaHash, 'owner');
     });
 
     transaction();
@@ -213,16 +231,63 @@ router.post('/register', async (req, res) => {
     // Log da criação
     console.log(`✅ Tenant criado: ${clinicaNome} (${slug}) - Owner: ${ownerNome}`);
 
-    // TODO: Enviar email de boas-vindas
-    // await emailService.sendWelcomeEmail(ownerEmail, { clinicaNome, slug, trialExpireAt });
+    // Enviar email de primeiro acesso com credenciais
+    try {
+      const emailService = require('../services/emailService');
+      
+      // Gerar senha temporária para primeiro acesso
+      const tempPassword = require('crypto').randomBytes(8).toString('hex');
+      const tempPasswordHash = await bcryptjs.hash(tempPassword, 12);
+      
+      // Atualizar senha no banco do tenant para a temporária
+      tenantDb.prepare(`
+        UPDATE usuarios 
+        SET senha_hash = ?, email_verified_at = NULL, status = 'pending_first_access'
+        WHERE email = ? AND tenant_id = ?
+      `).run(tempPasswordHash, ownerEmail, tenantId);
+      
+      // Atualizar master_users também
+      masterDb.prepare(`
+        UPDATE master_users 
+        SET senha_hash = ?
+        WHERE email = ? AND tenant_id = ?
+      `).run(tempPasswordHash, ownerEmail, tenantId);
+
+      const templateData = {
+        userName: ownerNome,
+        tenantName: clinicaNome,
+        email: ownerEmail,
+        tempPassword: tempPassword,
+        loginUrl: process.env.NODE_ENV === 'production' 
+          ? `https://altclinic.onrender.com/login`
+          : `http://localhost:3000/login`,
+        trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${trialExpireAt.toLocaleDateString('pt-BR')}</p>`
+      };
+
+      await emailService.sendEmail({
+        to: ownerEmail,
+        subject: `Bem-vindo à ${clinicaNome} - Suas credenciais de acesso`,
+        template: 'first-access',
+        data: templateData
+      });
+
+      console.log(`📧 Email de primeiro acesso enviado para: ${ownerEmail}`);
+      console.log(`🔑 Senha temporária: ${tempPassword}`);
+
+    } catch (emailError) {
+      console.error('⚠️ Erro ao enviar email de primeiro acesso:', emailError);
+      // Não falhar o cadastro por causa do email
+    }
 
     res.status(201).json({
-      message: 'Clínica criada com sucesso!',
+      message: 'Clínica criada com sucesso! Verifique seu email para acessar.',
       tenant: {
         id: tenantId,
         slug,
         nome: clinicaNome,
-        url: `https://${slug}.altclinic.com.br`,
+        url: process.env.NODE_ENV === 'production' 
+          ? `https://altclinic.onrender.com`
+          : `http://localhost:3000`,
         status: 'trial',
         trialExpireAt: trialExpireAt.toISOString(),
         config: defaultConfig
@@ -232,17 +297,21 @@ router.post('/register', async (req, res) => {
         email: ownerEmail,
         role: 'owner'
       },
-      auth: {
-        token,
-        expiresIn: '7d'
+      emailSent: true,
+      loginInstructions: {
+        message: 'Um email foi enviado com suas credenciais de primeiro acesso.',
+        loginUrl: process.env.NODE_ENV === 'production' 
+          ? `https://altclinic.onrender.com/login`
+          : `http://localhost:3000/login`,
+        checkEmail: 'Verifique sua caixa de entrada e spam.'
       },
       onboarding: {
         nextSteps: [
+          'Verificar email com credenciais de acesso',
+          'Fazer primeiro login com senha temporária',
+          'Configurar nova senha personalizada',
           'Configurar perfil da clínica',
-          'Adicionar serviços oferecidos',
-          'Convidar membros da equipe',
-          'Configurar WhatsApp Business',
-          'Importar pacientes (opcional)'
+          'Adicionar serviços oferecidos'
         ]
       }
     });
@@ -659,26 +728,3 @@ router.get('/check-slug', async (req, res) => {
 });
 
 module.exports = router;
-
-/**
- * Configurações dos planos
- */
-function getPlansConfig() {
-  return {
-    starter: {
-      maxUsuarios: 3,
-      maxPacientes: 500,
-      valor: 97
-    },
-    professional: {
-      maxUsuarios: 10,
-      maxPacientes: 2000,
-      valor: 197
-    },
-    enterprise: {
-      maxUsuarios: -1, // ilimitado
-      maxPacientes: -1, // ilimitado
-      valor: 397
-    }
-  };
-}

@@ -23,7 +23,9 @@ import {
   Menu as MenuIcon,
   Dashboard,
   Business,
-  Settings,
+  AttachMoney,
+  People,
+  Settings as SettingsIcon,
   Assessment,
   AccountCircle,
   Logout,
@@ -36,6 +38,9 @@ const drawerWidth = 280;
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Licenças', icon: <Business />, path: '/licencas' },
+  { text: 'Financeiro', icon: <AttachMoney />, path: '/financeiro' },
+  { text: 'CRM', icon: <People />, path: '/crm' },
+  { text: 'Automação', icon: <SettingsIcon />, path: '/automacao' },
   { text: 'Relatórios', icon: <Assessment />, path: '/relatorios' }
 ];
 
