@@ -4,7 +4,7 @@
 
 - Conta no [Render](https://render.com)
 - Repositório GitHub atualizado
-- Node.js 18+ configurado
+- Node.js 20.3.0+ (compatível com sharp module)
 
 ---
 
@@ -18,6 +18,10 @@ Os seguintes arquivos foram atualizados automaticamente:
 
 ```json
 {
+  "engines": {
+    "node": ">=20.3.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "build:linux": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install",
     "heroku-postbuild": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install"
