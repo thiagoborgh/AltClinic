@@ -435,6 +435,16 @@ router.delete('/:tenantId', async (req, res) => {
       }
     });
 
+  } catch (error) {
+    console.error('❌ Erro ao excluir tenant:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+      message: 'Falha ao excluir tenant'
+    });
+  }
+});
+
 /**
  * ADMIN: Resumo financeiro de todos os tenants
  * GET /api/tenants/admin/financeiro/resumo
@@ -607,6 +617,7 @@ router.get('/crm/relatorios', async (req, res) => {
             ocasionais: 525
           }
         };
+        break;
     }
 
     res.json({
