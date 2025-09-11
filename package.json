@@ -9,6 +9,7 @@
     "dev": "nodemon app.js",
     "build": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && powershell -ExecutionPolicy Bypass -File copy-build.ps1 && npm install",
     "build:linux": "cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install",
+    "postinstall": "npm rebuild sharp --platform=linux --arch=x64",
     "migrate": "node src/migrate.js run",
     "migrate:create": "node src/migrate.js create",
     "migrate:status": "node src/migrate.js status",
