@@ -74,6 +74,10 @@ class MultiTenantDatabaseManager {
         config TEXT DEFAULT '{}',
         billing TEXT DEFAULT '{}',
         theme TEXT DEFAULT '{}',
+        cnpj_cpf TEXT,
+        chave_licenca TEXT UNIQUE,
+        responsavel_nome TEXT,
+        responsavel_email TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -137,20 +141,24 @@ class MultiTenantDatabaseManager {
   /**
    * Criar database para um tenant
    */
-  async createTenantDatabase(tenantId, databaseName) {
+  createTenantDatabase(tenantId, databaseName) {
     try {
+      console.log(`🔄 Criando database para tenant ${tenantId} com nome ${databaseName}`);
       const dbPath = path.join(this.databasesPath, `${databaseName}.db`);
+      console.log(`📁 Caminho do database: ${dbPath}`);
       
       if (fs.existsSync(dbPath)) {
         console.log(`⚠️ Database já existe: ${databaseName}`);
         return dbPath;
       }
 
+      console.log(`🗄️ Criando novo database: ${databaseName}`);
       // Criar novo database
       const db = new Database(dbPath);
       
       // Executar schema do tenant
-      await this.createTenantSchema(db, tenantId);
+      console.log(`📋 Executando schema para tenant ${tenantId}`);
+      this.createTenantSchema(db, tenantId);
       
       // Fechar conexão inicial
       db.close();
@@ -160,6 +168,7 @@ class MultiTenantDatabaseManager {
       
     } catch (error) {
       console.error(`❌ Erro ao criar database do tenant ${tenantId}:`, error);
+      console.error('Stack trace:', error.stack);
       throw error;
     }
   }
@@ -167,13 +176,13 @@ class MultiTenantDatabaseManager {
   /**
    * Criar schema do tenant
    */
-  async createTenantSchema(db, tenantId) {
+  createTenantSchema(db, tenantId) {
     // Schema completo para cada tenant
     const schema = `
       -- Usuários do tenant
       CREATE TABLE usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         nome TEXT NOT NULL,
         email TEXT NOT NULL,
         senha_hash TEXT,
@@ -196,7 +205,7 @@ class MultiTenantDatabaseManager {
       -- Pacientes
       CREATE TABLE pacientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         nome TEXT NOT NULL,
         email TEXT,
         telefone TEXT,
@@ -213,7 +222,7 @@ class MultiTenantDatabaseManager {
       -- Agendamentos
       CREATE TABLE agendamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         paciente_id INTEGER NOT NULL,
         medico_id INTEGER,
         data_agendamento DATETIME NOT NULL,
@@ -231,7 +240,7 @@ class MultiTenantDatabaseManager {
       -- Serviços
       CREATE TABLE servicos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         nome TEXT NOT NULL,
         descricao TEXT,
         duracao INTEGER DEFAULT 60,
@@ -244,7 +253,7 @@ class MultiTenantDatabaseManager {
       -- Financeiro - Faturas
       CREATE TABLE faturas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         paciente_id INTEGER NOT NULL,
         agendamento_id INTEGER,
         numero_fatura TEXT,
@@ -265,7 +274,7 @@ class MultiTenantDatabaseManager {
       -- WhatsApp - Conversas
       CREATE TABLE whatsapp_conversas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         paciente_id INTEGER,
         telefone TEXT NOT NULL,
         ultima_mensagem TEXT,
@@ -279,7 +288,7 @@ class MultiTenantDatabaseManager {
       -- WhatsApp - Mensagens
       CREATE TABLE whatsapp_mensagens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         conversa_id INTEGER NOT NULL,
         tipo TEXT NOT NULL, -- enviada, recebida
         conteudo TEXT NOT NULL,
@@ -292,7 +301,7 @@ class MultiTenantDatabaseManager {
       -- Configurações do tenant
       CREATE TABLE configuracoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         chave TEXT NOT NULL,
         valor TEXT,
         tipo TEXT DEFAULT 'string',
@@ -303,7 +312,7 @@ class MultiTenantDatabaseManager {
       -- Automações
       CREATE TABLE automacoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         nome TEXT NOT NULL,
         tipo TEXT NOT NULL, -- lembrete, cobranca, follow_up
         trigger_evento TEXT NOT NULL,
@@ -317,7 +326,7 @@ class MultiTenantDatabaseManager {
       -- Logs de atividades
       CREATE TABLE activity_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id TEXT NOT NULL DEFAULT '${tenantId}',
+        tenant_id TEXT NOT NULL,
         usuario_id INTEGER,
         acao TEXT NOT NULL,
         entidade TEXT, -- paciente, agendamento, etc
@@ -341,8 +350,17 @@ class MultiTenantDatabaseManager {
       CREATE INDEX idx_usuarios_email ON usuarios(email);
     `;
 
-    db.exec(schema);
-    console.log(`✅ Schema criado para tenant: ${tenantId}`);
+    console.log(`📋 Executando schema SQL para tenant ${tenantId}...`);
+    console.log(`📏 Tamanho do schema: ${schema.length} caracteres`);
+    
+    try {
+      db.exec(schema);
+      console.log(`✅ Schema executado com sucesso para tenant: ${tenantId}`);
+    } catch (schemaError) {
+      console.error(`❌ Erro ao executar schema para tenant ${tenantId}:`, schemaError);
+      console.error('Schema que falhou:', schema.substring(0, 500) + '...');
+      throw schemaError;
+    }
   }
 
   /**

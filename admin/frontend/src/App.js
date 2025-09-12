@@ -4,6 +4,7 @@ import { Box, CircularProgress } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './pages/Dashboard';
 import Licencas from './pages/Licencas';
+import CadastroLicenca from './pages/CadastroLicenca';
 import Financeiro from './pages/Financeiro';
 import CRM from './pages/CRM';
 import Automacao from './pages/Automacao';
@@ -38,6 +39,7 @@ function AppContent() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/licencas" element={<Licencas />} />
+        <Route path="/nova-licenca" element={<CadastroLicenca />} />
         <Route path="/financeiro" element={<Financeiro />} />
         <Route path="/crm" element={<CRM />} />
         <Route path="/automacao" element={<Automacao />} />

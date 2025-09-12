@@ -29,7 +29,8 @@ import {
   Assessment,
   AccountCircle,
   Logout,
-  Notifications
+  Notifications,
+  AddBusiness
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -38,6 +39,7 @@ const drawerWidth = 280;
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Licenças', icon: <Business />, path: '/licencas' },
+  { text: 'Nova Licença', icon: <AddBusiness />, path: '/nova-licenca' },
   { text: 'Financeiro', icon: <AttachMoney />, path: '/financeiro' },
   { text: 'CRM', icon: <People />, path: '/crm' },
   { text: 'Automação', icon: <SettingsIcon />, path: '/automacao' },

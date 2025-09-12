@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const multiTenantDb = require('../models/MultiTenantDatabase');
 
 /**
@@ -853,6 +854,316 @@ router.post('/automacao/disparar', async (req, res) => {
       success: false,
       error: 'Erro interno do servidor',
       message: 'Falha ao disparar automação'
+    });
+  }
+});
+
+/**
+ * ADMIN: Criar tenant manualmente
+ * POST /api/tenants/admin/create
+ */
+router.post('/create', async (req, res) => {
+  try {
+    const {
+      nome,
+      email,
+      telefone,
+      clinica,
+      plano = 'trial',
+      especialidade,
+      sendTempPassword = true,
+      customPassword = null
+    } = req.body;
+
+    // Validações básicas
+    if (!nome || !email || !clinica) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome, email e nome da clínica são obrigatórios'
+      });
+    }
+
+    // Verificar se email já existe
+    const existingTenant = multiTenantDb.getMasterDb().prepare(`
+      SELECT id FROM tenants WHERE email = ?
+    `).get(email);
+
+    if (existingTenant) {
+      return res.status(409).json({
+        success: false,
+        message: 'Este email já possui uma conta.'
+      });
+    }
+
+    // Gerar slug único para o tenant
+    const baseSlug = clinica
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífen
+      .substring(0, 30);
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Garantir que o slug é único
+    while (multiTenantDb.getMasterDb().prepare(`
+      SELECT id FROM tenants WHERE slug = ?
+    `).get(slug)) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Data de expiração do trial (30 dias se for trial)
+    let trialExpireAt = null;
+    if (plano === 'trial') {
+      trialExpireAt = new Date();
+      trialExpireAt.setDate(trialExpireAt.getDate() + 30);
+    }
+
+    // Configurações padrão do tenant
+    const defaultConfig = {
+      whatsapp_enabled: true,
+      email_enabled: true,
+      sms_enabled: false,
+      timezone: 'America/Sao_Paulo',
+      currency: 'BRL',
+      language: 'pt-BR',
+      especialidade: especialidade || null
+    };
+
+    const defaultTheme = {
+      primary_color: '#1976d2',
+      secondary_color: '#dc004e',
+      logo_url: null,
+      custom_css: null
+    };
+
+    const defaultBilling = {
+      plan: plano,
+      status: plano === 'trial' ? 'trial' : 'active',
+      trial_started_at: plano === 'trial' ? new Date().toISOString() : null,
+      trial_expire_at: trialExpireAt ? trialExpireAt.toISOString() : null
+    };
+
+    // Criar tenant no database master
+    const tenantId = crypto.randomUUID();
+    const databaseName = `tenant_${slug}_${Date.now()}`;
+
+    const masterDb = multiTenantDb.getMasterDb();
+
+    // Inserir tenant
+    masterDb.prepare(`
+      INSERT INTO tenants (
+        id, slug, nome, email, telefone, plano, status,
+        trial_expire_at, database_name, config, billing, theme,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      tenantId,
+      slug,
+      clinica,
+      email,
+      telefone || '',
+      plano,
+      plano === 'trial' ? 'trial' : 'active',
+      trialExpireAt ? trialExpireAt.toISOString() : null,
+      databaseName,
+      JSON.stringify(defaultConfig),
+      JSON.stringify(defaultBilling),
+      JSON.stringify(defaultTheme),
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+
+    // Criar database do tenant
+    await multiTenantDb.createTenantDatabase(tenantId);
+
+    // Criar usuário admin para o tenant
+    const tenantDb = multiTenantDb.getTenantDb(tenantId);
+    const bcrypt = require('bcryptjs');
+
+    // Gerar senha
+    let tempPassword;
+    if (customPassword) {
+      tempPassword = customPassword;
+    } else {
+      tempPassword = Math.random().toString(36).slice(-10); // Senha mais forte
+    }
+
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    tenantDb.prepare(`
+      INSERT INTO usuarios (
+        tenant_id, nome, email, senha_hash, role, status,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      tenantId,
+      nome,
+      email,
+      hashedPassword,
+      'owner',
+      'active',
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+
+    // Enviar email com senha se solicitado
+    let emailSent = false;
+    if (sendTempPassword) {
+      try {
+        const { sendTempPassword: sendEmail } = require('../services/emailService');
+        const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${slug}`;
+
+        await sendEmail({
+          to: email,
+          nome: nome,
+          clinica: clinica,
+          tempPassword: tempPassword,
+          loginUrl: loginUrl,
+          tenantSlug: slug,
+          createdByAdmin: true
+        });
+
+        emailSent = true;
+        console.log(`✅ Email enviado para ${email} - Tenant: ${clinica}`);
+      } catch (emailError) {
+        console.error('❌ Erro ao enviar email:', emailError);
+        // Não falhar a criação por causa do email
+      }
+    }
+
+    // Log de auditoria
+    console.log(`🎯 Tenant criado pelo admin: ${clinica} (${email}) - Slug: ${slug} - Plano: ${plano}`);
+
+    res.status(201).json({
+      success: true,
+      message: `Tenant criado com sucesso!${emailSent ? ' Email enviado.' : ' Email não enviado.'}`,
+      tenant: {
+        id: tenantId,
+        slug: slug,
+        nome: clinica,
+        email: email,
+        plano: plano,
+        status: plano === 'trial' ? 'trial' : 'active',
+        trial_expire_at: trialExpireAt ? trialExpireAt.toISOString() : null
+      },
+      credentials: sendTempPassword ? {
+        email: email,
+        temp_password: tempPassword,
+        login_url: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${slug}`
+      } : null,
+      email_sent: emailSent
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar tenant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * ADMIN: Reenviar senha temporária
+ * POST /api/tenants/admin/:tenantId/send-temp-password
+ */
+router.post('/:tenantId/send-temp-password', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { customPassword = null } = req.body;
+
+    const masterDb = multiTenantDb.getMasterDb();
+
+    // Buscar tenant
+    const tenant = masterDb.prepare(`
+      SELECT * FROM tenants WHERE id = ?
+    `).get(tenantId);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant não encontrado'
+      });
+    }
+
+    // Buscar usuário owner
+    const tenantDb = multiTenantDb.getTenantDb(tenantId);
+    const owner = tenantDb.prepare(`
+      SELECT nome, email FROM usuarios
+      WHERE tenant_id = ? AND role = 'owner' AND status = 'active'
+      LIMIT 1
+    `).get(tenantId);
+
+    if (!owner) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário owner não encontrado'
+      });
+    }
+
+    // Gerar nova senha
+    const newPassword = customPassword || Math.random().toString(36).slice(-10);
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Atualizar senha no banco
+    tenantDb.prepare(`
+      UPDATE usuarios
+      SET senha_hash = ?, updated_at = ?
+      WHERE tenant_id = ? AND role = 'owner'
+    `).run(hashedPassword, new Date().toISOString(), tenantId);
+
+    // Enviar email
+    try {
+      const { sendTempPassword: sendEmail } = require('../services/emailService');
+      const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${tenant.slug}`;
+
+      await sendEmail({
+        to: owner.email,
+        nome: owner.nome,
+        clinica: tenant.nome,
+        tempPassword: newPassword,
+        loginUrl: loginUrl,
+        tenantSlug: tenant.slug,
+        createdByAdmin: true
+      });
+
+      console.log(`✅ Senha reenviada para ${owner.email} - Tenant: ${tenant.nome}`);
+
+      res.json({
+        success: true,
+        message: 'Senha temporária reenviada com sucesso',
+        credentials: {
+          email: owner.email,
+          temp_password: newPassword,
+          login_url: loginUrl
+        }
+      });
+
+    } catch (emailError) {
+      console.error('❌ Erro ao reenviar email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Tenant atualizado, mas erro ao enviar email',
+        credentials: {
+          email: owner.email,
+          temp_password: newPassword,
+          login_url: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${tenant.slug}`
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro ao reenviar senha:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

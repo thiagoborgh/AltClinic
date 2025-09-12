@@ -23,6 +23,7 @@ const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
 const pacientesRoutes = require('./src/routes/pacientes');
 const trialRoutes = require('./src/routes/trial');
+const adminLicencasRoutes = require('./src/routes/admin-licencas');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -150,6 +151,8 @@ console.log('🔧 Registrando rota /api/trial...');
 app.use('/api/trial', trialRoutes);
 console.log('🔧 Registrando rota /api/auth...');
 app.use('/api/auth', authRoutes);
+console.log('🔧 Registrando rota /api/admin/licencas...');
+app.use('/api/admin/licencas', adminLicencasRoutes);
 
 // Inicializar serviço de email
 const { verifyConnection } = require('./src/services/emailService');

@@ -509,6 +509,88 @@ class EmailService {
       }
     });
   }
+
+  // Enviar senha temporária para novo usuário
+  async sendTempPassword({
+    to,
+    nome,
+    clinica,
+    tempPassword,
+    loginUrl,
+    tenantSlug,
+    createdByAdmin = false
+  }) {
+    const subject = createdByAdmin 
+      ? `Conta criada - ${clinica} - AltClinic`
+      : 'Bem-vindo ao Alt Clinic - Sua conta está pronta!';
+
+    return await this.sendEmail({
+      to: to,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #1976d2;">${createdByAdmin ? '🏥' : '🎉'} ${createdByAdmin ? 'Conta Criada' : 'Bem-vindo ao Alt Clinic'}!</h1>
+          
+          <p>Olá <strong>${nome}</strong>,</p>
+          
+          ${createdByAdmin 
+            ? `<p>Sua conta foi criada com sucesso no sistema AltClinic para a clínica <strong>${clinica}</strong>.</p>`
+            : `<p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>30 dias grátis</strong> para explorar todas as funcionalidades.</p>`
+          }
+          
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>📋 Dados de Acesso:</h3>
+            <p><strong>URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+            <p><strong>Email:</strong> ${to}</p>
+            <p><strong>Senha temporária:</strong> <code style="background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${tempPassword}</code></p>
+            <p><strong>Clínica:</strong> ${clinica}</p>
+          </div>
+          
+          <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>🚀 Próximos Passos:</h3>
+            <ol>
+              <li>Acesse sua conta usando os dados acima</li>
+              <li><strong>Altere sua senha</strong> na primeira vez que fizer login</li>
+              <li>Configure os dados da sua clínica</li>
+              <li>Adicione seus primeiros pacientes</li>
+              <li>Explore o sistema de agendamentos</li>
+            </ol>
+          </div>
+          
+          <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>💡 Dicas para Começar:</h3>
+            <ul>
+              <li><strong>WhatsApp:</strong> Configure a integração para enviar lembretes automáticos</li>
+              <li><strong>Agenda:</strong> Cadastre seus horários de atendimento</li>
+              <li><strong>Serviços:</strong> Adicione os tratamentos que você oferece</li>
+              <li><strong>Relatórios:</strong> Acompanhe o desempenho da sua clínica</li>
+            </ul>
+          </div>
+          
+          <p>Precisa de ajuda? Nossa equipe está aqui para você:</p>
+          <ul>
+            <li>📧 Email: suporte@altclinic.com.br</li>
+            <li>📱 WhatsApp: (11) 99999-9999</li>
+            <li>🕒 Horário: Segunda a Sexta, 8h às 18h</li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" style="background: #1976d2; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              🚀 Acessar Minha Conta
+            </a>
+          </div>
+          
+          <p>Sucesso e bons resultados!</p>
+          <p><strong>Equipe Alt Clinic</strong></p>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">
+            Este é um email automático. ${createdByAdmin ? 'Conta criada pelo administrador.' : 'Sua trial expira em 30 dias.'}
+          </p>
+        </div>
+      `
+    });
+  }
 }
 
 // Singleton instance
@@ -528,5 +610,6 @@ module.exports = {
   sendWelcomeEmail: getEmailService().sendWelcomeEmail.bind(getEmailService()),
   sendFirstAccessEmail: getEmailService().sendFirstAccessEmail.bind(getEmailService()),
   sendPasswordReset: getEmailService().sendPasswordReset.bind(getEmailService()),
+  sendTempPassword: getEmailService().sendTempPassword.bind(getEmailService()),
   verifyConnection: getEmailService().verifyConnection.bind(getEmailService())
 };
