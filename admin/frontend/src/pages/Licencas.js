@@ -31,7 +31,9 @@ import {
   Error as ErrorIcon,
   Refresh,
   Restore,
-  Upgrade
+  Upgrade,
+  Add,
+  Email
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
@@ -46,10 +48,20 @@ const Licencas = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [dialogType, setDialogType] = useState(''); // 'reset-trial', 'change-plan', 'change-status'
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     dias: 30,
     plano: '',
-    status: ''
+    status: '',
+    // Dados para criação de tenant
+    nome: '',
+    email: '',
+    telefone: '',
+    clinica: '',
+    especialidade: '',
+    planoTenant: 'trial',
+    sendTempPassword: true,
+    customPassword: ''
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -234,6 +246,15 @@ const Licencas = () => {
               <Settings />
             </IconButton>
           </Tooltip>
+          <Tooltip title="Reenviar Senha">
+            <IconButton
+              size="small"
+              onClick={() => handleResendPassword(params.row)}
+              color="info"
+            >
+              <Email />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Inativar Licença">
             <IconButton
               size="small"
@@ -338,6 +359,82 @@ const Licencas = () => {
     }
   };
 
+  const handleResendPassword = async (tenant) => {
+    if (window.confirm(`Deseja reenviar a senha temporária para ${tenant.owner?.email}? Uma nova senha será gerada e enviada por email.`)) {
+      try {
+        const response = await axios.post(`/tenants/admin/${tenant.id}/send-temp-password`);
+        
+        if (response.data.success) {
+          setSnackbar({
+            open: true,
+            message: 'Senha temporária reenviada com sucesso',
+            severity: 'success'
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao reenviar senha:', error);
+        setSnackbar({
+          open: true,
+          message: 'Erro ao reenviar senha',
+          severity: 'error'
+        });
+      }
+    }
+  };
+
+  const handleCreateTenant = async () => {
+    try {
+      const createData = {
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        clinica: formData.clinica,
+        especialidade: formData.especialidade,
+        plano: formData.planoTenant,
+        sendTempPassword: formData.sendTempPassword
+      };
+
+      if (!formData.sendTempPassword && formData.customPassword) {
+        createData.customPassword = formData.customPassword;
+      }
+
+      const response = await axios.post('/tenants/admin/create', createData);
+
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: `Tenant criado com sucesso! ${response.data.email_sent ? 'Email enviado.' : 'Email não enviado.'}`,
+          severity: 'success'
+        });
+        setCreateDialogOpen(false);
+        
+        // Reset form
+        setFormData({
+          ...formData,
+          nome: '',
+          email: '',
+          telefone: '',
+          clinica: '',
+          especialidade: '',
+          planoTenant: 'trial',
+          sendTempPassword: true,
+          customPassword: ''
+        });
+        
+        fetchTenants();
+        fetchStats();
+      }
+    } catch (error) {
+      console.error('Erro ao criar tenant:', error);
+      const errorMessage = error.response?.data?.message || 'Erro ao criar tenant';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    }
+  };
+
   const filteredTenants = tenants.filter(tenant => {
     const matchesSearch = tenant.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          tenant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -410,16 +507,26 @@ const Licencas = () => {
         <Typography variant="h4">
           Gerenciamento de Licenças/Tenants
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Refresh />}
-          onClick={() => {
-            fetchTenants();
-            fetchStats();
-          }}
-        >
-          Atualizar
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<Add />}
+            onClick={() => setCreateDialogOpen(true)}
+            color="primary"
+          >
+            Novo Tenant
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Refresh />}
+            onClick={() => {
+              fetchTenants();
+              fetchStats();
+            }}
+          >
+            Atualizar
+          </Button>
+        </Box>
       </Box>
 
       {/* Filtros */}
@@ -581,6 +688,108 @@ const Licencas = () => {
           </Button>
           <Button onClick={handleSaveAction} variant="contained">
             Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para Criar Tenant */}
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Criar Novo Tenant
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nome do Proprietário"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Telefone"
+                value={formData.telefone}
+                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nome da Clínica"
+                value={formData.clinica}
+                onChange={(e) => setFormData({ ...formData, clinica: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Especialidade"
+                value={formData.especialidade}
+                onChange={(e) => setFormData({ ...formData, especialidade: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Plano</InputLabel>
+                <Select
+                  value={formData.planoTenant}
+                  label="Plano"
+                  onChange={(e) => setFormData({ ...formData, planoTenant: e.target.value })}
+                >
+                  <MenuItem value="trial">Trial (30 dias)</MenuItem>
+                  <MenuItem value="basic">Básico</MenuItem>
+                  <MenuItem value="premium">Premium</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Enviar Senha Temporária</InputLabel>
+                <Select
+                  value={formData.sendTempPassword}
+                  label="Enviar Senha Temporária"
+                  onChange={(e) => setFormData({ ...formData, sendTempPassword: e.target.value === 'true' })}
+                >
+                  <MenuItem value={true}>Sim - Gerar senha automática e enviar por email</MenuItem>
+                  <MenuItem value={false}>Não - Usar senha personalizada</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            {!formData.sendTempPassword && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Senha Personalizada"
+                  type="password"
+                  value={formData.customPassword}
+                  onChange={(e) => setFormData({ ...formData, customPassword: e.target.value })}
+                  helperText="A senha será enviada por email para o usuário"
+                />
+              </Grid>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleCreateTenant} variant="contained" disabled={!formData.nome || !formData.email || !formData.clinica}>
+            Criar Tenant
           </Button>
         </DialogActions>
       </Dialog>
