@@ -18,19 +18,20 @@ import Login from './pages/Login';
 import OnboardingPage from './pages/OnboardingPage';
 import MultiTenantLogin from './pages/MultiTenantLogin';
 import LandingPage from './pages/LandingPage';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Agendamentos from './pages/Agendamentos';
 import Pacientes from './pages/Pacientes';
+import ListaPacientes from './pages/ListaPacientes';
+import CadastroPaciente from './pages/CadastroPaciente';
+import ProfissionaisMedicos from './pages/ProfissionaisMedicos';
 import Financeiro from './pages/Financeiro';
 import CRM from './pages/CRM';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
-import BillingPage from './pages/billing/BillingPage';
 
 // Componente interno que usa o contexto de auth
 const AppContent = () => {
-  console.log('AppContent renderizando...');
-  
   const { 
     isAuthenticated, 
     loading, 
@@ -40,11 +41,7 @@ const AppContent = () => {
     user, 
     selectLicense,
     loginLoading
-  } = useAuth();
-
-  console.log('AppContent estado:', { isAuthenticated, loading, user });
-
-  if (loading) {
+  } = useAuth();  if (loading) {
     console.log('Mostrando tela de loading');
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -82,17 +79,23 @@ const AppContent = () => {
           <AuthLayout><MultiTenantLogin /></AuthLayout>
         } />
         
+        <Route path="/reset-password" element={
+          <AuthLayout><ResetPassword /></AuthLayout>
+        } />
+        
         {/* Layout protegido com rotas aninhadas */}
         {isAuthenticated && (
           <Route path="/" element={<DashboardLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="agendamentos" element={<Agendamentos />} />
-            <Route path="pacientes" element={<Pacientes />} />
+            <Route path="pacientes" element={<ListaPacientes />} />
+            <Route path="cadastro-paciente" element={<CadastroPaciente />} />
+            <Route path="profissionais" element={<ProfissionaisMedicos />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="crm" element={<CRM />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
-            <Route path="billing" element={<BillingPage />} />
+            {/* <Route path="billing" element={<BillingPage />} /> */}
           </Route>
         )}
 
