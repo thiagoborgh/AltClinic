@@ -21,10 +21,10 @@ import LandingPage from './pages/LandingPage';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Agendamentos from './pages/Agendamentos';
-import Pacientes from './pages/Pacientes';
 import ListaPacientes from './pages/ListaPacientes';
 import CadastroPaciente from './pages/CadastroPaciente';
 import ProfissionaisMedicos from './pages/ProfissionaisMedicos';
+import SalaEspera from './pages/SalaEspera';
 import Financeiro from './pages/Financeiro';
 import CRM from './pages/CRM';
 import Relatorios from './pages/Relatorios';
@@ -91,6 +91,7 @@ const AppContent = () => {
             <Route path="pacientes" element={<ListaPacientes />} />
             <Route path="cadastro-paciente" element={<CadastroPaciente />} />
             <Route path="profissionais" element={<ProfissionaisMedicos />} />
+            <Route path="espera" element={<SalaEspera />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="crm" element={<CRM />} />
             <Route path="relatorios" element={<Relatorios />} />

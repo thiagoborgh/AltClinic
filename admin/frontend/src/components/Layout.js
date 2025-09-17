@@ -41,6 +41,7 @@ const menuItems = [
   { text: 'Licenças', icon: <Business />, path: '/licencas' },
   { text: 'Nova Licença', icon: <AddBusiness />, path: '/nova-licenca' },
   { text: 'Financeiro', icon: <AttachMoney />, path: '/financeiro' },
+  { text: 'Configurações Financeiras', icon: <SettingsIcon />, path: '/configuracoes-financeiras' },
   { text: 'CRM', icon: <People />, path: '/crm' },
   { text: 'Automação', icon: <SettingsIcon />, path: '/automacao' },
   { text: 'Relatórios', icon: <Assessment />, path: '/relatorios' }

@@ -21,6 +21,7 @@ import {
   Menu,
   MenuItem,
   Dialog,
+  DialogContent,
   Tooltip,
   Alert,
   Fab,
@@ -47,8 +48,7 @@ import {
 } from '@mui/icons-material';
 import { usePacientes } from '../../hooks/usePacientes';
 import CadastroPacienteSimples from './CadastroPacienteSimples';
-import ProntuarioCompleto from '../prontuario/ProntuarioCompleto';
-import ProntuarioClinicoViewer from './prontuario/ProntuarioClinicoViewer';
+import ProntuarioClinicoViewer from '../prontuario/ProntuarioClinicoViewer';
 import AtendimentoModal from '../atendimento/AtendimentoModal';
 import { format, differenceInYears, isValid, parseISO } from 'date-fns';
 
@@ -683,12 +683,22 @@ const PacientesManager = () => {
         <PersonAddIcon />
       </Fab>
 
-      {/* Modal do Prontuário Completo */}
+      {/* Modal do Prontuário Clínico */}
       {prontuarioCompletoAberto && (
-        <ProntuarioCompleto
-          pacienteId={prontuarioCompletoAberto}
+        <Dialog
+          open={true}
           onClose={() => setProntuarioCompletoAberto(null)}
-        />
+          maxWidth="xl"
+          fullWidth
+          fullScreen
+        >
+          <DialogContent sx={{ p: 0, height: '100vh' }}>
+            <ProntuarioClinicoViewer
+              pacienteId={prontuarioCompletoAberto}
+              onClose={() => setProntuarioCompletoAberto(null)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Modal de Atendimento com Cronômetro */}

@@ -60,7 +60,7 @@ class EmailService {
   loadTemplate(templateName) {
     try {
       const templatePath = path.join(__dirname, '../templates/emails', `${templateName}.html`);
-      
+
       if (fs.existsSync(templatePath)) {
         return fs.readFileSync(templatePath, 'utf8');
       }
@@ -186,37 +186,31 @@ class EmailService {
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Redefinir Senha - AltClinic</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #1976d2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-          </style>
+          <title>Redefinição de Senha - AltClinic</title>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🔐 Redefinir Senha</h1>
-            </div>
-            <div class="content">
-              <h2>Solicitação de nova senha</h2>
-              <p>Você solicitou a redefinição de sua senha na AltClinic.</p>
-              
-              <div style="text-align: center;">
-                <a href="{resetUrl}" class="button">Redefinir Senha</a>
-              </div>
-              
-              <p><strong>⚠️ Este link expira em 1 hora.</strong></p>
-              
-              <p>Se você não solicitou esta alteração, ignore este email. Sua senha permanecerá inalterada.</p>
-            </div>
-            <div class="footer">
-              <p>© 2025 AltClinic - Plataforma SaaS para Clínicas</p>
-              <p>altclinic.com.br</p>
-            </div>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1976d2;">Redefinição de Senha</h2>
+            <p>Olá,</p>
+            <p>Recebemos uma solicitação para redefinir sua senha no sistema AltClinic.</p>
+            <p>Clique no link abaixo para criar uma nova senha:</p>
+            <p style="margin: 20px 0;">
+              <a href="{resetUrl}" style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                Redefinir Senha
+              </a>
+            </p>
+            <p><strong>Importante:</strong></p>
+            <ul>
+              <li>Este link expira em 1 hora</li>
+              <li>Se você não solicitou esta redefinição, ignore este email</li>
+              <li>Por segurança, não compartilhe este link com ninguém</li>
+            </ul>
+            <p>Se o botão não funcionar, copie e cole este link no seu navegador:</p>
+            <p style="word-break: break-all; color: #666;">{resetUrl}</p>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="color: #666; font-size: 12px;">
+              Esta é uma mensagem automática. Não responda este email.
+            </p>
           </div>
         </body>
         </html>
@@ -365,7 +359,7 @@ class EmailService {
         console.log(`📧 Assunto: ${subject}`);
         console.log(`📧 Template: ${template}`);
         console.log(`📧 Dados:`, data);
-        
+
         // Mostrar conteúdo do template processado
         if (template) {
           let simulatedHtml = this.loadTemplate(template);
@@ -373,7 +367,7 @@ class EmailService {
           console.log('📧 Conteúdo HTML processado (primeiras 500 chars):');
           console.log(simulatedHtml.substring(0, 500));
         }
-        
+
         console.log('📧 --- FIM DO EMAIL SIMULADO ---');
 
         return {
@@ -390,7 +384,7 @@ class EmailService {
       if (template) {
         emailHtml = this.loadTemplate(template);
         emailHtml = this.replaceVariables(emailHtml, data);
-        
+
         // Gerar versão text do HTML
         emailText = emailHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
       }
@@ -404,7 +398,7 @@ class EmailService {
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
+
       console.log(`✅ Email enviado para ${to}:`, result.messageId);
       return {
         success: true,
@@ -520,7 +514,7 @@ class EmailService {
     tenantSlug,
     createdByAdmin = false
   }) {
-    const subject = createdByAdmin 
+    const subject = createdByAdmin
       ? `Conta criada - ${clinica} - AltClinic`
       : 'Bem-vindo ao Alt Clinic - Sua conta está pronta!';
 
@@ -533,10 +527,10 @@ class EmailService {
           
           <p>Olá <strong>${nome}</strong>,</p>
           
-          ${createdByAdmin 
-            ? `<p>Sua conta foi criada com sucesso no sistema AltClinic para a clínica <strong>${clinica}</strong>.</p>`
-            : `<p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>30 dias grátis</strong> para explorar todas as funcionalidades.</p>`
-          }
+          ${createdByAdmin
+          ? `<p>Sua conta foi criada com sucesso no sistema AltClinic para a clínica <strong>${clinica}</strong>.</p>`
+          : `<p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>30 dias grátis</strong> para explorar todas as funcionalidades.</p>`
+        }
           
           <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>📋 Dados de Acesso:</h3>

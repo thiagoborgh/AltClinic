@@ -19,11 +19,11 @@ class MultiTenantDatabaseManager {
       const { MockMultiTenantDatabase } = require('../utils/mockDatabase');
       return new MockMultiTenantDatabase();
     }
-    
+
     this.masterDb = null;
     this.tenantConnections = new Map();
     this.databasesPath = path.join(__dirname, '../../databases');
-    
+
     this.init();
   }
 
@@ -38,7 +38,7 @@ class MultiTenantDatabaseManager {
 
     // Conectar ao database master
     this.masterDb = this.connectMasterDb();
-    
+
     console.log('✅ Multi-tenant database manager iniciado');
   }
 
@@ -48,10 +48,10 @@ class MultiTenantDatabaseManager {
   connectMasterDb() {
     const masterDbPath = path.join(__dirname, '../../saee-master.db');
     const db = new Database(masterDbPath);
-    
+
     // Criar tabelas do sistema principal se não existirem
     this.createMasterTables(db);
-    
+
     return db;
   }
 
@@ -125,7 +125,7 @@ class MultiTenantDatabaseManager {
       console.error('❌ Master DB não inicializado');
       throw new Error('Master database not initialized');
     }
-    
+
     // Tentar executar uma query simples para verificar se a conexão está ativa
     try {
       this.masterDb.prepare('SELECT 1').get();
@@ -134,7 +134,7 @@ class MultiTenantDatabaseManager {
       // Tentar reconectar
       this.masterDb = this.connectMasterDb();
     }
-    
+
     return this.masterDb;
   }
 
@@ -146,7 +146,7 @@ class MultiTenantDatabaseManager {
       console.log(`🔄 Criando database para tenant ${tenantId} com nome ${databaseName}`);
       const dbPath = path.join(this.databasesPath, `${databaseName}.db`);
       console.log(`📁 Caminho do database: ${dbPath}`);
-      
+
       if (fs.existsSync(dbPath)) {
         console.log(`⚠️ Database já existe: ${databaseName}`);
         return dbPath;
@@ -155,17 +155,17 @@ class MultiTenantDatabaseManager {
       console.log(`🗄️ Criando novo database: ${databaseName}`);
       // Criar novo database
       const db = new Database(dbPath);
-      
+
       // Executar schema do tenant
       console.log(`📋 Executando schema para tenant ${tenantId}`);
       this.createTenantSchema(db, tenantId);
-      
+
       // Fechar conexão inicial
       db.close();
-      
+
       console.log(`✅ Database criado para tenant ${tenantId}: ${databaseName}`);
       return dbPath;
-      
+
     } catch (error) {
       console.error(`❌ Erro ao criar database do tenant ${tenantId}:`, error);
       console.error('Stack trace:', error.stack);
@@ -352,7 +352,7 @@ class MultiTenantDatabaseManager {
 
     console.log(`📋 Executando schema SQL para tenant ${tenantId}...`);
     console.log(`📏 Tamanho do schema: ${schema.length} caracteres`);
-    
+
     try {
       db.exec(schema);
       console.log(`✅ Schema executado com sucesso para tenant: ${tenantId}`);
@@ -372,23 +372,23 @@ class MultiTenantDatabaseManager {
       const tenant = this.masterDb.prepare(`
         SELECT database_name FROM tenants WHERE id = ?
       `).get(tenantId);
-      
+
       if (!tenant) {
         throw new Error(`Tenant não encontrado: ${tenantId}`);
       }
-      
+
       const dbPath = path.join(this.databasesPath, `${tenant.database_name}.db`);
-      
+
       if (!fs.existsSync(dbPath)) {
         throw new Error(`Database do tenant não encontrado: ${dbPath}`);
       }
-      
+
       const db = new Database(dbPath);
       this.tenantConnections.set(tenantId, db);
-      
+
       console.log(`🔗 Conexão estabelecida com tenant: ${tenantId}`);
     }
-    
+
     return this.tenantConnections.get(tenantId);
   }
 
@@ -408,7 +408,7 @@ class MultiTenantDatabaseManager {
       }
     }
     this.tenantConnections.clear();
-    
+
     // Fechar conexão master
     if (this.masterDb) {
       try {
@@ -427,7 +427,7 @@ class MultiTenantDatabaseManager {
    */
   async runMigrationOnAllTenants(migrationSql) {
     const tenants = this.masterDb.prepare('SELECT id, database_name FROM tenants').all();
-    
+
     for (const tenant of tenants) {
       try {
         const tenantDb = this.getTenantDb(tenant.id);
@@ -444,28 +444,28 @@ class MultiTenantDatabaseManager {
    */
   async backupAllDatabases() {
     const backupDir = path.join(__dirname, '../../backups', new Date().toISOString().split('T')[0]);
-    
+
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
-    
+
     // Backup master
     const masterBackupPath = path.join(backupDir, 'master.db');
     fs.copyFileSync(path.join(__dirname, '../../saee-master.db'), masterBackupPath);
-    
+
     // Backup tenants
     const tenants = this.masterDb.prepare('SELECT id, database_name FROM tenants').all();
-    
+
     for (const tenant of tenants) {
       const sourcePath = path.join(this.databasesPath, `${tenant.database_name}.db`);
       const backupPath = path.join(backupDir, `${tenant.database_name}.db`);
-      
+
       if (fs.existsSync(sourcePath)) {
         fs.copyFileSync(sourcePath, backupPath);
         console.log(`📦 Backup criado para tenant: ${tenant.id}`);
       }
     }
-    
+
     console.log(`📦 Backup completo salvo em: ${backupDir}`);
     return backupDir;
   }

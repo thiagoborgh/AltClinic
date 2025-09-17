@@ -45,7 +45,8 @@ const Login = () => {
     user, 
     licenses, 
     showLicenseSelector, 
-    setShowLicenseSelector 
+    setShowLicenseSelector,
+    isAuthenticated
   } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [sessionConflict, setSessionConflict] = useState(null);
@@ -70,27 +71,25 @@ const Login = () => {
     },
   });
 
-  // Capturar parâmetros da URL
+  // Redirecionar automaticamente quando o usuário for autenticado
   useEffect(() => {
-    const trial = searchParams.get('trial');
-    const email = searchParams.get('email');
-
-    if (trial === 'true' && email) {
-      setIsFirstAccess(true);
-      setTrialEmail(email);
-      // Preencher o email no formulário
-      setValue('email', email);
+    console.log('🔐 LOGIN useEffect: isAuthenticated:', isAuthenticated, 'user:', !!user);
+    if (isAuthenticated && user) {
+      console.log('🔐 LOGIN useEffect: Redirecionando para /dashboard');
+      navigate('/dashboard', { replace: true });
     }
-  }, [searchParams, setValue]);
+  }, [isAuthenticated, user, navigate]);
 
   const onSubmit = async (data) => {
     try {
+      console.log('🔐 LOGIN: Iniciando login para:', data.email);
       const result = await login(data.email, data.senha);
+      console.log('🔐 LOGIN: Resultado do login:', result);
       
       if (result.success) {
         if (result.singleLicense) {
           toast.success(`Login realizado com sucesso! ${result.sessionInfo?.message || ''}`);
-          navigate('/dashboard');
+          // O redirecionamento será feito automaticamente pelo useEffect quando isAuthenticated mudar
         } else if (result.multipleLicenses) {
           toast.success('Selecione a clínica que deseja acessar');
         }
@@ -107,6 +106,7 @@ const Login = () => {
         toast.error(result.message || 'Erro ao fazer login');
       }
     } catch (error) {
+      console.error('🔐 LOGIN: Erro no onSubmit:', error);
       toast.error('Erro inesperado. Tente novamente.');
     }
   };

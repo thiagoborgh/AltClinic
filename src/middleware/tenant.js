@@ -54,6 +54,7 @@ const extractTenant = async (req, res, next) => {
     // Buscar tenant no database master
     const masterDb = multiTenantDb.getMasterDb();
     console.log('🏥 MIDDLEWARE TENANT: Master DB obtido');
+    console.log('🏥 MIDDLEWARE TENANT: Procurando tenant:', tenantSlug);
     
     const tenant = masterDb.prepare(`
       SELECT id, slug, nome, plano, status, config, billing, theme, trial_expire_at

@@ -344,6 +344,7 @@ const LandingPage = () => {
                     color: 'white',
                     px: 4,
                     py: 2,
+                    mr: 2,
                     '&:hover': {
                       borderColor: 'white',
                       bgcolor: 'rgba(255,255,255,0.1)'
@@ -352,6 +353,23 @@ const LandingPage = () => {
                   onClick={() => document.getElementById('planos').scrollIntoView({ behavior: 'smooth' })}
                 >
                   Ver Planos
+                </Button>
+                <Button
+                  variant="text"
+                  size="large"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    color: 'white',
+                    px: 4,
+                    py: 2,
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.5)'
+                    }
+                  }}
+                >
+                  Já tenho conta - Fazer Login
                 </Button>
               </Box>
             </Grid>

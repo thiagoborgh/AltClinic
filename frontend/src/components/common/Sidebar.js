@@ -21,7 +21,8 @@ import {
   Chat as CrmIcon,
   Assessment as RelatoriosIcon,
   Settings as ConfiguracoesIcon,
-  LocalHospital as MedicosIcon
+  LocalHospital as MedicosIcon,
+  AccessTime as EsperaIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -48,6 +49,11 @@ const menuItems = [
     text: 'Profissionais',
     icon: MedicosIcon,
     path: '/profissionais'
+  },
+  {
+    text: 'Sala de Espera',
+    icon: EsperaIcon,
+    path: '/espera'
   },
   {
     text: 'Financeiro',

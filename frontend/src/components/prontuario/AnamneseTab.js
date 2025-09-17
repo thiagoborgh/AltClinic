@@ -32,42 +32,63 @@ import {
 } from '@mui/icons-material';
 
 export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
-  const [anamnese, setAnamnese] = useState(prontuario?.anamnese || {
-    dadosPessoais: {},
-    historico: {},
-    alergias: [],
-    medicamentos: [],
-    habitosVida: {},
-    observacoes: ''
-  });
-  
+  const [anamneses, setAnamneses] = useState(prontuario?.anamneses || [{
+    id: Date.now(),
+    data: new Date().toISOString().split('T')[0],
+    especialidade: 'clinicaGeral',
+    titulo: 'Anamnese Inicial',
+    dados: {
+      dadosPessoais: {},
+      historico: {},
+      alergias: [],
+      medicamentos: [],
+      habitosVida: {},
+      observacoes: ''
+    }
+  }]);
+  const [anamneseAtiva, setAnamneseAtiva] = useState(0);
   const [carregandoIA, setCarregandoIA] = useState(false);
   const [sugestoesIA, setSugestoesIA] = useState([]);
 
   const handleInputChange = (categoria, campo, valor) => {
-    setAnamnese(prev => ({
-      ...prev,
-      [categoria]: {
-        ...prev[categoria],
-        [campo]: valor
-      }
-    }));
+    setAnamneses(prev => prev.map((a, index) =>
+      index === anamneseAtiva ? {
+        ...a,
+        dados: {
+          ...a.dados,
+          [categoria]: {
+            ...a.dados[categoria],
+            [campo]: valor
+          }
+        }
+      } : a
+    ));
   };
 
   const handleArrayAdd = (campo, item) => {
     if (item.trim()) {
-      setAnamnese(prev => ({
-        ...prev,
-        [campo]: [...(prev[campo] || []), item.trim()]
-      }));
+      setAnamneses(prev => prev.map((a, index) =>
+        index === anamneseAtiva ? {
+          ...a,
+          dados: {
+            ...a.dados,
+            [campo]: [...(a.dados[campo] || []), item.trim()]
+          }
+        } : a
+      ));
     }
   };
 
   const handleArrayRemove = (campo, index) => {
-    setAnamnese(prev => ({
-      ...prev,
-      [campo]: prev[campo].filter((_, i) => i !== index)
-    }));
+    setAnamneses(prev => prev.map((a, idx) =>
+      idx === anamneseAtiva ? {
+        ...a,
+        dados: {
+          ...a.dados,
+          [campo]: a.dados[campo].filter((_, i) => i !== index)
+        }
+      } : a
+    ));
   };
 
   const solicitarSugestoesIA = async () => {
@@ -92,17 +113,70 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
   };
 
   const salvarAnamnese = () => {
-    onAtualizarAnamnese(anamnese);
+    onAtualizarAnamnese(anamneses);
   };
+
+  const adicionarNovaAnamnese = () => {
+    const novaAnamnese = {
+      id: Date.now(),
+      data: new Date().toISOString().split('T')[0],
+      especialidade: 'clinicaGeral',
+      titulo: `Anamnese ${anamneses.length + 1}`,
+      dados: {
+        dadosPessoais: {},
+        historico: {},
+        alergias: [],
+        medicamentos: [],
+        habitosVida: {},
+        observacoes: ''
+      }
+    };
+    setAnamneses(prev => [...prev, novaAnamnese]);
+    setAnamneseAtiva(anamneses.length);
+  };
+
+  const removerAnamnese = (index) => {
+    if (anamneses.length > 1) {
+      setAnamneses(prev => prev.filter((_, i) => i !== index));
+      if (anamneseAtiva >= index && anamneseAtiva > 0) {
+        setAnamneseAtiva(anamneseAtiva - 1);
+      }
+    }
+  };
+
+  const anamneseAtual = anamneses[anamneseAtiva];
 
   return (
     <Box>
       <Grid container spacing={3}>
-        {/* Header com ações */}
+        {/* Header com ações e seleção de anamnese */}
         <Grid item xs={12}>
-          <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
-            <Typography variant="h5">Anamnese</Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Typography variant="h5">Anamneses</Typography>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Selecionar Anamnese</InputLabel>
+                <Select
+                  value={anamneseAtiva}
+                  onChange={(e) => setAnamneseAtiva(e.target.value)}
+                  label="Selecionar Anamnese"
+                >
+                  {anamneses.map((anamnese, index) => (
+                    <MenuItem key={anamnese.id} value={index}>
+                      {anamnese.titulo} - {new Date(anamnese.data).toLocaleDateString('pt-BR')}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             <Box>
+              <Button
+                startIcon={<AddIcon />}
+                onClick={adicionarNovaAnamnese}
+                sx={{ mr: 1 }}
+              >
+                Nova Anamnese
+              </Button>
               <Button
                 startIcon={<AIIcon />}
                 onClick={solicitarSugestoesIA}
@@ -120,9 +194,27 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
               </Button>
             </Box>
           </Box>
-          
+
+          {/* Informações da anamnese ativa */}
+          <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+            <Typography variant="subtitle1" gutterBottom>
+              {anamneseAtual.titulo}
+            </Typography>
+            <Box display="flex" gap={2}>
+              <Chip
+                label={`Data: ${new Date(anamneseAtual.data).toLocaleDateString('pt-BR')}`}
+                size="small"
+              />
+              <Chip
+                label={`Especialidade: ${anamneseAtual.especialidade}`}
+                size="small"
+                color="primary"
+              />
+            </Box>
+          </Paper>
+
           {carregandoIA && <LinearProgress sx={{ mb: 2 }} />}
-          
+
           {sugestoesIA.length > 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
@@ -149,7 +241,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <TextField
                     fullWidth
                     label="Estado Civil"
-                    value={anamnese.dadosPessoais?.estadoCivil || ''}
+                    value={anamneseAtual.dados.dadosPessoais?.estadoCivil || ''}
                     onChange={(e) => handleInputChange('dadosPessoais', 'estadoCivil', e.target.value)}
                   />
                 </Grid>
@@ -157,7 +249,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <TextField
                     fullWidth
                     label="Profissão"
-                    value={anamnese.dadosPessoais?.profissao || ''}
+                    value={anamneseAtual.dados.dadosPessoais?.profissao || ''}
                     onChange={(e) => handleInputChange('dadosPessoais', 'profissao', e.target.value)}
                   />
                 </Grid>
@@ -167,7 +259,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                     multiline
                     rows={2}
                     label="Motivo da Consulta"
-                    value={anamnese.dadosPessoais?.motivoConsulta || ''}
+                    value={anamneseAtual.dados.dadosPessoais?.motivoConsulta || ''}
                     onChange={(e) => handleInputChange('dadosPessoais', 'motivoConsulta', e.target.value)}
                   />
                 </Grid>
@@ -193,9 +285,9 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                           key={doenca}
                           control={
                             <Checkbox
-                              checked={anamnese.historico?.doencas?.includes(doenca) || false}
+                              checked={anamneseAtual.dados.historico?.doencas?.includes(doenca) || false}
                               onChange={(e) => {
-                                const doencas = anamnese.historico?.doencas || [];
+                                const doencas = anamneseAtual.dados.historico?.doencas || [];
                                 if (e.target.checked) {
                                   handleInputChange('historico', 'doencas', [...doencas, doenca]);
                                 } else {
@@ -215,7 +307,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <FormControl fullWidth>
                     <FormLabel>Histórico de Cirurgias</FormLabel>
                     <RadioGroup
-                      value={anamnese.historico?.cirurgias || 'nao'}
+                      value={anamneseAtual.dados.historico?.cirurgias || 'nao'}
                       onChange={(e) => handleInputChange('historico', 'cirurgias', e.target.value)}
                     >
                       <FormControlLabel value="nao" control={<Radio />} label="Não" />
@@ -224,14 +316,14 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   </FormControl>
                 </Grid>
 
-                {anamnese.historico?.cirurgias === 'sim' && (
+                {anamneseAtual.dados.historico?.cirurgias === 'sim' && (
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       multiline
                       rows={2}
                       label="Descreva as cirurgias realizadas"
-                      value={anamnese.historico?.descricaoCirurgias || ''}
+                      value={anamneseAtual.dados.historico?.descricaoCirurgias || ''}
                       onChange={(e) => handleInputChange('historico', 'descricaoCirurgias', e.target.value)}
                     />
                   </Grid>
@@ -247,10 +339,10 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">
                 Alergias 
-                {anamnese.alergias?.length > 0 && (
+                {anamneseAtual.dados.alergias?.length > 0 && (
                   <Chip 
                     size="small" 
-                    label={anamnese.alergias.length} 
+                    label={anamneseAtual.dados.alergias.length} 
                     color="warning" 
                     sx={{ ml: 1 }}
                   />
@@ -261,7 +353,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
               <Box>
                 <AlergiaInput onAdd={(alergia) => handleArrayAdd('alergias', alergia)} />
                 <Box mt={2}>
-                  {anamnese.alergias?.map((alergia, index) => (
+                  {anamneseAtual.dados.alergias?.map((alergia, index) => (
                     <Chip
                       key={index}
                       label={alergia}
@@ -283,10 +375,10 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">
                 Medicamentos em Uso
-                {anamnese.medicamentos?.length > 0 && (
+                {anamneseAtual.dados.medicamentos?.length > 0 && (
                   <Chip 
                     size="small" 
-                    label={anamnese.medicamentos.length} 
+                    label={anamneseAtual.dados.medicamentos.length} 
                     color="info" 
                     sx={{ ml: 1 }}
                   />
@@ -297,7 +389,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
               <Box>
                 <MedicamentoInput onAdd={(medicamento) => handleArrayAdd('medicamentos', medicamento)} />
                 <Box mt={2}>
-                  {anamnese.medicamentos?.map((medicamento, index) => (
+                  {anamneseAtual.dados.medicamentos?.map((medicamento, index) => (
                     <Chip
                       key={index}
                       label={medicamento}
@@ -325,7 +417,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <FormControl fullWidth>
                     <InputLabel>Tabagismo</InputLabel>
                     <Select
-                      value={anamnese.habitosVida?.tabagismo || ''}
+                      value={anamneseAtual.dados.habitosVida?.tabagismo || ''}
                       onChange={(e) => handleInputChange('habitosVida', 'tabagismo', e.target.value)}
                     >
                       <MenuItem value="nunca">Nunca fumou</MenuItem>
@@ -339,7 +431,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <FormControl fullWidth>
                     <InputLabel>Álcool</InputLabel>
                     <Select
-                      value={anamnese.habitosVida?.alcool || ''}
+                      value={anamneseAtual.dados.habitosVida?.alcool || ''}
                       onChange={(e) => handleInputChange('habitosVida', 'alcool', e.target.value)}
                     >
                       <MenuItem value="nao">Não bebe</MenuItem>
@@ -354,7 +446,7 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
                   <FormControl fullWidth>
                     <InputLabel>Atividade Física</InputLabel>
                     <Select
-                      value={anamnese.habitosVida?.atividadeFisica || ''}
+                      value={anamneseAtual.dados.habitosVida?.atividadeFisica || ''}
                       onChange={(e) => handleInputChange('habitosVida', 'atividadeFisica', e.target.value)}
                     >
                       <MenuItem value="sedentario">Sedentário</MenuItem>
@@ -380,8 +472,8 @@ export default function AnamneseTab({ prontuario, onAtualizarAnamnese }) {
               multiline
               rows={4}
               placeholder="Adicione observações importantes sobre o paciente..."
-              value={anamnese.observacoes || ''}
-              onChange={(e) => setAnamnese(prev => ({ ...prev, observacoes: e.target.value }))}
+              value={anamneseAtual.dados.observacoes || ''}
+              onChange={(e) => handleInputChange('observacoes', '', e.target.value)}
             />
           </Paper>
         </Grid>

@@ -78,7 +78,7 @@ const CRM = () => {
 
   const fetchTenants = async () => {
     try {
-      const response = await axios.get('/tenants/admin/list');
+      const response = await axios.get('/api/tenants/admin/list');
       if (response.data.success) {
         setTenants(response.data.tenants);
       }
@@ -102,7 +102,7 @@ const CRM = () => {
 
   const handleSendCampaign = async () => {
     try {
-      const response = await axios.post('/crm/campaign', {
+      const response = await axios.post('/api/crm/campaign', {
         tenantId: selectedTenant,
         tipo: 'reativacao'
       });

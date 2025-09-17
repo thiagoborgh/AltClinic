@@ -19,9 +19,7 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Avatar,
-  IconButton,
-  Tooltip
+  Avatar
 } from '@mui/material';
 import {
   Download,
@@ -37,7 +35,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import dayjs from 'dayjs';
 
 const Relatorios = () => {
@@ -47,7 +45,7 @@ const Relatorios = () => {
   });
   const [tipoRelatorio, setTipoRelatorio] = useState('geral');
   const [loading, setLoading] = useState(false);
-  const [dados, setDados] = useState({
+  const [dados] = useState({
     resumo: {
       totalLicencas: 58,
       faturamentoTotal: 245000,

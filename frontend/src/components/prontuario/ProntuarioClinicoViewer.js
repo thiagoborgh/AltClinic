@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -31,6 +31,7 @@ import PlanoDeTratamento from './PlanoDeTratamento';
 import ResultadosAnalises from './ResultadosAnalises';
 import ComunicacaoHistorico from './ComunicacaoHistorico';
 import NovoAtendimentoModal from './NovoAtendimentoModal';
+import AtendimentoControls from './AtendimentoControls';
 
 // Componente principal do Prontuário Clínico
 const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
@@ -47,6 +48,56 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
 
   const [tabAtiva, setTabAtiva] = useState(0);
   const [modalAtendimento, setModalAtendimento] = useState(false);
+  const [atendimento, setAtendimento] = useState(null);
+  const [tempoAtendimento, setTempoAtendimento] = useState(0);
+  const [cronometroAtivo, setCronometroAtivo] = useState(false);
+
+  // Auto-iniciar atendimento quando o componente carrega
+  useEffect(() => {
+    if (paciente && !atendimento) {
+      const novoAtendimento = {
+        id: Date.now(),
+        pacienteId: pacienteId,
+        status: 'ativo',
+        dataInicio: new Date().toISOString(),
+        especialidade: 'Geral'
+      };
+      setAtendimento(novoAtendimento);
+      setCronometroAtivo(true);
+    }
+  }, [paciente, pacienteId, atendimento]);
+
+  // Cronômetro do atendimento
+  useEffect(() => {
+    let interval;
+    if (cronometroAtivo && atendimento && atendimento.status === 'ativo') {
+      interval = setInterval(() => {
+        const inicio = new Date(atendimento.dataInicio);
+        const agora = new Date();
+        const diferenca = Math.floor((agora - inicio) / 1000); // em segundos
+        setTempoAtendimento(diferenca);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [cronometroAtivo, atendimento]);
+
+  // Formatar tempo do cronômetro
+  const formatarTempo = (segundos) => {
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segs = segundos % 60;
+    return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
+  };
+
+  // Handler para mudanças no atendimento
+  const handleAtualizarDados = (novoAtendimento) => {
+    setAtendimento(novoAtendimento);
+    if (novoAtendimento?.status === 'ativo') {
+      setCronometroAtivo(true);
+    } else {
+      setCronometroAtivo(false);
+    }
+  };
 
   // Abas do prontuário
   const abas = [
@@ -174,6 +225,15 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
                 size="small"
                 color={estatisticas.statusAtivo ? 'success' : 'default'}
               />
+              {atendimento && atendimento.status === 'ativo' && (
+                <Chip
+                  label={`⏱️ ${formatarTempo(tempoAtendimento)}`}
+                  size="small"
+                  color="primary"
+                  variant="filled"
+                  sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}
+                />
+              )}
             </Box>
           }
           subheader={
@@ -205,25 +265,28 @@ const ProntuarioClinicoViewer = ({ pacienteId, onClose }) => {
             </Grid>
           }
           action={
-            <Box display="flex" gap={1}>
-              <Tooltip title="Novo Atendimento">
-                <IconButton
-                  color="primary"
-                  onClick={() => setModalAtendimento(true)}
-                >
-                  <PersonAddIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Gerar Relatório">
-                <IconButton onClick={handleGerarRelatorio}>
-                  <PrintIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Editar Dados do Paciente">
-                <IconButton>
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
+            <Box display="flex" gap={1} alignItems="center">
+              {/* Controles de Atendimento */}
+              <AtendimentoControls
+                paciente={paciente}
+                atendimentoAtivo={atendimento}
+                onAtendimentoChange={handleAtualizarDados}
+                size="small"
+              />
+              
+              {/* Botões de Ação */}
+              <Box display="flex" gap={1}>
+                <Tooltip title="Gerar Relatório">
+                  <IconButton onClick={handleGerarRelatorio}>
+                    <PrintIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Editar Dados do Paciente">
+                  <IconButton>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
           }
         />

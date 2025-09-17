@@ -15,7 +15,7 @@ const getApiBaseURL = () => {
   }
   
   // Fallback para desenvolvimento
-  return 'http://localhost:3001/api';
+  return 'http://localhost:3000/api';
 };
 
 // Configuração base da API
@@ -30,6 +30,9 @@ const api = axios.create({
 // Interceptor para requisições
 api.interceptors.request.use(
   (config) => {
+    console.log('🌐 API REQUEST:', config.method?.toUpperCase(), config.baseURL + config.url);
+    console.log('🌐 API REQUEST DATA:', config.data);
+    
     // Verificar se já existe Authorization header (definido pelo useAuth)
     if (!config.headers.Authorization) {
       // Adicionar token de autenticação se existir (fallback)
@@ -70,9 +73,13 @@ api.interceptors.request.use(
 // Interceptor para respostas
 api.interceptors.response.use(
   (response) => {
+    console.log('🌐 API RESPONSE:', response.status, response.config.method?.toUpperCase(), response.config.url);
+    console.log('🌐 API RESPONSE DATA:', response.data);
     return response;
   },
   (error) => {
+    console.log('🌐 API ERROR:', error.response?.status, error.config?.method?.toUpperCase(), error.config?.url);
+    console.log('🌐 API ERROR DATA:', error.response?.data);
     const { response } = error;
     
     // Tratamento de erros globais

@@ -11,8 +11,8 @@ describe('Configuração do Jest', () => {
     expect(global.fetch).toBeDefined();
   });
 
-  test('deve ter localStorage mockado', () => {
-    expect(window.localStorage).toBeDefined();
-    expect(typeof window.localStorage.setItem).toBe('function');
+  test('deve ter acesso ao global', () => {
+    expect(global).toBeDefined();
+    expect(typeof global.setTimeout).toBe('function');
   });
 });

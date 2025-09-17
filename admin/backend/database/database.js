@@ -90,6 +90,29 @@ class AdminDatabase {
       )
     `);
 
+    // Tabela de configurações de recorrência
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS recorrencia_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id TEXT NOT NULL,
+        frequencia TEXT NOT NULL DEFAULT 'mensal',
+        valor DECIMAL(10,2) NOT NULL,
+        dias_graca INTEGER DEFAULT 7,
+        chave_pix TEXT,
+        cartao_numero TEXT,
+        cartao_nome TEXT,
+        cartao_validade TEXT,
+        cartao_cvv TEXT,
+        agencia TEXT,
+        conta TEXT,
+        lembretes_dias INTEGER DEFAULT 3,
+        ativo BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tenant_id) REFERENCES licencas (id)
+      )
+    `);
+
     // Índices
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_licencas_status ON licencas(status);
@@ -255,6 +278,42 @@ class AdminDatabase {
     stats.faturamentoMensal = faturamento.total || 0;
 
     return stats;
+  }
+
+  // Métodos para configurações de recorrência
+  saveRecorrenciaConfig(config) {
+    const existing = this.db.prepare('SELECT id FROM recorrencia_config WHERE tenant_id = ?').get(config.tenantId);
+    
+    if (existing) {
+      return this.db.prepare(`
+        UPDATE recorrencia_config SET
+          frequencia = ?, valor = ?, dias_graca = ?, chave_pix = ?,
+          cartao_numero = ?, cartao_nome = ?, cartao_validade = ?, cartao_cvv = ?,
+          agencia = ?, conta = ?, lembretes_dias = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = ?
+      `).run(
+        config.frequencia, config.valor, config.diasGraca, config.chavePix,
+        config.cartaoNumero, config.cartaoNome, config.cartaoValidade, config.cartaoCvv,
+        config.agencia, config.conta, config.lembretesDias, config.ativo ? 1 : 0,
+        config.tenantId
+      );
+    } else {
+      return this.db.prepare(`
+        INSERT INTO recorrencia_config (
+          tenant_id, frequencia, valor, dias_graca, chave_pix,
+          cartao_numero, cartao_nome, cartao_validade, cartao_cvv,
+          agencia, conta, lembretes_dias, ativo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        config.tenantId, config.frequencia, config.valor, config.diasGraca, config.chavePix,
+        config.cartaoNumero, config.cartaoNome, config.cartaoValidade, config.cartaoCvv,
+        config.agencia, config.conta, config.lembretesDias, config.ativo ? 1 : 0
+      );
+    }
+  }
+
+  getRecorrenciaConfig(tenantId) {
+    return this.db.prepare('SELECT * FROM recorrencia_config WHERE tenant_id = ?').get(tenantId);
   }
 
   close() {

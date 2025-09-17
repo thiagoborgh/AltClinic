@@ -14,8 +14,6 @@ export const useAuth = () => {
 
 // Provider de autenticação
 export const AuthProvider = ({ children }) => {
-  console.log('AuthProvider iniciando...');
-  
   const [user, setUser] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [license, setLicense] = useState(null);
@@ -24,8 +22,6 @@ export const AuthProvider = ({ children }) => {
   const [showLicenseSelector, setShowLicenseSelector] = useState(false);
   const [loading, setLoading] = useState(false); // Iniciar como false
   const [loginLoading, setLoginLoading] = useState(false);
-
-  console.log('AuthProvider estado inicial:', { token, user, loading });
 
   // Função para limpar dados problemáticos do localStorage
   const cleanupLocalStorage = useCallback(() => {
@@ -54,6 +50,7 @@ export const AuthProvider = ({ children }) => {
     setLicenses([]);
     setShowLicenseSelector(false);
     localStorage.removeItem('authToken');
+    localStorage.removeItem('tenantSlug');
     localStorage.removeItem('agenda_profissionais_selecionados');
   }, []);
 
@@ -117,6 +114,7 @@ export const AuthProvider = ({ children }) => {
   // Login unificado com controle de sessões
   const login = async (email, senha, forceLogin = false, sessionsToRemove = []) => {
     try {
+      console.log('🔐 LOGIN API: Iniciando login para:', email);
       setLoginLoading(true);
       
       const response = await api.post('/auth/login', { 
@@ -126,25 +124,35 @@ export const AuthProvider = ({ children }) => {
         sessionsToRemove 
       });
       
-      if (response.data.success) {
-        const { user: userData, token: authToken, sessionId, sessionInfo } = response.data;
+        console.log('🔐 LOGIN API: Response status:', response.status);
+        console.log('🔐 LOGIN API: Response data:', response.data);
         
+        if (response.data.success) {
+          const { user: userData, token: authToken, sessionId, sessionInfo } = response.data;        console.log('🔐 LOGIN API: Setting auth state');
+        
+        // Armazenar informações no localStorage ANTES de definir o estado
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('sessionId', sessionId);
+        
+        // Armazenar tenantSlug para requisições futuras
+        if (response.data.tenant?.slug) {
+          localStorage.setItem('tenantSlug', response.data.tenant.slug);
+        }
+        
+        // Agora definir o estado React
         setUser(userData);
         setToken(authToken);
         setTenant(response.data.tenant);
         setLicense(response.data.license);
         
-        // Armazenar informações da sessão
-        localStorage.setItem('sessionId', sessionId);
+        console.log('🔐 LOGIN API: Estado atualizado, isAuthenticated:', !!(authToken && userData && response.data.tenant && response.data.license));
         
         return { 
           success: true, 
           singleLicense: true,
           sessionInfo
         };
-      }
-      
-      return { success: false, message: response.data.message };
+      }      return { success: false, message: response.data.message };
       
     } catch (error) {
       console.error('Erro no login:', error);
@@ -269,6 +277,14 @@ export const AuthProvider = ({ children }) => {
 
   // Estado de autenticação
   const isAuthenticated = !!token && !!user && !!tenant && !!license;
+  
+  console.log('🔐 AUTH STATE:', {
+    token: !!token,
+    user: !!user,
+    tenant: !!tenant,
+    license: !!license,
+    isAuthenticated
+  });
 
   const value = {
     // Estados

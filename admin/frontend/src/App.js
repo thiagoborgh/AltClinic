@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Licencas from './pages/Licencas';
 import CadastroLicenca from './pages/CadastroLicenca';
 import Financeiro from './pages/Financeiro';
+import ConfiguracoesFinanceiras from './pages/ConfiguracoesFinanceiras';
 import CRM from './pages/CRM';
 import Automacao from './pages/Automacao';
 import Configuracoes from './pages/Configuracoes';
@@ -41,6 +42,7 @@ function AppContent() {
         <Route path="/licencas" element={<Licencas />} />
         <Route path="/nova-licenca" element={<CadastroLicenca />} />
         <Route path="/financeiro" element={<Financeiro />} />
+        <Route path="/configuracoes-financeiras" element={<ConfiguracoesFinanceiras />} />
         <Route path="/crm" element={<CRM />} />
         <Route path="/automacao" element={<Automacao />} />
         <Route path="/configuracoes/:licencaId" element={<Configuracoes />} />

@@ -86,18 +86,23 @@ class UsuarioMultiTenantModel {
    * @returns {Object|null} - Usuário encontrado
    */
   findByEmail(email, tenantId) {
+    console.log('🔧 findByEmail called with:', email, 'tenantId:', tenantId);
     const tenantDb = this.getTenantDb(tenantId);
+    console.log('🔧 tenantDb obtained for tenant:', tenantId);
+
     const usuario = tenantDb.prepare(`
-      SELECT id, tenant_id, nome, email, senha_hash, role, permissions, avatar, telefone, 
+      SELECT id, tenant_id, nome, email, senha_hash, role, permissions, avatar, telefone,
              crm, especialidade, status, last_login, created_at, updated_at
-      FROM usuarios 
+      FROM usuarios
       WHERE email = ? AND tenant_id = ?
     `).get(email, tenantId);
-    
+
+    console.log('🔧 Query result:', usuario ? 'User found' : 'User not found');
     if (usuario) {
+      console.log('🔧 User data:', { id: usuario.id, email: usuario.email, tenant_id: usuario.tenant_id });
       usuario.permissions = JSON.parse(usuario.permissions || '{}');
     }
-    
+
     return usuario;
   }
 
@@ -109,7 +114,9 @@ class UsuarioMultiTenantModel {
    * @returns {Object|null} - Dados do usuário autenticado
    */
   authenticate(email, senha, tenantId) {
-    console.log('🔧 UsuarioMultiTenant.authenticate called with:', email, tenantId);
+    console.log('🔧 UsuarioMultiTenant.authenticate called with:', email, 'tenantId:', tenantId);
+    console.log('🔧 authenticate: Starting authentication process');
+
     const usuario = this.findByEmail(email, tenantId);
     
     if (!usuario) {

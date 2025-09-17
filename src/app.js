@@ -14,11 +14,14 @@ const prontuariosRoutes = require('./routes/prontuarios');
 const financeiroRoutes = require('./routes/financeiro');
 const tenantsRoutes = require('./routes/tenants');
 const tenantsAdminRoutes = require('./routes/tenants-admin');
+const adminAuthRoutes = require('./routes/admin-auth');
+const adminLicencasRoutes = require('./routes/admin-licencas');
 const billingRoutes = require('./routes/billing');
 const pacientesRoutes = require('./routes/pacientes-simple');
 const prontuarioRoutes = require('./routes/prontuario-simple');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
+const atendimentosRoutes = require('./routes/atendimentos');
 
 // Importar middlewares
 const { extractTenant } = require('./middleware/tenant');
@@ -143,9 +146,14 @@ class SaeeApp {
     this.app.use('/api/tenants/admin', tenantsAdminRoutes);
     this.app.use('/api/billing', billingRoutes);
     
+    // Rotas admin (sem tenant)
+    console.log('🔧 Configurando rotas admin...');
+    this.app.use('/api/admin/auth', adminAuthRoutes);
+    this.app.use('/api/admin/licencas', adminLicencasRoutes);
+    
     // Rotas que precisam de tenant (exceto login que já tem o middleware interno)
     // this.app.use('/api/auth/login', extractTenant); // Removido - middleware aplicado internamente
-    this.app.use('/api/auth/me', extractTenant);
+    // this.app.use('/api/auth/me', extractTenant); // Removido - usa tenantId do JWT
     this.app.use('/api/auth/send-first-access-email', extractTenant);
     // /api/auth/recovery não precisa de tenant - ela encontra o tenant pelo email
     
@@ -161,6 +169,7 @@ class SaeeApp {
     this.app.use('/api/prontuarios', extractTenant);
     this.app.use('/api/financeiro', extractTenant);
     this.app.use('/api/configuracoes', extractTenant);
+    this.app.use('/api/atendimentos', extractTenant);
     
     // Rotas de auth (SOMENTE as que não precisam de tenant)
     console.log('🔧 Configurando rota /api/auth...');
@@ -168,6 +177,7 @@ class SaeeApp {
     this.app.use('/api/prontuarios', prontuariosRoutes);
     this.app.use('/api/financeiro', financeiroRoutes);
     this.app.use('/api/configuracoes', configuracoesRoutes);
+    this.app.use('/api/atendimentos', atendimentosRoutes);
 
     // Webhook do Twilio para WhatsApp/SMS
     this.app.post('/webhook/twilio', (req, res) => {

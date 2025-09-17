@@ -10,37 +10,30 @@ import {
   Grid,
   Tabs,
   Tab,
-  Alert,
   Chip,
-  Avatar,
-  Divider,
   Switch,
   FormControlLabel,
   IconButton,
-  Tooltip,
   Paper,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  MenuItem
 } from '@mui/material';
 import {
   ArrowBack,
   Save,
-  Refresh,
   Security,
   Api,
-  Email,
   Message,
-  Business,
-  AttachMoney,
   Settings,
   Phone,
   QrCode,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  AttachMoney
 } from '@mui/icons-material';
-import axios from 'axios';
 
 const Configuracoes = () => {
   const { licencaId } = useParams();
@@ -53,10 +46,6 @@ const Configuracoes = () => {
   const [qrCodeDialog, setQrCodeDialog] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showPasswords, setShowPasswords] = useState({});
-
-  useEffect(() => {
-    fetchLicencaData();
-  }, [licencaId]);
 
   const fetchLicencaData = async () => {
     try {
@@ -115,8 +104,23 @@ const Configuracoes = () => {
         chave_pix: 'contato@clinicasp.com.br',
         banco: 'Banco do Brasil',
         nome_titular: 'Clínica São Paulo Ltda',
+        pix_cpf_cnpj: '12.345.678/0001-90',
+        pix_ativo: true,
 
-        // SISTEMA
+        // Gateway Adquirentes
+        gateway_stripe_public_key: '',
+        gateway_stripe_secret_key: '',
+        gateway_stripe_ativo: false,
+
+        gateway_pagseguro_email: '',
+        gateway_pagseguro_token: '',
+        gateway_pagseguro_ativo: false,
+
+        // Configurações Gerais Financeiras
+        moeda_padrao: 'BRL',
+        timezone: 'America/Sao_Paulo',
+        notificacoes_email: true,
+        notificacoes_whatsapp: true,
         ambiente: 'production',
         debug_mode: false,
         log_level: 'info',
@@ -136,6 +140,11 @@ const Configuracoes = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchLicencaData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [licencaId]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -177,10 +186,10 @@ const Configuracoes = () => {
   };
 
   const tabLabels = [
+    { label: 'Financeiro da Empresa', icon: <AttachMoney /> },
     { label: 'IA & Automação', icon: <Api /> },
     { label: 'Comunicação', icon: <Message /> },
     { label: 'WhatsApp', icon: <Phone /> },
-    { label: 'Financeiro', icon: <AttachMoney /> },
     { label: 'Sistema', icon: <Settings /> },
     { label: 'LGPD', icon: <Security /> }
   ];
@@ -637,52 +646,6 @@ const Configuracoes = () => {
     </Grid>
   );
 
-  const renderFinanceTab = () => (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Typography variant="h6" gutterBottom>
-          💰 Configurações Financeiras
-        </Typography>
-      </Grid>
-
-      <Grid item xs={12} md={6}>
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle1" gutterBottom>
-              PIX
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Chave PIX"
-                  value={configuracoes.chave_pix || ''}
-                  onChange={(e) => handleConfigChange('', 'chave_pix', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Banco"
-                  value={configuracoes.banco || ''}
-                  onChange={(e) => handleConfigChange('', 'banco', e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Nome do Titular"
-                  value={configuracoes.nome_titular || ''}
-                  onChange={(e) => handleConfigChange('', 'nome_titular', e.target.value)}
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
-  );
-
   const renderSystemTab = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -771,15 +734,286 @@ const Configuracoes = () => {
     </Grid>
   );
 
+  const renderFinanceTab = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="h6" gutterBottom>
+          💰 Configurações Financeiras da Empresa
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Configure os dados para recebimento de pagamentos dos clientes (clínicas usuárias) via PIX e gateways.
+        </Typography>
+      </Grid>
+
+      {/* PIX Configuration */}
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="subtitle1" gutterBottom>
+              🏦 Configuração PIX
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Dados para geração automática de QR Codes PIX para faturas dos clientes.
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Chave PIX"
+                  value={configuracoes.chave_pix || ''}
+                  onChange={(e) => handleConfigChange('', 'chave_pix', e.target.value)}
+                  helperText="Email, telefone, CPF/CNPJ ou chave aleatória"
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Nome do Titular"
+                  value={configuracoes.nome_titular || ''}
+                  onChange={(e) => handleConfigChange('', 'nome_titular', e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="CPF/CNPJ do Titular"
+                  value={configuracoes.pix_cpf_cnpj || ''}
+                  onChange={(e) => handleConfigChange('', 'pix_cpf_cnpj', e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Banco"
+                  value={configuracoes.banco || ''}
+                  onChange={(e) => handleConfigChange('', 'banco', e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={configuracoes.pix_ativo || false}
+                      onChange={(e) => handleConfigChange('', 'pix_ativo', e.target.checked)}
+                    />
+                  }
+                  label="PIX Ativo"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Gateway Configuration */}
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="subtitle1" gutterBottom>
+              💳 Gateway de Pagamento
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Integração com gateways para processamento de cartões de crédito.
+            </Typography>
+            <Grid container spacing={2}>
+              {/* Stripe */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="primary">
+                  Stripe
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Public Key"
+                  type={showPasswords.stripe_public_key ? 'text' : 'password'}
+                  value={configuracoes.gateway_stripe_public_key || ''}
+                  onChange={(e) => handleConfigChange('gateway_stripe', 'public_key', e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton onClick={() => togglePasswordVisibility('stripe_public_key')}>
+                        {showPasswords.stripe_public_key ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Secret Key"
+                  type={showPasswords.stripe_secret_key ? 'text' : 'password'}
+                  value={configuracoes.gateway_stripe_secret_key || ''}
+                  onChange={(e) => handleConfigChange('gateway_stripe', 'secret_key', e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton onClick={() => togglePasswordVisibility('stripe_secret_key')}>
+                        {showPasswords.stripe_secret_key ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={configuracoes.gateway_stripe_ativo || false}
+                      onChange={(e) => handleConfigChange('gateway_stripe', 'ativo', e.target.checked)}
+                    />
+                  }
+                  label="Stripe Ativo"
+                />
+              </Grid>
+
+              {/* PagSeguro */}
+              <Grid item xs={12} sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" color="primary">
+                  PagSeguro
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  value={configuracoes.gateway_pagseguro_email || ''}
+                  onChange={(e) => handleConfigChange('gateway_pagseguro', 'email', e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Token"
+                  type={showPasswords.pagseguro_token ? 'text' : 'password'}
+                  value={configuracoes.gateway_pagseguro_token || ''}
+                  onChange={(e) => handleConfigChange('gateway_pagseguro', 'token', e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton onClick={() => togglePasswordVisibility('pagseguro_token')}>
+                        {showPasswords.pagseguro_token ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={configuracoes.gateway_pagseguro_ativo || false}
+                      onChange={(e) => handleConfigChange('gateway_pagseguro', 'ativo', e.target.checked)}
+                    />
+                  }
+                  label="PagSeguro Ativo"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* General Settings */}
+      <Grid item xs={12}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="subtitle1" gutterBottom>
+              ⚙️ Configurações Gerais
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Moeda Padrão"
+                  value={configuracoes.moeda_padrao || 'BRL'}
+                  onChange={(e) => handleConfigChange('', 'moeda_padrao', e.target.value)}
+                  select
+                >
+                  <MenuItem value="BRL">BRL - Real Brasileiro</MenuItem>
+                  <MenuItem value="USD">USD - Dólar Americano</MenuItem>
+                  <MenuItem value="EUR">EUR - Euro</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Timezone"
+                  value={configuracoes.timezone || 'America/Sao_Paulo'}
+                  onChange={(e) => handleConfigChange('', 'timezone', e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={configuracoes.notificacoes_email || false}
+                      onChange={(e) => handleConfigChange('', 'notificacoes_email', e.target.checked)}
+                    />
+                  }
+                  label="Notificações por Email"
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={configuracoes.notificacoes_whatsapp || false}
+                      onChange={(e) => handleConfigChange('', 'notificacoes_whatsapp', e.target.checked)}
+                    />
+                  }
+                  label="Notificações por WhatsApp"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Test and Validation Section */}
+      <Grid item xs={12}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="subtitle1" gutterBottom>
+              🧪 Testes e Validação
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Teste suas configurações antes de ativar para produção.
+            </Typography>
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <Button
+                variant="outlined"
+                startIcon={<QrCode />}
+                onClick={generateWhatsAppQR}
+                disabled={!configuracoes.chave_pix || !configuracoes.pix_ativo}
+              >
+                Gerar QR Code PIX de Teste
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<AttachMoney />}
+                disabled={!configuracoes.gateway_stripe_ativo && !configuracoes.gateway_pagseguro_ativo}
+              >
+                Simular Recebimento R$1
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+
   const renderTabContent = () => {
     switch (currentTab) {
-      case 0: return renderAITab();
-      case 1: return renderCommunicationTab();
-      case 2: return renderWhatsAppTab();
-      case 3: return renderFinanceTab();
+      case 0: return renderFinanceTab();
+      case 1: return renderAITab();
+      case 2: return renderCommunicationTab();
+      case 3: return renderWhatsAppTab();
       case 4: return renderSystemTab();
       case 5: return renderLGPDTab();
-      default: return renderAITab();
+      default: return renderFinanceTab();
     }
   };
 

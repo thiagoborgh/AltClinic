@@ -12,6 +12,7 @@ const configuracoesRoutes = require('./routes/configuracoes');
 const dashboardRoutes = require('./routes/dashboard');
 const relatoriosRoutes = require('./routes/relatorios');
 const whatsappRoutes = require('./routes/whatsapp');
+const financeiroRoutes = require('./routes/financeiro');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +57,7 @@ app.use('/api/admin/configuracoes', configuracoesRoutes);
 app.use('/api/admin/dashboard', dashboardRoutes);
 app.use('/api/admin/relatorios', relatoriosRoutes);
 app.use('/api/admin/whatsapp', whatsappRoutes);
+app.use('/api/admin/financeiro', financeiroRoutes);
 
 // Rota de health check
 app.get('/api/admin/health', (req, res) => {
@@ -116,6 +118,10 @@ app.listen(PORT, () => {
   - GET  /api/admin/configuracoes/:licencaId
   - GET  /api/admin/relatorios
   - POST /api/admin/whatsapp/:licencaId/qr
+  - POST /api/admin/financeiro/recorrencia
+  - GET  /api/admin/financeiro/recorrencia/:tenantId
+  - GET  /api/admin/financeiro/resumo
+  - POST /api/admin/financeiro/pix
   `);
 });
 

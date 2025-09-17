@@ -122,25 +122,14 @@ class UserService {
    */
   async sendPasswordRecoveryEmail(user, tenant) {
     try {
-      // Gerar token de recuperação
-      const resetToken = require('crypto').randomBytes(32).toString('hex');
-      const resetExpires = new Date(Date.now() + 3600000); // 1 hora
-
-      const templateData = {
-        userName: user.name || 'Usuário',
-        tenantName: tenant.nome,
-        resetUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${user.email}`,
-        supportEmail: process.env.SUPPORT_EMAIL || 'suporte@altclinic.com.br'
-      };
-
-      const emailResult = await sendEmail({
-        to: user.email,
-        subject: `Recuperação de Senha - ${tenant.nome}`,
-        template: 'password-reset',
-        data: templateData
+      // Usar o endpoint padrão de forgot-password que já salva o token corretamente
+      const axios = require('axios');
+      const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/forgot-password`, {
+        email: user.email
       });
 
-      return emailResult;
+      console.log('📧 Email de recuperação enviado via endpoint padrão:', user.email);
+      return { success: true };
 
     } catch (error) {
       console.error('Erro ao enviar email de recuperação:', error);

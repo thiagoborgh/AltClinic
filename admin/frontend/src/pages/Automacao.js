@@ -102,7 +102,7 @@ const Automacao = () => {
 
   const fetchTenants = async () => {
     try {
-      const response = await axios.get('/tenants/admin/list');
+      const response = await axios.get('/api/tenants/admin/list');
       if (response.data.success) {
         setTenants(response.data.tenants);
       }

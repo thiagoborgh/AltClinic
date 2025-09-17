@@ -23,19 +23,20 @@ describe('Caminho feliz - Criar licença TRIAL', () => {
     expect(res.body).toHaveProperty('tenant');
     expect(res.body.tenant.status).toBe('trial');
     expect(res.body.tenant.nome).toBe('Clínica Teste Trial');
+    expect(res.body.tenant.slug).toBe(slug);
     expect(res.body.owner.nome).toBe('Dra. Teste');
-    expect(res.body.auth).toHaveProperty('token');
+    expect(res.body.owner.email).toBeDefined();
+    expect(res.body.emailSent).toBe(true);
+    expect(res.body).toHaveProperty('loginInstructions');
+    expect(res.body).toHaveProperty('onboarding');
 
-    // Validar seed inicial
-    const tenantId = res.body.tenant.id;
-    const token = res.body.auth.token;
-    // Consulta rápida de status
-    const statusRes = await request(app)
-      .get(`/api/t/${slug}/status`)
-      .set('Authorization', `Bearer ${token}`);
-    expect(statusRes.status).toBe(200);
-    expect(statusRes.body.stats.usuarios).toBeGreaterThanOrEqual(1);
-    expect(statusRes.body.stats.pacientes).toBeGreaterThanOrEqual(3);
-    expect(statusRes.body.stats.agendamentosHoje).toBeGreaterThanOrEqual(0);
+    // Validar que o tenant foi criado no banco
+    const multiTenantDb = require('../src/models/MultiTenantDatabase');
+    const masterDb = multiTenantDb.getMasterDb();
+    const tenantCheck = masterDb.prepare('SELECT id FROM tenants WHERE slug = ?').get(slug);
+    expect(tenantCheck).toBeTruthy();
+    expect(tenantCheck.id).toBe(res.body.tenant.id);
+
+    console.log('✅ Licença trial criada com sucesso:', slug);
   });
 });

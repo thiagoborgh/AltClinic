@@ -9,20 +9,20 @@ console.log('📋 Tabelas encontradas:', tables.map(t => t.name));
 
 // Verificar estrutura da tabela tenants
 if (tables.some(t => t.name === 'tenants')) {
-  console.log('✅ Tabela tenants existe');
+    console.log('✅ Tabela tenants existe');
 
-  const columns = db.prepare("PRAGMA table_info(tenants)").all();
-  console.log('📊 Colunas da tabela tenants:');
-  columns.forEach(col => {
-    console.log(`  - ${col.name}: ${col.type}${col.notnull ? ' NOT NULL' : ''}${col.pk ? ' PRIMARY KEY' : ''}`);
-  });
+    const columns = db.prepare("PRAGMA table_info(tenants)").all();
+    console.log('📊 Colunas da tabela tenants:');
+    columns.forEach(col => {
+        console.log(`  - ${col.name}: ${col.type}${col.notnull ? ' NOT NULL' : ''}${col.pk ? ' PRIMARY KEY' : ''}`);
+    });
 
-  // Verificar se há registros
-  const count = db.prepare("SELECT COUNT(*) as count FROM tenants").get();
-  console.log(`📈 Total de registros na tabela tenants: ${count.count}`);
+    // Verificar se há registros
+    const count = db.prepare("SELECT COUNT(*) as count FROM tenants").get();
+    console.log(`📈 Total de registros na tabela tenants: ${count.count}`);
 
 } else {
-  console.log('❌ Tabela tenants não encontrada');
+    console.log('❌ Tabela tenants não encontrada');
 }
 
 db.close();

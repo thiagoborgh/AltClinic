@@ -1,341 +1,337 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import { useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
-export const useAtendimento = (pacienteId) => {
-  const [atendimento, setAtendimento] = useState(null);
-  const [logs, setLogs] = useState([]);
-  const [metricas, setMetricas] = useState(null);
+// Hook para gerenciar atendimentos
+export const useAtendimento = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [tempoDecorrido, setTempoDecorrido] = useState(0);
-  
-  const intervalRef = useRef(null);
-  // const wsRef = useRef(null); // Para implementação futura do WebSocket
 
-  // Configurar interceptors do axios
-  useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      response => response,
-      error => {
-        console.error('Erro na API:', error);
-        setError(error.response?.data?.message || 'Erro de conexão');
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.response.eject(interceptor);
-    };
-  }, []);
-
-  // Timer para atualizar tempo decorrido
-  useEffect(() => {
-    if (atendimento?.status === 'em_atendimento' && atendimento?.iniciadoEm) {
-      intervalRef.current = setInterval(() => {
-        const inicio = new Date(atendimento.iniciadoEm);
-        const agora = new Date();
-        const segundos = Math.floor((agora - inicio) / 1000);
-        setTempoDecorrido(segundos);
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setTempoDecorrido(0);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [atendimento]);
-
-  // WebSocket para atualizações em tempo real (futuro)
-  useEffect(() => {
-    // TODO: Implementar WebSocket quando disponível
-    // const ws = new WebSocket(`ws://localhost:5000/ws/atendimentos/${pacienteId}`);
-    // wsRef.current = ws;
-    
-    return () => {
-      // Cleanup será implementado quando WebSocket estiver ativo
-    };
-  }, [pacienteId]);
-
-  // Buscar dados do atendimento atual
-  const buscarAtendimento = useCallback(async () => {
-    if (!pacienteId) return;
-    
-    setLoading(true);
-    setError(null);
-    
+  // Iniciar atendimento
+  const iniciarAtendimento = useCallback(async (dadosAtendimento) => {
     try {
-      const response = await axios.get(`${API_BASE}/atendimentos/${pacienteId}`);
-      
-      if (response.data.success) {
-        setAtendimento(response.data.data);
-        setTempoDecorrido(response.data.data.tempoDecorrido || 0);
-      }
-    } catch (err) {
-      setError('Erro ao buscar atendimento');
-    } finally {
-      setLoading(false);
-    }
-  }, [pacienteId]);
+      setLoading(true);
+      setError(null);
 
-  // Buscar logs do paciente
-  const buscarLogs = useCallback(async (filtros = {}) => {
-    if (!pacienteId) return;
-    
-    try {
-      const params = new URLSearchParams({
-        limite: filtros.limite || 50,
-        pagina: filtros.pagina || 1,
-        ...(filtros.periodo && { periodo: filtros.periodo }),
-        ...(filtros.acao && { acao: filtros.acao })
+      console.log('Iniciando atendimento:', dadosAtendimento);
+
+      // Simulação da API - em produção seria uma chamada real
+      const response = await fetch('/api/atendimentos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dadosAtendimento)
       });
 
-      const response = await axios.get(`${API_BASE}/atendimentos/${pacienteId}/logs?${params}`);
-      
-      if (response.data.success) {
-        setLogs(response.data.data.logs);
-        return response.data.data;
+      if (!response.ok) {
+        throw new Error('Erro ao iniciar atendimento');
       }
-    } catch (err) {
-      setError('Erro ao buscar logs');
-      return null;
-    }
-  }, [pacienteId]);
 
-  // Buscar métricas do paciente
-  const buscarMetricas = useCallback(async (periodo = '30') => {
-    if (!pacienteId) return;
-    
-    try {
-      const response = await axios.get(`${API_BASE}/atendimentos/${pacienteId}/metricas?periodo=${periodo}`);
-      
-      if (response.data.success) {
-        setMetricas(response.data.data);
-        return response.data.data;
-      }
-    } catch (err) {
-      setError('Erro ao buscar métricas');
-      return null;
-    }
-  }, [pacienteId]);
+      const resultado = await response.json();
 
-  // Atualizar status do atendimento
-  const atualizarStatus = useCallback(async (status, dados = {}) => {
-    if (!pacienteId) return false;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const payload = {
-        status,
-        motivo: dados.motivo || '',
-        observacoes: dados.observacoes || '',
-        usuario: dados.usuario || 'Sistema'
-      };
+      toast.success('Atendimento iniciado com sucesso!');
+      return resultado;
 
-      const response = await axios.put(`${API_BASE}/atendimentos/${pacienteId}/status`, payload);
-      
-      if (response.data.success) {
-        setAtendimento(response.data.data.atendimento);
-        
-        // Adicionar novo log à lista
-        if (response.data.data.log) {
-          setLogs(logsAtuais => [response.data.data.log, ...logsAtuais]);
-        }
-        
-        return true;
-      }
-      
-      return false;
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao atualizar status');
-      return false;
+      console.error('Erro ao iniciar atendimento:', err);
+      setError(err.message);
+      toast.error('Erro ao iniciar atendimento');
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [pacienteId]);
-
-  // Adicionar log manual
-  const adicionarLog = useCallback(async (dados) => {
-    if (!pacienteId) return false;
-    
-    try {
-      const payload = {
-        acao: dados.acao,
-        motivo: dados.motivo || '',
-        observacoes: dados.observacoes || '',
-        usuario: dados.usuario || 'Sistema',
-        metadata: dados.metadata || {}
-      };
-
-      const response = await axios.post(`${API_BASE}/atendimentos/${pacienteId}/logs`, payload);
-      
-      if (response.data.success) {
-        setLogs(logsAtuais => [response.data.data, ...logsAtuais]);
-        return true;
-      }
-      
-      return false;
-    } catch (err) {
-      setError('Erro ao adicionar log');
-      return false;
-    }
-  }, [pacienteId]);
-
-  // Ações específicas de atendimento
-  const iniciarAtendimento = useCallback(async (dados = {}) => {
-    return await atualizarStatus('em_atendimento', {
-      ...dados,
-      usuario: dados.usuario || 'Médico'
-    });
-  }, [atualizarStatus]);
-
-  const pausarAtendimento = useCallback(async (dados = {}) => {
-    return await atualizarStatus('em_espera', {
-      ...dados,
-      motivo: dados.motivo || 'Pausa solicitada',
-      usuario: dados.usuario || 'Médico'
-    });
-  }, [atualizarStatus]);
-
-  const retomarAtendimento = useCallback(async (dados = {}) => {
-    return await atualizarStatus('em_atendimento', {
-      ...dados,
-      motivo: dados.motivo || 'Atendimento retomado',
-      usuario: dados.usuario || 'Médico'
-    });
-  }, [atualizarStatus]);
-
-  const concluirAtendimento = useCallback(async (dados = {}) => {
-    return await atualizarStatus('concluido', {
-      ...dados,
-      motivo: dados.motivo || 'Atendimento finalizado',
-      usuario: dados.usuario || 'Médico'
-    });
-  }, [atualizarStatus]);
-
-  const cancelarAtendimento = useCallback(async (dados = {}) => {
-    return await atualizarStatus('cancelado', {
-      ...dados,
-      motivo: dados.motivo || 'Atendimento cancelado',
-      usuario: dados.usuario || 'Sistema'
-    });
-  }, [atualizarStatus]);
-
-  // Exportar logs
-  const exportarLogs = useCallback(async (formato = 'json') => {
-    try {
-      const todosLogs = await buscarLogs({ limite: 1000 });
-      
-      if (!todosLogs?.logs) return null;
-
-      const dadosExport = {
-        pacienteId,
-        logs: todosLogs.logs,
-        total: todosLogs.total,
-        exportadoEm: new Date().toISOString(),
-        formato
-      };
-
-      if (formato === 'csv') {
-        return convertToCSV(dadosExport.logs);
-      }
-
-      return JSON.stringify(dadosExport, null, 2);
-    } catch (err) {
-      setError('Erro ao exportar logs');
-      return null;
-    }
-  }, [pacienteId, buscarLogs]);
-
-  // Limpar dados
-  const limparDados = useCallback(() => {
-    setAtendimento(null);
-    setLogs([]);
-    setMetricas(null);
-    setError(null);
-    setTempoDecorrido(0);
   }, []);
 
-  // Inicializar dados ao montar o componente
-  useEffect(() => {
-    if (pacienteId) {
-      buscarAtendimento();
-      buscarLogs();
-    } else {
-      limparDados();
+  // Finalizar atendimento
+  const finalizarAtendimento = useCallback(async (atendimentoId, dadosFinalizacao) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${atendimentoId}/finalizar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dadosFinalizacao)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao finalizar atendimento');
+      }
+
+      const resultado = await response.json();
+
+      toast.success('Atendimento finalizado com sucesso!');
+      return resultado;
+
+    } catch (err) {
+      console.error('Erro ao finalizar atendimento:', err);
+      setError(err.message);
+      toast.error('Erro ao finalizar atendimento');
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [pacienteId, buscarAtendimento, buscarLogs, limparDados]);
+  }, []);
+
+  // Buscar atendimento por ID
+  const buscarAtendimento = useCallback(async (atendimentoId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${atendimentoId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar atendimento');
+      }
+
+      const atendimento = await response.json();
+      return atendimento;
+
+    } catch (err) {
+      console.error('Erro ao buscar atendimento:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Atualizar atendimento
+  const atualizarAtendimento = useCallback(async (atendimentoId, dadosAtualizacao) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${atendimentoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dadosAtualizacao)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar atendimento');
+      }
+
+      const resultado = await response.json();
+
+      toast.success('Atendimento atualizado com sucesso!');
+      return resultado;
+
+    } catch (err) {
+      console.error('Erro ao atualizar atendimento:', err);
+      setError(err.message);
+      toast.error('Erro ao atualizar atendimento');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buscar atendimentos do profissional
+  const buscarAtendimentosProfissional = useCallback(async (profissionalId, filtros = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams({
+        profissional_id: profissionalId,
+        ...filtros
+      });
+
+      const response = await fetch(`/api/atendimentos/profissional?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar atendimentos');
+      }
+
+      const atendimentos = await response.json();
+      return atendimentos;
+
+    } catch (err) {
+      console.error('Erro ao buscar atendimentos:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Buscar atendimentos do paciente
+  const buscarAtendimentosPaciente = useCallback(async (pacienteId, filtros = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams({
+        paciente_id: pacienteId,
+        ...filtros
+      });
+
+      const response = await fetch(`/api/atendimentos/paciente?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar atendimentos');
+      }
+
+      const atendimentos = await response.json();
+      return atendimentos;
+
+    } catch (err) {
+      console.error('Erro ao buscar atendimentos:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Adicionar evolução ao atendimento
+  const adicionarEvolucao = useCallback(async (atendimentoId, dadosEvolucao) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${atendimentoId}/evolucao`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dadosEvolucao)
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao adicionar evolução');
+      }
+
+      const resultado = await response.json();
+
+      toast.success('Evolução adicionada com sucesso!');
+      return resultado;
+
+    } catch (err) {
+      console.error('Erro ao adicionar evolução:', err);
+      setError(err.message);
+      toast.error('Erro ao adicionar evolução');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Pausar atendimento
+  const pausarAtendimento = useCallback(async (dadosPausa) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${dadosPausa.atendimentoId}/pausar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          motivo: dadosPausa.motivo,
+          observacoes: dadosPausa.observacoes,
+          timestamp: dadosPausa.timestamp
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao pausar atendimento');
+      }
+
+      const resultado = await response.json();
+
+      toast.success('Atendimento pausado com sucesso!');
+      return resultado;
+
+    } catch (err) {
+      console.error('Erro ao pausar atendimento:', err);
+      setError(err.message);
+      toast.error('Erro ao pausar atendimento');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cancelar atendimento
+  const cancelarAtendimento = useCallback(async (dadosCancelamento) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/atendimentos/${dadosCancelamento.atendimentoId}/cancelar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          motivo: dadosCancelamento.motivo,
+          observacoes: dadosCancelamento.observacoes,
+          timestamp: dadosCancelamento.timestamp
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao cancelar atendimento');
+      }
+
+      const resultado = await response.json();
+
+      toast.success('Atendimento cancelado com sucesso!');
+      return resultado;
+
+    } catch (err) {
+      console.error('Erro ao cancelar atendimento:', err);
+      setError(err.message);
+      toast.error('Erro ao cancelar atendimento');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Limpar erro
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
-    // Estado
-    atendimento,
-    logs,
-    metricas,
     loading,
     error,
-    tempoDecorrido,
-    
-    // Funções principais
-    buscarAtendimento,
-    buscarLogs,
-    buscarMetricas,
-    atualizarStatus,
-    adicionarLog,
-    
-    // Ações específicas
     iniciarAtendimento,
+    finalizarAtendimento,
     pausarAtendimento,
-    retomarAtendimento,
-    concluirAtendimento,
     cancelarAtendimento,
-    
-    // Utilidades
-    exportarLogs,
-    limparDados,
-    
-    // Estado derivado
-    isAtendimentoAtivo: atendimento?.status === 'em_atendimento',
-    isAtendimentoPausado: atendimento?.status === 'em_espera',
-    isAtendimentoConcluido: atendimento?.status === 'concluido',
-    isAtendimentoCancelado: atendimento?.status === 'cancelado',
-    podeIniciar: !atendimento || atendimento.status === 'pendente',
-    podePausar: atendimento?.status === 'em_atendimento',
-    podeRetomar: atendimento?.status === 'em_espera',
-    podeConcluir: atendimento?.status === 'em_atendimento',
-    podeCancelar: atendimento && !['concluido', 'cancelado'].includes(atendimento.status)
+    buscarAtendimento,
+    atualizarAtendimento,
+    buscarAtendimentosProfissional,
+    buscarAtendimentosPaciente,
+    adicionarEvolucao,
+    clearError
   };
 };
-
-// Função auxiliar para converter logs para CSV
-function convertToCSV(logs) {
-  if (!logs || logs.length === 0) return '';
-
-  const headers = ['ID', 'Data/Hora', 'Ação', 'Status Anterior', 'Status Novo', 'Motivo', 'Usuário', 'Observações'];
-  const csvContent = [
-    headers.join(','),
-    ...logs.map(log => [
-      log.id,
-      log.timestamp,
-      log.acao,
-      log.statusAnterior || '',
-      log.statusNovo || '',
-      `"${log.motivo || ''}"`,
-      log.usuario || '',
-      `"${log.observacoes || ''}"`
-    ].join(','))
-  ].join('\n');
-
-  return csvContent;
-}
-
-export default useAtendimento;

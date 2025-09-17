@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, CssBaseline } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
-import SidebarNew from '../components/common/SidebarNew';
+import Sidebar from '../components/common/Sidebar';
 import { PacienteProvider } from '../contexts/PacienteContext';
 
 const DashboardLayoutContent = () => {
@@ -24,7 +24,7 @@ const DashboardLayoutContent = () => {
       <Navbar onMenuClick={handleDrawerToggle} />
       
       {/* Sidebar */}
-      <SidebarNew 
+      <Sidebar 
         mobileOpen={mobileOpen} 
         onMobileClose={handleMobileClose}
       />

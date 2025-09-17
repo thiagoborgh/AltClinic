@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Configurar axios para incluir token em todas as requisições
-  axios.defaults.baseURL = '/api';
+  axios.defaults.baseURL = 'http://localhost:3001/api';
   axios.interceptors.request.use((config) => {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -38,8 +38,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/auth/login', { email, senha: password });
-      const { token, user: userData } = response.data;
+      const response = await axios.post('/admin/auth/login', { email, password });
+      const { token, user: userData } = response.data.data;
       
       localStorage.setItem('admin_token', token);
       setUser(userData);
@@ -66,8 +66,8 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await axios.get('/auth/me');
-      setUser(response.data.user);
+      const response = await axios.get('/admin/auth/me');
+      setUser(response.data.data.user);
     } catch (error) {
       console.error('Erro na verificação de auth:', error);
       localStorage.removeItem('admin_token');

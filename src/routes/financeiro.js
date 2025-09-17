@@ -166,6 +166,52 @@ const mockFinanceiroData = {
       "Considere criar pacotes promocionais para março",
       "Aumente o foco em tratamentos de alta margem"
     ]
+  },
+
+  // Configurações financeiras da empresa
+  configuracoes: {
+    pix: {
+      chavePix: "",
+      tipoChave: "cpf", // cpf, cnpj, email, telefone, aleatoria
+      nomeTitular: "",
+      cidade: "",
+      ativo: false
+    },
+    gateways: {
+      pagseguro: {
+        ativo: false,
+        email: "",
+        token: "",
+        appId: "",
+        appKey: ""
+      },
+      mercadopago: {
+        ativo: false,
+        publicKey: "",
+        accessToken: "",
+        clientId: "",
+        clientSecret: ""
+      },
+      stripe: {
+        ativo: false,
+        publishableKey: "",
+        secretKey: "",
+        webhookSecret: ""
+      }
+    },
+    gerais: {
+      moedaPadrao: "BRL",
+      idioma: "pt-BR",
+      timezone: "America/Sao_Paulo",
+      formatoData: "DD/MM/YYYY",
+      emailNotificacoes: "",
+      diasVencimentoPadrao: 30,
+      jurosMora: 2.0,
+      multaAtraso: 2.0,
+      permitirParcelamento: true,
+      maxParcelas: 12,
+      valorMinimoParcela: 50.00
+    }
   }
 };
 
@@ -293,7 +339,7 @@ router.post('/proposta', (req, res) => {
 // POST /api/financeiro/pix - Gerar PIX
 router.post('/pix', (req, res) => {
   try {
-    const { valor, descricao } = req.body;
+    const { valor, descricao, tenant } = req.body;
     
     if (!valor || valor <= 0) {
       return res.status(400).json({
@@ -301,14 +347,46 @@ router.post('/pix', (req, res) => {
         message: 'Valor inválido para PIX'
       });
     }
+
+    // Usar configurações PIX salvas
+    const pixConfig = mockFinanceiroData.configuracoes.pix;
     
-    // Simulação de geração de PIX
+    if (!pixConfig.ativo || !pixConfig.chavePix) {
+      return res.status(400).json({
+        success: false,
+        message: 'PIX não configurado. Configure primeiro nas configurações financeiras.'
+      });
+    }
+
+    // Gerar código PIX mais realista baseado nas configurações
+    const valorFormatado = valor.toFixed(2);
+    const txid = `TXN${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
+    // Formato básico do PIX (EMV QR Code)
+    const pixCode = [
+      '00020101', // Payload Format Indicator
+      '021226', // Point of Initiation Method
+      `0014BR.GOV.BCB.PIX01${pixConfig.chavePix.length.toString().padStart(2, '0')}${pixConfig.chavePix}`, // Merchant Account Information
+      '52040000', // Merchant Category Code
+      '5303986', // Transaction Currency (BRL)
+      `54${valorFormatado.length.toString().padStart(2, '0')}${valorFormatado}`, // Transaction Amount
+      '5802BR', // Country Code
+      `59${pixConfig.nomeTitular.length.toString().padStart(2, '0')}${pixConfig.nomeTitular}`, // Merchant Name
+      `60${pixConfig.cidade.length.toString().padStart(2, '0')}${pixConfig.cidade}`, // Merchant City
+      `62${(7 + txid.length).toString().padStart(2, '0')}05${txid.length.toString().padStart(2, '0')}${txid}`, // Additional Data Field Template
+      '6304' // CRC16
+    ].join('');
+
     const pixData = {
-      codigo: `00020126580014BR.GOV.BCB.PIX013636401040-1f40-48ba-9b4f-2b9e3b65454652040000530398654${valor.toFixed(2).padStart(4, '0')}5802BR5921ALTCLINIC ESTETICA LTDA6008SAOPAULO62070503***6304${Math.random().toString(16).substring(2, 6).toUpperCase()}`,
+      codigo: pixCode,
       valor: parseFloat(valor),
       descricao: descricao || 'Pagamento ALTclinic',
       vencimento: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      qrCode: `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...` // QR Code simulado
+      txid: txid,
+      chavePix: pixConfig.chavePix,
+      nomeTitular: pixConfig.nomeTitular,
+      cidade: pixConfig.cidade,
+      tenant: tenant
     };
     
     res.json({
@@ -404,6 +482,141 @@ router.get('/todos', (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar dados financeiros',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/financeiro/configuracoes - Buscar configurações financeiras
+router.get('/configuracoes', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: mockFinanceiroData.configuracoes
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar configurações financeiras',
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/financeiro/configuracoes - Salvar configurações financeiras
+router.put('/configuracoes', (req, res) => {
+  try {
+    const { pix, gateways, gerais } = req.body;
+
+    // Validação básica
+    if (!pix || !gateways || !gerais) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dados de configuração incompletos'
+      });
+    }
+
+    // Atualizar configurações
+    mockFinanceiroData.configuracoes.pix = { ...mockFinanceiroData.configuracoes.pix, ...pix };
+    mockFinanceiroData.configuracoes.gateways = { ...mockFinanceiroData.configuracoes.gateways, ...gateways };
+    mockFinanceiroData.configuracoes.gerais = { ...mockFinanceiroData.configuracoes.gerais, ...gerais };
+
+    res.json({
+      success: true,
+      message: 'Configurações salvas com sucesso',
+      data: mockFinanceiroData.configuracoes
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao salvar configurações',
+      error: error.message
+    });
+  }
+});
+
+// Endpoint para buscar histórico de faturas de um tenant específico (admin)
+router.get('/admin/invoices/:subdomain', async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+    
+    // Simulação de dados de histórico de faturas
+    const mockInvoices = [
+      {
+        id: 1,
+        subdomain,
+        data_geracao: '2024-01-15T10:30:00.000Z',
+        valor: '299.90',
+        descricao: 'Mensalidade - Plano Profissional',
+        status: 'pago',
+        metodo_pagamento: 'PIX',
+        qr_code: 'EMV_QR_CODE_EXAMPLE_1'
+      },
+      {
+        id: 2,
+        subdomain,
+        data_geracao: '2024-01-01T09:15:00.000Z',
+        valor: '199.90',
+        descricao: 'Mensalidade - Plano Básico',
+        status: 'pago',
+        metodo_pagamento: 'PIX',
+        qr_code: 'EMV_QR_CODE_EXAMPLE_2'
+      },
+      {
+        id: 3,
+        subdomain,
+        data_geracao: '2024-02-15T14:20:00.000Z',
+        valor: '299.90',
+        descricao: 'Mensalidade - Plano Profissional',
+        status: 'pendente',
+        metodo_pagamento: 'PIX',
+        qr_code: 'EMV_QR_CODE_EXAMPLE_3'
+      }
+    ];
+
+    res.json({
+      success: true,
+      invoices: mockInvoices
+    });
+  } catch (error) {
+    console.error('Erro ao buscar histórico de faturas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar histórico de faturas',
+      error: error.message
+    });
+  }
+});
+
+// Endpoint para salvar uma nova fatura (quando gerada no financeiro)
+router.post('/admin/invoices', async (req, res) => {
+  try {
+    const { subdomain, valor, descricao, qr_code, metodo_pagamento } = req.body;
+    
+    // Simular salvamento no banco
+    const newInvoice = {
+      id: Date.now(),
+      subdomain,
+      data_geracao: new Date().toISOString(),
+      valor: parseFloat(valor).toFixed(2),
+      descricao,
+      status: 'pendente',
+      metodo_pagamento: metodo_pagamento || 'PIX',
+      qr_code
+    };
+    
+    console.log('📋 Nova fatura salva:', newInvoice);
+    
+    res.json({
+      success: true,
+      invoice: newInvoice,
+      message: 'Fatura salva com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao salvar fatura:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao salvar fatura',
       error: error.message
     });
   }

@@ -21,9 +21,12 @@ const agendamentosRoutes = require('./src/routes/agendamentos');
 const propostasRoutes = require('./src/routes/propostas');
 const crmRoutes = require('./src/routes/crm');
 const tenantsRoutes = require('./src/routes/tenants');
+const tenantsAdminRoutes = require('./src/routes/tenants-admin');
 const pacientesRoutes = require('./src/routes/pacientes');
 const trialRoutes = require('./src/routes/trial');
 const adminLicencasRoutes = require('./src/routes/admin-licencas');
+const adminAuthRoutes = require('./src/routes/admin-auth');
+const financeiroRoutes = require('./src/routes/financeiro');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +56,25 @@ const globalLimiter = rateLimit({
     message: 'Muitas tentativas. Tente novamente em 15 minutos.'
   }
 });
+
+// === ROTAS ADMIN (antes do rate limiter) ===
+console.log('🔧 Registrando rota /api/admin/auth...');
+console.log('🔧 adminAuthRoutes type:', typeof adminAuthRoutes);
+console.log('🔧 adminAuthRoutes keys:', adminAuthRoutes ? Object.keys(adminAuthRoutes) : 'null');
+app.use('/api/admin/auth', adminAuthRoutes);
+console.log('✅ Rota /api/admin/auth registrada com sucesso');
+
+// ROTA DE TESTE - adicionar temporariamente
+app.post('/api/test', (req, res) => {
+  console.log('🧪 ROTA DE TESTE ACIONADA');
+  res.json({ success: true, message: 'Rota de teste funcionando' });
+});
+console.log('🧪 Rota de teste /api/test registrada');
+
+console.log('🔧 Registrando rota /api/admin/licencas...');
+app.use('/api/admin/licencas', adminLicencasRoutes);
+console.log('🔧 Registrando rota /api/admin/financeiro...');
+app.use('/api/admin/financeiro', financeiroRoutes);
 
 app.use('/api/', globalLimiter);
 
@@ -103,6 +125,15 @@ app.use('/static', (req, res, next) => {
 // Middleware de log - melhorado para multi-tenant (com duração e status, ignora assets)
 app.use((req, res, next) => {
   console.log(`📨 REQUEST RECEIVED: ${req.method} ${req.path}`);
+  
+  // Debug específico para rotas admin
+  if (req.path.startsWith('/api/admin/')) {
+    console.log(`🔧 ADMIN ROUTE DETECTED: ${req.method} ${req.path}`);
+    console.log(`🔧 Full URL: ${req.originalUrl}`);
+    console.log(`🔧 Base URL: ${req.baseUrl}`);
+    console.log(`🔧 Route: ${req.route ? req.route.path : 'no route'}`);
+  }
+  
   // Silenciar logs em ambiente de teste para estabilidade dos testes
   if ((process.env.NODE_ENV || '').toLowerCase() === 'test') {
     return next();
@@ -147,12 +178,16 @@ app.use((req, res, next) => {
 // === ROTAS PÚBLICAS (sem tenant) ===
 console.log('🔧 Registrando rota /api/tenants...');
 app.use('/api/tenants', tenantsRoutes);
+console.log('🔧 Registrando rota /api/tenants/admin...');
+app.use('/api/tenants/admin', tenantsAdminRoutes);
 console.log('🔧 Registrando rota /api/trial...');
 app.use('/api/trial', trialRoutes);
 console.log('🔧 Registrando rota /api/auth...');
 app.use('/api/auth', authRoutes);
-console.log('🔧 Registrando rota /api/admin/licencas...');
-app.use('/api/admin/licencas', adminLicencasRoutes);
+// Rotas admin movidas para antes do rate limiter
+console.log('🔧 Registrando rota /api/financeiro...');
+app.use('/api/financeiro', extractTenant);
+app.use('/api/financeiro', financeiroRoutes);
 
 // Inicializar serviço de email
 const { verifyConnection } = require('./src/services/emailService');
@@ -179,7 +214,7 @@ app.use('/api/t/:tenantSlug/pacientes', pacientesRoutes);
 app.get('/api/t/:tenantSlug/status', extractTenant, (req, res) => {
   try {
     const tenant = req.tenant;
-  const tenantDb = multiTenantDb.getTenantDb(tenant.id);
+    const tenantDb = multiTenantDb.getTenantDb(tenant.id);
     const usuarios = tenantDb.prepare("SELECT COUNT(*) as c FROM usuarios WHERE status='active'").get().c;
     const pacientes = tenantDb.prepare("SELECT COUNT(*) as c FROM pacientes WHERE status='ativo'").get().c;
     const agendamentosHoje = tenantDb.prepare("SELECT COUNT(*) as c FROM agendamentos WHERE date(data_agendamento)=date('now')").get().c;
@@ -203,7 +238,7 @@ app.get('/api/health', (req, res) => {
   const botStatus = botManager && typeof botManager.getStatus === 'function'
     ? botManager.getStatus()
     : { whatsapp: { ready: false, connected: false, twilio_enabled: false }, telegram: { ready: false, configured: false }, ai: { provider: 'disabled' } };
-  
+
   res.json({
     success: true,
     status: 'running',
@@ -278,7 +313,7 @@ app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
   console.error('Erro type:', err.type);
   console.error('Erro message:', err.message);
-  
+
   if (err.type === 'entity.parse.failed') {
     console.error('Erro de parsing JSON detectado');
     return res.status(400).json({
@@ -286,7 +321,7 @@ app.use((err, req, res, next) => {
       message: 'JSON inválido'
     });
   }
-  
+
   res.status(500).json({
     success: false,
     message: 'Erro interno do servidor',
@@ -306,11 +341,11 @@ app.use('*', (req, res) => {
 async function startServer() {
   try {
     console.log('🚀 Iniciando Alt Clinic - Sistema de Agendamento Automatizado...');
-    
+
     // Verificar conexão com banco
     const db = dbManager.getDb();
     console.log('✅ Banco de dados conectado');
-    
+
     // Iniciar cron jobs e bots apenas fora de testes
     const isTest = (process.env.NODE_ENV || '').toLowerCase() === 'test';
     if (!isTest) {
@@ -319,12 +354,12 @@ async function startServer() {
       cronManager.start();
       console.log('⏰ Cron jobs iniciados');
     }
-    
+
     // Iniciar servidor
     const server = app.listen(PORT, () => {
       console.log(`🌐 Servidor rodando na porta ${PORT}`);
       console.log(`📱 Health check: http://localhost:${PORT}/api/health`);
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔧 Ambiente: Desenvolvimento`);
         console.log(`📊 Dashboard: http://localhost:${PORT}`);
@@ -334,11 +369,11 @@ async function startServer() {
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('🛑 Recebido SIGTERM, encerrando servidor graciosamente...');
-      
+
       if (cronManager && typeof cronManager.stop === 'function') cronManager.stop();
       if (botManager && typeof botManager.stop === 'function') botManager.stop();
       dbManager.close();
-      
+
       server.close(() => {
         console.log('✅ Servidor encerrado com sucesso');
         process.exit(0);
@@ -347,11 +382,11 @@ async function startServer() {
 
     process.on('SIGINT', () => {
       console.log('🛑 Recebido SIGINT, encerrando servidor graciosamente...');
-      
+
       if (cronManager && typeof cronManager.stop === 'function') cronManager.stop();
       if (botManager && typeof botManager.stop === 'function') botManager.stop();
       dbManager.close();
-      
+
       server.close(() => {
         console.log('✅ Servidor encerrado com sucesso');
         process.exit(0);
