@@ -1,105 +1,264 @@
 import { useState, useEffect } from 'react';
+import api from '../../services/api';
 
 // Hook para integração com WhatsApp Business API
 const useWhatsAppAPI = () => {
-  const [config, setConfig] = useState({
-    phoneNumberId: '',
-    accessToken: '',
-    webhookToken: '',
-    isConnected: false
+  const [usage, setUsage] = useState({
+    used: 0,
+    limit: 100,
+    remaining: 100,
+    exceeded: false,
+    planType: 'trial',
+    percentage: 0
   });
-  
-  const [conversas, setConversas] = useState([]);
+  const [whatsappStatus, setWhatsappStatus] = useState('not_configured');
   const [loading, setLoading] = useState(false);
+  const [nextReset, setNextReset] = useState('');
 
-  // Carregar configuração do localStorage
-  useEffect(() => {
-    const savedConfig = localStorage.getItem('whatsappConfig');
-    if (savedConfig) {
-      const parsedConfig = JSON.parse(savedConfig);
-      setConfig(parsedConfig);
-      if (parsedConfig.accessToken && parsedConfig.phoneNumberId) {
-        verificarConexao(parsedConfig);
-      }
-    }
-  }, []);
-
-  const verificarConexao = async (configToTest = config) => {
-    if (!configToTest.accessToken || !configToTest.phoneNumberId) {
-      return false;
-    }
-
-    setLoading(true);
+  // Carregar dados de uso do WhatsApp
+  const loadUsage = async () => {
     try {
-      // Simular verificação da API (substituir por chamada real)
-      const response = await fetch(`https://graph.facebook.com/v18.0/${configToTest.phoneNumberId}`, {
-        headers: {
-          'Authorization': `Bearer ${configToTest.accessToken}`
-        }
-      });
-
-      if (response.ok) {
-        setConfig(prev => ({ ...prev, isConnected: true }));
-        return true;
-      } else {
-        setConfig(prev => ({ ...prev, isConnected: false }));
-        return false;
+      const response = await api.get('/whatsapp/usage');
+      if (response.data.success) {
+        setUsage(response.data.usage);
+        setWhatsappStatus(response.data.whatsappStatus);
+        setNextReset(response.data.nextReset);
       }
     } catch (error) {
-      console.error('Erro ao verificar conexão WhatsApp:', error);
-      setConfig(prev => ({ ...prev, isConnected: false }));
-      return false;
+      console.error('Erro ao carregar uso do WhatsApp:', error);
+    }
+  };
+
+  // Carregar dados na inicialização
+  useEffect(() => {
+    loadUsage();
+  }, []);
+
+  const isConnected = whatsappStatus === 'active';
+
+  const activateWhatsApp = async (phoneNumber) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/activate', { phoneNumber });
+      if (response.data.success) {
+        setWhatsappStatus('pending_qr');
+        return {
+          success: true,
+          phoneId: response.data.phoneId,
+          qrUrl: response.data.qrUrl,
+          message: response.data.message
+        };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao ativar WhatsApp:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro interno do servidor'
+      };
     } finally {
       setLoading(false);
     }
   };
 
-  const salvarConfiguracao = async (novaConfig) => {
-    const configCompleta = { ...config, ...novaConfig };
-    setConfig(configCompleta);
-    localStorage.setItem('whatsappConfig', JSON.stringify(configCompleta));
-    
-    if (novaConfig.accessToken && novaConfig.phoneNumberId) {
-      return await verificarConexao(configCompleta);
-    }
-    return false;
-  };
-
-  const enviarMensagem = async (telefone, mensagem, tipo = 'text') => {
-    if (!config.isConnected) {
-      throw new Error('WhatsApp não está conectado');
+  const sendMessage = async (to, message) => {
+    if (usage.exceeded) {
+      throw new Error('Limite mensal de mensagens excedido');
     }
 
     setLoading(true);
     try {
-      const payload = {
-        messaging_product: 'whatsapp',
-        to: telefone,
-        type: tipo,
-        text: tipo === 'text' ? { body: mensagem } : undefined
+      const response = await api.post('/whatsapp/send', { to, message });
+      if (response.data.success) {
+        // Atualizar uso local
+        setUsage(prev => ({
+          ...prev,
+          used: response.data.usage.used,
+          remaining: response.data.usage.remaining,
+          percentage: response.data.usage.percentage
+        }));
+
+        return {
+          success: true,
+          messageId: response.data.messageId,
+          usage: response.data.usage
+        };
+      }
+      throw new Error(response.data.message);
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const upgradePlan = async (newPlan) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/upgrade', { newPlan });
+      if (response.data.success) {
+        // Recarregar uso após upgrade
+        await loadUsage();
+        return { success: true, message: response.data.message };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao fazer upgrade:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro interno do servidor'
       };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Simular envio (substituir por chamada real à API)
-      const response = await fetch(`https://graph.facebook.com/v18.0/${config.phoneNumberId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+  return {
+    usage,
+    whatsappStatus,
+    isConnected,
+    loading,
+    nextReset,
+    activateWhatsApp,
+    sendMessage,
+    upgradePlan,
+    loadUsage
+  };
+};
 
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Adicionar à lista de conversas
-        const novaConversa = {
-          id: result.messages?.[0]?.id || Date.now(),
-          telefone,
-          mensagem,
-          tipo: 'enviada',
+export default useWhatsAppAPI;
           timestamp: new Date().toISOString(),
-          status: 'enviada'
+          import { useState, useEffect } from 'react';
+import api from '../../services/api';
+
+// Hook para integração com WhatsApp Business API
+const useWhatsAppAPI = () => {
+  const [usage, setUsage] = useState({
+    used: 0,
+    limit: 100,
+    remaining: 100,
+    exceeded: false,
+    planType: 'trial',
+    percentage: 0
+  });
+  const [whatsappStatus, setWhatsappStatus] = useState('not_configured');
+  const [loading, setLoading] = useState(false);
+  const [nextReset, setNextReset] = useState('');
+
+  // Carregar dados de uso do WhatsApp
+  const loadUsage = async () => {
+    try {
+      const response = await api.get('/whatsapp/usage');
+      if (response.data.success) {
+        setUsage(response.data.usage);
+        setWhatsappStatus(response.data.whatsappStatus);
+        setNextReset(response.data.nextReset);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar uso do WhatsApp:', error);
+    }
+  };
+
+  // Carregar dados na inicialização
+  useEffect(() => {
+    loadUsage();
+  }, []);
+
+  const isConnected = whatsappStatus === 'active';
+
+  const activateWhatsApp = async (phoneNumber) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/activate', { phoneNumber });
+      if (response.data.success) {
+        setWhatsappStatus('pending_qr');
+        return {
+          success: true,
+          phoneId: response.data.phoneId,
+          qrUrl: response.data.qrUrl,
+          message: response.data.message
+        };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao ativar WhatsApp:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro interno do servidor'
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendMessage = async (to, message) => {
+    if (usage.exceeded) {
+      throw new Error('Limite mensal de mensagens excedido');
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/send', { to, message });
+      if (response.data.success) {
+        // Atualizar uso local
+        setUsage(prev => ({
+          ...prev,
+          used: response.data.usage.used,
+          remaining: response.data.usage.remaining,
+          percentage: response.data.usage.percentage
+        }));
+
+        return {
+          success: true,
+          messageId: response.data.messageId,
+          usage: response.data.usage
+        };
+      }
+      throw new Error(response.data.message);
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const upgradePlan = async (newPlan) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/upgrade', { newPlan });
+      if (response.data.success) {
+        // Recarregar uso após upgrade
+        await loadUsage();
+        return { success: true, message: response.data.message };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('Erro ao fazer upgrade:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erro interno do servidor'
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    usage,
+    whatsappStatus,
+    isConnected,
+    loading,
+    nextReset,
+    activateWhatsApp,
+    sendMessage,
+    upgradePlan,
+    loadUsage
+  };
+};
+
+export default useWhatsAppAPI;
         };
         
         setConversas(prev => [novaConversa, ...prev]);
