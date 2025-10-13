@@ -35,6 +35,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../hooks/useAuth';
 import LicenseSelector from '../components/Auth/LicenseSelector';
 import SessionConflictDialog from '../components/Auth/SessionConflictDialog';
+import LoginErrorAlert from '../components/LoginErrorAlert';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -58,12 +59,14 @@ const Login = () => {
   const [recoveryType, setRecoveryType] = useState('forgot-password');
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-    setValue
+    setValue,
+    watch
   } = useForm({
     defaultValues: {
       email: '',
@@ -83,6 +86,8 @@ const Login = () => {
   const onSubmit = async (data) => {
     try {
       console.log('🔐 LOGIN: Iniciando login para:', data.email);
+      setLoginError(null); // Limpar erros anteriores
+      
       const result = await login(data.email, data.senha);
       console.log('🔐 LOGIN: Resultado do login:', result);
       
@@ -103,11 +108,21 @@ const Login = () => {
         });
         setPendingLoginData(data);
       } else {
-        toast.error(result.message || 'Erro ao fazer login');
+        // Tratar diferentes tipos de erro com feedback específico
+        setLoginError({
+          message: result.message || 'Erro ao fazer login',
+          errorType: result.errorType,
+          hint: result.hint,
+          suggestedAction: result.suggestedAction
+        });
       }
     } catch (error) {
       console.error('🔐 LOGIN: Erro no onSubmit:', error);
-      toast.error('Erro inesperado. Tente novamente.');
+      setLoginError({
+        message: 'Erro inesperado. Tente novamente.',
+        errorType: 'UNEXPECTED_ERROR',
+        hint: 'Se o problema persistir, entre em contato com o suporte.'
+      });
     }
   };
 
@@ -172,6 +187,27 @@ const Login = () => {
     setPendingLoginData(null);
   };
 
+  // Funções para tratar ações dos erros de login
+  const handleRetryLogin = () => {
+    setLoginError(null);
+  };
+
+  const handleForgotPassword = () => {
+    setLoginError(null);
+    setRecoveryType('forgot-password');
+    setShowRecoveryDialog(true);
+  };
+
+  const handleContactSupport = () => {
+    // Abrir link do WhatsApp ou email de suporte
+    const message = encodeURIComponent(
+      `Olá! Estou com problemas para fazer login no sistema ALTCLINIC. 
+      Erro: ${loginError?.message || 'Erro desconhecido'}
+      Email usado: ${watch('email') || 'não informado'}`
+    );
+    window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
+  };
+
   const handleRecoverySubmit = async () => {
     if (!recoveryEmail) {
       toast.error('Por favor, informe seu email');
@@ -180,7 +216,7 @@ const Login = () => {
 
     setRecoveryLoading(true);
     try {
-      const response = await fetch('/api/auth/recovery', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -248,6 +284,14 @@ const Login = () => {
           </Typography>
         </Alert>
       )}
+
+      {/* Mensagens de erro detalhadas */}
+      <LoginErrorAlert
+        error={loginError}
+        onRetry={handleRetryLogin}
+        onForgotPassword={handleForgotPassword}
+        onContactSupport={handleContactSupport}
+      />
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={3}>
@@ -346,14 +390,6 @@ const Login = () => {
           Primeiro acesso?
         </Typography>
       </Divider>
-
-      <Alert severity="info" sx={{ mt: 2 }}>
-        <Typography variant="body2">
-          <strong>Usuário padrão:</strong><br />
-          Email: admin@clinica.com<br />
-          Senha: 123456
-        </Typography>
-      </Alert>
 
       <Box mt={3} textAlign="center">
         <Typography variant="body2" color="text.secondary">

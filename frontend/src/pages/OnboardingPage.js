@@ -61,7 +61,7 @@ const OnboardingPage = () => {
   const planos = [
     {
       id: 'trial',
-      nome: 'Trial (30 dias)',
+      nome: 'Trial (15 dias)',
       preco: 'Grátis',
       descricao: 'Teste todas as funcionalidades',
       recursos: ['3 usuários', '500 pacientes', 'WhatsApp incluído']

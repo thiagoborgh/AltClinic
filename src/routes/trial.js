@@ -52,9 +52,9 @@ router.post('/trial', async (req, res) => {
       counter++;
     }
 
-    // Data de expiração do trial (30 dias)
+    // Data de expiração do trial (15 dias)
     const trialExpireAt = new Date();
-    trialExpireAt.setDate(trialExpireAt.getDate() + 30);
+    trialExpireAt.setDate(trialExpireAt.getDate() + 15);
 
     // Configurações padrão do tenant
     const defaultConfig = {
@@ -150,7 +150,7 @@ router.post('/trial', async (req, res) => {
             
             <p>Olá <strong>${nome}</strong>,</p>
             
-            <p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>30 dias grátis</strong> para explorar todas as funcionalidades.</p>
+            <p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>15 dias grátis</strong> para explorar todas as funcionalidades.</p>
             
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>📋 Dados de Acesso:</h3>

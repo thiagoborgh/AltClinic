@@ -143,9 +143,9 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setToken(authToken);
         setTenant(response.data.tenant);
-        setLicense(response.data.license);
+        setLicense(response.data.license || null);
         
-        console.log('🔐 LOGIN API: Estado atualizado, isAuthenticated:', !!(authToken && userData && response.data.tenant && response.data.license));
+        console.log('🔐 LOGIN API: Estado atualizado, isAuthenticated:', !!(authToken && userData && response.data.tenant));
         
         return { 
           success: true, 
@@ -276,7 +276,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Estado de autenticação
-  const isAuthenticated = !!token && !!user && !!tenant && !!license;
+  const isAuthenticated = !!token && !!user && !!tenant;
   
   console.log('🔐 AUTH STATE:', {
     token: !!token,

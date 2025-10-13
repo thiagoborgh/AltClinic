@@ -12,28 +12,36 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔐 MIDDLEWARE: authenticateToken called');
+  console.log('🔐 MIDDLEWARE: authHeader:', authHeader);
+  console.log('🔐 MIDDLEWARE: token:', token ? 'Token present' : 'No token');
+
   if (!token) {
+    console.log('🔐 MIDDLEWARE: No token provided');
     return res.status(401).json({
       success: false,
       message: 'Token de acesso requerido'
     });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'saee-development-secret', (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_change_in_production', (err, user) => {
     if (err) {
+      console.log('🔐 MIDDLEWARE: Token verification failed:', err.message);
       return res.status(403).json({
         success: false,
         message: 'Token inválido'
       });
     }
     
+    console.log('🔐 MIDDLEWARE: Token verified successfully');
+    console.log('🔐 MIDDLEWARE: user data:', user);
     req.user = user;
     next();
   });
 }
 
 // 📧 LOGIN COM DETECÇÃO AUTOMÁTICA DE TENANT
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
 
@@ -44,35 +52,133 @@ router.post('/login', (req, res) => {
       });
     }
 
-    // Buscar tenant do usuário baseado no email
+    // Se tenant específico fornecido via header, usar apenas esse
+    const tenantSlug = req.headers['x-tenant-slug'];
+    console.log('🔐 LOGIN: tenantSlug from header:', tenantSlug);
+    if (tenantSlug) {
+      try {
+        const masterDb = multiTenantDb.getMasterDb();
+        const tenant = masterDb.prepare('SELECT id, nome, slug FROM tenants WHERE slug = ? AND status IN (\'active\', \'trial\')').get(tenantSlug);
+        console.log('🔐 LOGIN: tenant found:', tenant);
+        
+        if (tenant) {
+          console.log('🔐 LOGIN: calling authenticate for tenant:', tenant.id);
+          const authResult = await UsuarioModel.authenticate(email, senha, tenant.id);
+          console.log('🔐 LOGIN: authenticate result:', authResult);
+          
+          if (authResult.success) {
+            const user = authResult.user;
+            // Gerar token JWT
+            const token = jwt.sign(
+              { 
+                userId: user.id, 
+                tenantId: tenant.id,
+                email: user.email,
+                role: user.role 
+              },
+              process.env.JWT_SECRET || 'fallback_secret_change_in_production',
+              { expiresIn: '24h' }
+            );
+
+            return res.json({
+              success: true,
+              message: 'Login realizado com sucesso',
+              user: {
+                id: user.id,
+                nome: user.nome,
+                email: user.email,
+                role: user.role
+              },
+              token,
+              tenant: {
+                id: tenant.id,
+                nome: tenant.nome,
+                slug: tenant.slug
+              },
+              sessionId: `session_${Date.now()}`
+            });
+          } else {
+            // Retornar erro específico
+            return res.status(401).json({
+              success: false,
+              message: authResult.message,
+              errorType: authResult.error,
+              hint: authResult.error === 'INVALID_PASSWORD' 
+                ? 'Verifique se a senha está correta. Lembre-se que a senha é case-sensitive.' 
+                : 'Verifique se o email está correto ou se você tem acesso a esta clínica.'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erro no login com tenant específico:', error);
+      }
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Tenant não encontrado ou inativo',
+        errorType: 'TENANT_NOT_FOUND',
+        hint: 'A clínica especificada não foi encontrada ou está inativa.',
+        suggestedAction: 'contact_support'
+      });
+    }
+
+    // Buscar tenant do usuário baseado no email (login automático)
     let tenantInfo = null;
     let usuario = null;
     let foundTenantId = null;
 
     try {
       const masterDb = multiTenantDb.getMasterDb();
-      const tenants = masterDb.prepare('SELECT id, nome, slug FROM tenants').all();
+      const tenants = masterDb.prepare('SELECT id, nome, slug FROM tenants WHERE status IN (\'active\', \'trial\')').all();
 
       // Tentar autenticar em cada tenant
       for (const tenant of tenants) {
         try {
-          const user = UsuarioModel.authenticate(email, senha, tenant.id);
-          if (user) {
-            usuario = user;
+          const authResult = await UsuarioModel.authenticate(email, senha, tenant.id);
+          if (authResult.success) {
+            usuario = authResult.user;
             tenantInfo = tenant;
             foundTenantId = tenant.id;
             break;
+          } else if (authResult.error === 'USER_NOT_FOUND') {
+            // Usuário não encontrado neste tenant, continuar
+            console.log('User not found in tenant:', tenant.id);
+            continue;
+          } else if (authResult.error === 'INVALID_PASSWORD') {
+            // Usuário encontrado mas senha incorreta - registrar mas continuar tentando outros tenants
+            console.log('Invalid password for user in tenant:', tenant.id);
+            // Se encontrarmos o usuário em qualquer tenant com senha errada, 
+            // guardar essa informação para dar feedback específico
+            if (!usuario) {
+              usuario = { error: 'INVALID_PASSWORD', tenant: tenant };
+            }
+            continue;
           }
         } catch (authError) {
-          // Continuar tentando outros tenants
+          // Erro inesperado, continuar
+          console.log('Unexpected error in tenant:', tenant.id, authError.message);
           continue;
         }
+      }
+
+      // Se não encontrou usuário autenticado mas encontrou com senha errada
+      if (!tenantInfo && usuario && usuario.error === 'INVALID_PASSWORD') {
+        return res.status(401).json({
+          success: false,
+          message: 'Senha incorreta',
+          errorType: 'INVALID_PASSWORD',
+          hint: 'Verifique se a senha está correta. Lembre-se que a senha é case-sensitive.',
+          suggestedAction: 'reset_password'
+        });
       }
 
       if (!usuario || !tenantInfo) {
         return res.status(401).json({
           success: false,
-          message: 'Credenciais inválidas'
+          message: 'Email não encontrado em nenhuma clínica',
+          errorType: 'USER_NOT_FOUND',
+          hint: 'Verifique se o email está correto ou se você tem acesso ao sistema.',
+          suggestedAction: 'contact_support'
         });
       }
     } catch (dbError) {
@@ -607,22 +713,23 @@ router.post('/reset-password', async (req, res) => {
 // 📋 ENDPOINT PARA OBTER INFORMAÇÕES DO USUÁRIO AUTENTICADO
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    console.log('🔐 GET /me: Starting');
+    console.log('🔐 GET /me: req.user:', req.user);
+    
+    const userId = req.user.userId; // Corrigir: era req.user.id, mas o token tem userId
     const tenantId = req.user.tenantId;
     
+    console.log('🔐 GET /me: userId:', userId, 'tenantId:', tenantId);
+
     // Buscar informações completas do usuário
     const UsuarioModel = require('../models/UsuarioMultiTenant');
     
     const usuario = await UsuarioModel.findById(userId, tenantId);
     
-    if (!usuario) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado'
-      });
-    }
+    console.log('🔐 GET /me: usuario found:', !!usuario);
     
     if (!usuario) {
+      console.log('🔐 GET /me: Usuario not found');
       return res.status(404).json({
         success: false,
         message: 'Usuário não encontrado'
@@ -672,7 +779,8 @@ router.get('/me', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Erro ao buscar informações do usuário:', error);
+    console.error('❌ GET /me: Erro ao buscar informações do usuário:', error);
+    console.error('❌ GET /me: Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
