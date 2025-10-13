@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔧 Inicializar AltClinic no Render</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 32px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 16px;
+      text-align: center;
+    }
+    
+    .steps {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .step {
+      display: flex;
+      align-items: flex-start;
+      margin: 15px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .step-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+    
+    .step-content {
+      flex: 1;
+    }
+    
+    .step-title {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .step-desc {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin: 10px 0;
+    }
+    
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .result {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .result.show {
+      display: block;
+    }
+    
+    .result.success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+    }
+    
+    .result.error {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+    }
+    
+    .result.info {
+      background: #d1ecf1;
+      border-left: 4px solid #17a2b8;
+    }
+    
+    .credential {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+    }
+    
+    .credential strong {
+      color: #667eea;
+      display: inline-block;
+      width: 100px;
+    }
+    
+    .credential-value {
+      color: #333;
+      font-weight: bold;
+      user-select: all;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    
+    .spinner.show {
+      display: block;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    pre {
+      background: #282c34;
+      color: #61dafb;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+      color: #856404;
+    }
+    
+    .success-icon {
+      font-size: 60px;
+      text-align: center;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Inicializar Sistema</h1>
+    <p class="subtitle">AltClinic no Render</p>
+    
+    <div class="warning">
+      <strong>⚠️ Problema Atual:</strong><br>
+      "Usuário não encontrado" - O banco de dados está vazio
+    </div>
+    
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <div class="step-title">Verificar Status</div>
+          <div class="step-desc">Checar se o sistema já foi inicializado</div>
+        </div>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <div class="step-title">Inicializar Sistema</div>
+          <div class="step-desc">Criar tenant e usuário administrador</div>
+        </div>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <div class="step-title">Obter Credenciais</div>
+          <div class="step-desc">Copiar email, senha e tenant gerados</div>
+        </div>
+      </div>
+    </div>
+    
+    <button id="checkBtn" onclick="checkStatus()">
+      🔍 1. Verificar Status do Sistema
+    </button>
+    
+    <button id="initBtn" onclick="initSystem()" style="display: none;">
+      🚀 2. Inicializar Sistema Agora
+    </button>
+    
+    <div class="spinner" id="spinner"></div>
+    
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const API_URL = 'https://altclinic.onrender.com';
+    
+    async function checkStatus() {
+      const btn = document.getElementById('checkBtn');
+      const initBtn = document.getElementById('initBtn');
+      const spinner = document.getElementById('spinner');
+      const result = document.getElementById('result');
+      
+      btn.disabled = true;
+      spinner.classList.add('show');
+      result.classList.remove('show');
+      
+      try {
+        console.log('🔍 Verificando status...');
+        
+        const response = await fetch(`${API_URL}/api/auth/init-status`);
+        const data = await response.json();
+        
+        console.log('📊 Status:', data);
+        
+        spinner.classList.remove('show');
+        result.classList.add('show', 'info');
+        
+        if (data.initialized) {
+          result.innerHTML = `
+            <h3>ℹ️ Sistema Já Inicializado</h3>
+            <p style="margin: 15px 0;">O sistema já foi inicializado anteriormente.</p>
+            <div class="warning">
+              <strong>🤔 Mas ainda está dando erro?</strong><br><br>
+              Possíveis causas:<br>
+              1. Banco de dados foi resetado<br>
+              2. Usuário foi deletado<br>
+              3. Tenant 'teste' não existe<br><br>
+              <strong>Solução:</strong> Vá para o Shell do Render e execute:<br>
+              <pre>node create-first-user-production.js</pre>
+            </div>
+            <button onclick="testLogin()" style="background: #28a745;">
+              🔐 Testar Login Direto
+            </button>
+          `;
+        } else {
+          result.innerHTML = `
+            <h3>⚠️ Sistema NÃO Inicializado</h3>
+            <p style="margin: 15px 0;">O sistema precisa ser inicializado.</p>
+            <p style="color: #666;">Clique no botão abaixo para criar o primeiro usuário.</p>
+          `;
+          initBtn.style.display = 'block';
+        }
+        
+        btn.disabled = false;
+        
+      } catch (error) {
+        spinner.classList.remove('show');
+        result.classList.add('show', 'error');
+        result.innerHTML = `
+          <h3>❌ Erro na Verificação</h3>
+          <p>Erro: ${error.message}</p>
+          <p style="margin-top: 10px;">Tente inicializar mesmo assim:</p>
+        `;
+        initBtn.style.display = 'block';
+        btn.disabled = false;
+      }
+    }
+    
+    async function initSystem() {
+      const initBtn = document.getElementById('initBtn');
+      const spinner = document.getElementById('spinner');
+      const result = document.getElementById('result');
+      
+      initBtn.disabled = true;
+      spinner.classList.add('show');
+      result.classList.remove('show');
+      
+      try {
+        console.log('🚀 Inicializando sistema...');
+        
+        const response = await fetch(`${API_URL}/api/auth/init-system`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        console.log('📊 Resultado:', data);
+        
+        spinner.classList.remove('show');
+        result.classList.add('show');
+        
+        if (data.success) {
+          result.classList.add('success');
+          result.innerHTML = `
+            <div class="success-icon">🎉</div>
+            <h3 style="text-align: center; margin-bottom: 20px;">Sistema Inicializado com Sucesso!</h3>
+            
+            <div class="warning" style="background: #d1ecf1; border-color: #17a2b8; color: #0c5460;">
+              <strong>📋 COPIE ESTAS CREDENCIAIS:</strong>
+            </div>
+            
+            <div class="credential">
+              <strong>📧 Email:</strong>
+              <span class="credential-value" id="email">${data.credentials.email}</span>
+            </div>
+            
+            <div class="credential">
+              <strong>🔑 Senha:</strong>
+              <span class="credential-value" id="password">${data.credentials.password}</span>
+            </div>
+            
+            <div class="credential">
+              <strong>🏥 Tenant:</strong>
+              <span class="credential-value" id="tenant">${data.credentials.tenant}</span>
+            </div>
+            
+            <div class="warning">
+              <strong>⚠️ IMPORTANTE:</strong><br>
+              • Copie essas credenciais AGORA<br>
+              • Salve em local seguro<br>
+              • Você NÃO conseguirá ver novamente<br>
+              • Altere a senha após primeiro login
+            </div>
+            
+            <button onclick="copyAll()" style="background: #17a2b8;">
+              📋 Copiar Todas as Credenciais
+            </button>
+            
+            <button onclick="goToLogin()" style="background: #28a745;">
+              🔐 Ir para Login
+            </button>
+          `;
+          
+          // Salvar no localStorage
+          localStorage.setItem('initCredentials', JSON.stringify(data.credentials));
+          
+        } else if (data.initialized) {
+          result.classList.add('info');
+          result.innerHTML = `
+            <h3>ℹ️ Sistema Já Foi Inicializado</h3>
+            <p style="margin: 15px 0;">Use as credenciais fornecidas no primeiro acesso.</p>
+            <button onclick="goToLogin()" style="background: #28a745;">
+              🔐 Ir para Login
+            </button>
+          `;
+        } else {
+          throw new Error(data.message || 'Erro desconhecido');
+        }
+        
+      } catch (error) {
+        spinner.classList.remove('show');
+        result.classList.add('show', 'error');
+        result.innerHTML = `
+          <h3>❌ Erro na Inicialização</h3>
+          <p>Erro: ${error.message}</p>
+          <div class="warning">
+            <strong>🔧 Solução Alternativa:</strong><br>
+            Acesse o Shell do Render e execute:<br>
+            <pre>node quick-init-production.js</pre>
+          </div>
+        `;
+        initBtn.disabled = false;
+      }
+    }
+    
+    async function testLogin() {
+      const result = document.getElementById('result');
+      result.innerHTML += '<p style="margin-top: 20px;">🔄 Testando login...</p>';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-Slug': 'teste'
+          },
+          body: JSON.stringify({
+            email: 'thiagoborgh@gmail.com',
+            senha: 'Altclinic123'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          result.innerHTML += `
+            <div class="credential" style="background: #d4edda;">
+              ✅ Login funcionou! Token recebido.
+            </div>
+            <button onclick="goToLogin()" style="background: #28a745;">
+              🔐 Ir para Login
+            </button>
+          `;
+        } else {
+          result.innerHTML += `
+            <div class="credential" style="background: #f8d7da;">
+              ❌ Login falhou: ${data.message}
+            </div>
+            <div class="warning">
+              <strong>Solução:</strong> Execute no Shell do Render:<br>
+              <pre>node create-first-user-production.js</pre>
+            </div>
+          `;
+        }
+      } catch (error) {
+        result.innerHTML += `
+          <div class="credential" style="background: #f8d7da;">
+            ❌ Erro: ${error.message}
+          </div>
+        `;
+      }
+    }
+    
+    function copyAll() {
+      const email = document.getElementById('email').textContent;
+      const password = document.getElementById('password').textContent;
+      const tenant = document.getElementById('tenant').textContent;
+      
+      const text = `Email: ${email}\nSenha: ${password}\nTenant: ${tenant}`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Credenciais copiadas!\n\nCole em um local seguro.');
+      }).catch(err => {
+        prompt('📋 Copie manualmente:', text);
+      });
+    }
+    
+    function goToLogin() {
+      window.location.href = `${API_URL}/login`;
+    }
+    
+    // Auto-verificar ao carregar
+    window.onload = function() {
+      console.log('🔧 Página de inicialização carregada');
+      console.log('🌐 API URL:', API_URL);
+    };
+  </script>
+</body>
+</html>
