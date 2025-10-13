@@ -28,7 +28,11 @@ import {
   FormControl,
   InputLabel,
   Select,
-  CircularProgress
+  CircularProgress,
+  Tabs,
+  Tab,
+  Paper,
+  Alert
 } from '@mui/material';
 import {
   LocalHospital,
@@ -37,15 +41,24 @@ import {
   MoreVert,
   Edit,
   Delete,
+  Restore,
   Phone,
   Email,
   Badge,
   Save,
   Cancel,
-  PersonAdd
+  PersonAdd,
+  Schedule as ScheduleIcon,
+  Person as PersonIcon,
+  History as HistoryIcon,
+  Notifications as NotificationsIcon
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import dayjs from 'dayjs';
+import ProfessionalSchedule from '../components/configuracoes/ProfessionalSchedule';
+import ProfessionalNotifications from '../components/configuracoes/ProfessionalNotifications';
+import ConfiguracaoGrade from '../components/ConfiguracaoGrade';
+import medicoService from '../services/medicoService';
 
 // Lista de especialidades médicas
 const especialidades = [
@@ -73,7 +86,6 @@ const especialidades = [
 const ProfissionaisMedicos = () => {
   // Estados para lista
   const [medicos, setMedicos] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -85,6 +97,9 @@ const ProfissionaisMedicos = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     crm: '',
@@ -94,10 +109,10 @@ const ProfissionaisMedicos = () => {
     observacoes: ''
   });
   const [errors, setErrors] = useState({});
+  const [medicoStatuses, setMedicoStatuses] = useState({}); // Estado para controlar status dos médicos
 
   // Carregar médicos
   const loadMedicos = useCallback(async () => {
-    setLoading(true);
     try {
       // Mock data para desenvolvimento - substituir pela API real
       const mockMedicos = [
@@ -133,6 +148,17 @@ const ProfissionaisMedicos = () => {
           status: 'ativo',
           dataContratacao: '2021-03-10',
           observacoes: ''
+        },
+        {
+          id: 4,
+          nome: 'Dr. Pedro Inativo',
+          crm: 'CRM/SP 999999',
+          especialidade: 'Neurologia',
+          telefone: '11666666666',
+          email: 'pedro.inativo@clinic.com',
+          status: 'inativo',
+          dataContratacao: '2018-08-12',
+          observacoes: 'Médico atualmente inativo'
         }
       ];
 
@@ -145,15 +171,19 @@ const ProfissionaisMedicos = () => {
           )
         : mockMedicos;
 
-      setMedicos(filtered);
-      setTotalCount(filtered.length);
+      // Aplicar status modificados aos médicos
+      const medicosComStatus = filtered.map(medico => ({
+        ...medico,
+        status: medicoStatuses[medico.id] !== undefined ? medicoStatuses[medico.id] : medico.status
+      }));
+
+      setMedicos(medicosComStatus);
+      setTotalCount(medicosComStatus.length);
     } catch (error) {
       console.error('Erro ao carregar médicos:', error);
       toast.error('Erro ao carregar médicos');
-    } finally {
-      setLoading(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, medicoStatuses]);
 
   useEffect(() => {
     loadMedicos();
@@ -181,7 +211,7 @@ const ProfissionaisMedicos = () => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setSelectedMedico(null);
+    // NÃO limpar selectedMedico aqui, pois pode estar sendo usado no dialog
   };
 
   // Handlers do modal
@@ -216,6 +246,8 @@ const ProfissionaisMedicos = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setActiveTab(0); // Resetar para a primeira aba
+    setSelectedMedico(null); // Limpar o profissional selecionado apenas ao fechar o dialog
     setFormData({
       nome: '',
       crm: '',
@@ -286,19 +318,57 @@ const ProfissionaisMedicos = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    setOpenDeleteDialog(true);
+    setAnchorEl(null); // Fechar apenas o menu, sem limpar selectedMedico
+  };
+
+  const handleConfirmDelete = async () => {
+    console.log('🩺 ProfissionaisMedicos: handleConfirmDelete called');
+    console.log('🩺 ProfissionaisMedicos: selectedMedico:', selectedMedico);
     if (selectedMedico) {
+      setDeleting(true);
       try {
-        // Aqui seria a chamada para a API real
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Verificar status atual para decidir se vai ativar ou inativar
+        const currentStatus = medicoStatuses[selectedMedico.id] !== undefined 
+          ? medicoStatuses[selectedMedico.id] 
+          : selectedMedico.status;
         
-        toast.success('Médico removido com sucesso');
-        loadMedicos();
+        const isCurrentlyActive = currentStatus === 'ativo';
+        const newActiveStatus = !isCurrentlyActive; // Se está ativo, vai inativar; se inativo, vai ativar
+        
+        console.log('🩺 ProfissionaisMedicos: Current status:', currentStatus, 'New active status:', newActiveStatus);
+        
+        await medicoService.alterarStatusMedico(selectedMedico.id, newActiveStatus);
+        
+        // Atualizar status local
+        const newStatus = newActiveStatus ? 'ativo' : 'inativo';
+        setMedicoStatuses(prev => ({
+          ...prev,
+          [selectedMedico.id]: newStatus
+        }));
+        
+        // Mensagem de sucesso baseada na ação
+        const successMessage = newActiveStatus 
+          ? 'Médico reativado com sucesso' 
+          : 'Médico removido com sucesso';
+        toast.success(successMessage);
+        
+        loadMedicos(); // Recarregar lista com novos status
+        setOpenDeleteDialog(false);
+        setSelectedMedico(null); // Limpar após sucesso
       } catch (error) {
-        toast.error('Erro ao remover médico');
+        console.error('🩺 ProfissionaisMedicos: Erro ao alterar status do médico:', error);
+        toast.error('Erro ao alterar status do médico');
+      } finally {
+        setDeleting(false);
       }
     }
-    handleMenuClose();
+  };
+
+  const handleCancelDelete = () => {
+    setOpenDeleteDialog(false);
+    setSelectedMedico(null); // Limpar apenas ao cancelar o modal de exclusão
   };
 
   const formatPhone = (phone) => {
@@ -310,6 +380,7 @@ const ProfissionaisMedicos = () => {
   };
 
   const getInitials = (nome) => {
+    if (!nome || typeof nome !== 'string') return '?';
     return nome
       .split(' ')
       .map(word => word.charAt(0))
@@ -487,9 +558,29 @@ const ProfissionaisMedicos = () => {
           <Edit sx={{ mr: 1 }} />
           Editar
         </MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          <Delete sx={{ mr: 1 }} />
-          Excluir
+        <MenuItem 
+          onClick={handleDelete} 
+          sx={{ 
+            color: selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+              ? medicoStatuses[selectedMedico.id] 
+              : selectedMedico.status) === 'ativo' 
+              ? 'error.main' 
+              : 'success.main' 
+          }}
+        >
+          {selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+            ? medicoStatuses[selectedMedico.id] 
+            : selectedMedico.status) === 'ativo' ? (
+            <>
+              <Delete sx={{ mr: 1 }} />
+              Excluir
+            </>
+          ) : (
+            <>
+              <Restore sx={{ mr: 1 }} />
+              Reativar
+            </>
+          )}
         </MenuItem>
       </Menu>
 
@@ -511,101 +602,186 @@ const ProfissionaisMedicos = () => {
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
+        PaperProps={{
+          sx: { 
+            height: '90vh',
+            maxHeight: '90vh'
+          }
+        }}
       >
         <DialogTitle>
           {editMode ? 'Editar Médico' : 'Cadastrar Novo Médico'}
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                label="Nome Completo *"
-                value={formData.nome}
-                onChange={(e) => handleInputChange('nome', e.target.value)}
-                error={!!errors.nome}
-                helperText={errors.nome}
-              />
-            </Grid>
+        
+        {/* Abas para separar dados pessoais e horários */}
+        <Paper sx={{ borderRadius: 0 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+          >
+            <Tab 
+              icon={<PersonIcon />} 
+              label="Dados Pessoais" 
+              id="tab-dados-pessoais"
+            />
+            <Tab 
+              icon={<ScheduleIcon />} 
+              label="Criar Grade" 
+              id="tab-criar-grade"
+            />
+            <Tab 
+              icon={<HistoryIcon />} 
+              label="Histórico de Grades" 
+              id="tab-historico-grades"
+            />
+            <Tab 
+              icon={<NotificationsIcon />} 
+              label="Notificações" 
+              id="tab-notificacoes"
+            />
+          </Tabs>
+        </Paper>
 
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="CRM *"
-                value={formData.crm}
-                onChange={(e) => handleInputChange('crm', e.target.value)}
-                error={!!errors.crm}
-                helperText={errors.crm}
-                placeholder="CRM/SP 123456"
-              />
-            </Grid>
+        <DialogContent sx={{ minHeight: '400px' }}>
+          {/* Debug info */}
+          {console.log('🔍 activeTab atual:', activeTab)}
+          
+          {/* Aba 1: Dados Pessoais */}
+          {activeTab === 0 && (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  label="Nome Completo *"
+                  value={formData.nome}
+                  onChange={(e) => handleInputChange('nome', e.target.value)}
+                  error={!!errors.nome}
+                  helperText={errors.nome}
+                />
+              </Grid>
 
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth error={!!errors.especialidade}>
-                <InputLabel>Especialidade *</InputLabel>
-                <Select
-                  value={formData.especialidade}
-                  label="Especialidade *"
-                  onChange={(e) => handleInputChange('especialidade', e.target.value)}
-                >
-                  {especialidades.map((esp) => (
-                    <MenuItem key={esp} value={esp}>
-                      {esp}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.especialidade && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                    {errors.especialidade}
-                  </Typography>
-                )}
-              </FormControl>
-            </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="CRM *"
+                  value={formData.crm}
+                  onChange={(e) => handleInputChange('crm', e.target.value)}
+                  error={!!errors.crm}
+                  helperText={errors.crm}
+                  placeholder="CRM/SP 123456"
+                />
+              </Grid>
 
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Telefone *"
-                value={formatPhone(formData.telefone)}
-                onChange={(e) => {
-                  const numbers = e.target.value.replace(/\D/g, '');
-                  if (numbers.length <= 11) {
-                    handleInputChange('telefone', numbers);
-                  }
-                }}
-                error={!!errors.telefone}
-                helperText={errors.telefone}
-                placeholder="(11) 99999-9999"
-              />
-            </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth error={!!errors.especialidade}>
+                  <InputLabel>Especialidade *</InputLabel>
+                  <Select
+                    value={formData.especialidade}
+                    label="Especialidade *"
+                    onChange={(e) => handleInputChange('especialidade', e.target.value)}
+                  >
+                    {especialidades.map((esp) => (
+                      <MenuItem key={esp} value={esp}>
+                        {esp}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.especialidade && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                      {errors.especialidade}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                helperText={errors.email}
-                placeholder="medico@clinic.com"
-              />
-            </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Telefone *"
+                  value={formatPhone(formData.telefone)}
+                  onChange={(e) => {
+                    const numbers = e.target.value.replace(/\D/g, '');
+                    if (numbers.length <= 11) {
+                      handleInputChange('telefone', numbers);
+                    }
+                  }}
+                  error={!!errors.telefone}
+                  helperText={errors.telefone}
+                  placeholder="(11) 99999-9999"
+                />
+              </Grid>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Observações"
-                multiline
-                rows={3}
-                value={formData.observacoes}
-                onChange={(e) => handleInputChange('observacoes', e.target.value)}
-                placeholder="Informações adicionais sobre o médico..."
-              />
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  placeholder="medico@clinic.com"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Observações"
+                  multiline
+                  rows={3}
+                  value={formData.observacoes}
+                  onChange={(e) => handleInputChange('observacoes', e.target.value)}
+                  placeholder="Informações adicionais sobre o médico..."
+                />
+              </Grid>
             </Grid>
-          </Grid>
+          )}
+
+          {/* Aba 2: Criar Grade */}
+          {activeTab === 1 && (
+            <Box sx={{ py: 2 }}>
+              {selectedMedico?.id ? (
+                <ConfiguracaoGrade
+                  professionalId={selectedMedico.id}
+                  professionalName={formData.nome || selectedMedico.nome}
+                  isEmbedded={true}
+                />
+              ) : (
+                <Alert severity="warning">
+                  Selecione um profissional para criar grades de horários.
+                </Alert>
+              )}
+            </Box>
+          )}
+
+          {/* Aba 3: Histórico de Grades */}
+          {activeTab === 2 && (
+            <Box sx={{ py: 2 }}>
+              {selectedMedico?.id ? (
+                <ProfessionalSchedule 
+                  professionalId={selectedMedico.id}
+                  professionalName={formData.nome || selectedMedico.nome}
+                />
+              ) : (
+                <Alert severity="warning">
+                  Aguardando seleção do profissional...
+                </Alert>
+              )}
+            </Box>
+          )}
+
+          {/* Aba 4: Configurações de Notificação */}
+          {activeTab === 3 && (
+            <Box sx={{ py: 2 }}>
+              <ProfessionalNotifications />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button
@@ -622,6 +798,83 @@ const ProfissionaisMedicos = () => {
             startIcon={saving ? <CircularProgress size={20} /> : <Save />}
           >
             {saving ? 'Salvando...' : (editMode ? 'Atualizar' : 'Cadastrar')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão/Reativação */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          {selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+            ? medicoStatuses[selectedMedico.id] 
+            : selectedMedico.status) === 'ativo' 
+            ? 'Confirmar Exclusão' 
+            : 'Confirmar Reativação'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography id="delete-dialog-description">
+            {selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+              ? medicoStatuses[selectedMedico.id] 
+              : selectedMedico.status) === 'ativo' 
+              ? (
+                <>
+                  Tem certeza que deseja remover o profissional <strong>{selectedMedico?.nome}</strong>?
+                </>
+              ) : (
+                <>
+                  Tem certeza que deseja reativar o profissional <strong>{selectedMedico?.nome}</strong>?
+                </>
+              )}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+              ? medicoStatuses[selectedMedico.id] 
+              : selectedMedico.status) === 'ativo' 
+              ? 'O profissional será inativado e poderá ser reativado posteriormente.' 
+              : 'O profissional voltará a ficar ativo no sistema.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCancelDelete}
+            disabled={deleting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            variant="contained"
+            color={selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+              ? medicoStatuses[selectedMedico.id] 
+              : selectedMedico.status) === 'ativo' 
+              ? 'error' 
+              : 'success'}
+            startIcon={deleting ? <CircularProgress size={20} /> : (
+              selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+                ? medicoStatuses[selectedMedico.id] 
+                : selectedMedico.status) === 'ativo' 
+                ? <Delete /> 
+                : <Restore />
+            )}
+          >
+            {deleting 
+              ? (selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+                  ? medicoStatuses[selectedMedico.id] 
+                  : selectedMedico.status) === 'ativo' 
+                  ? 'Removendo...' 
+                  : 'Reativando...')
+              : (selectedMedico && (medicoStatuses[selectedMedico.id] !== undefined 
+                  ? medicoStatuses[selectedMedico.id] 
+                  : selectedMedico.status) === 'ativo' 
+                  ? 'Remover' 
+                  : 'Reativar')
+            }
           </Button>
         </DialogActions>
       </Dialog>

@@ -19,7 +19,7 @@ import {
   Business,
   Security,
   Notifications,
-  Integration,
+  SettingsInputComponent as Integration,
   Save
 } from '@mui/icons-material';
 

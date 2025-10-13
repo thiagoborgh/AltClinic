@@ -18,1053 +18,869 @@ import {
   TextField,
   Card,
   CardHeader,
-  CardContent
+  CardContent,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
-  Settings as SettingsIcon,
   IntegrationInstructions as IntegrationIcon,
-  Business as BusinessIcon,
   Article as TemplateIcon,
   Security as SecurityIcon,
-  Save as SaveIcon,
   Backup as BackupIcon,
   CloudDownload as DownloadIcon,
   CloudUpload as UploadIcon,
-  QrCode as QrCodeIcon
+  QrCode as QrCodeIcon,
+  Phone as PhoneIcon,
+  Refresh as RefreshIcon,
+  Schedule as ScheduleIcon
 } from '@mui/icons-material';
-
-// Importar componentes das seções (comentados temporariamente)
-// import IntegracoesExternas from './sections/IntegracoesExternas';
-// import ClinicaOperacoes from './sections/ClinicaOperacoes';
-// import TemplatesCRM from './sections/TemplatesCRM';
-// import SegurancaPrivacidade from './sections/SegurancaPrivacidade';
+import api from '../../services/api';
 
 // Hook para gerenciar configurações
-import { useConfiguracoes } from '../../hooks/useConfiguracoes';
+const useConfiguracoes = () => {
+  const [configuracoes, setConfiguracoes] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-// Componente específico para integração WhatsApp
-const WhatsAppIntegration = ({ configuracoes, onGerarQR, onVerificarStatus }) => {
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [statusChecking, setStatusChecking] = useState(false);
-  
-  const whatsapp = configuracoes?.integracoes?.whatsapp || {};
-  const isConnected = whatsapp.status === 'conectado';
-  const isConnecting = whatsapp.status === 'conectando';
-  
-  const handleGerarQR = async () => {
+  const salvarConfiguracoes = async (novasConfiguracoes) => {
+    setLoading(true);
     try {
-      await onGerarQR();
-      setQrModalOpen(true);
+      // Implementar salvamento das configurações
+      console.log('Salvando configurações:', novasConfiguracoes);
+      setConfiguracoes(prev => ({ ...prev, ...novasConfiguracoes }));
+    } catch (error) {
+      setError('Erro ao salvar configurações');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    configuracoes,
+    loading,
+    error,
+    salvarConfiguracoes
+  };
+};
+
+// Gerenciador de WhatsApp com seletor de tipo
+const WhatsAppManager = () => {
+  const [tipoWhatsApp, setTipoWhatsApp] = useState('zapi'); // 'zapi' ou 'evolution'
+
+  const handleTipoChange = (event) => {
+    setTipoWhatsApp(event.target.value);
+  };
+
+  return (
+    <Box>
+      <Box mb={3}>
+        <FormControl fullWidth>
+          <InputLabel>Tipo de Integração WhatsApp</InputLabel>
+          <Select
+            value={tipoWhatsApp}
+            label="Tipo de Integração WhatsApp"
+            onChange={handleTipoChange}
+          >
+            <MenuItem value="zapi">Z-API (Recomendado)</MenuItem>
+            <MenuItem value="evolution">Evolution/Meta API</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {tipoWhatsApp === 'zapi' && <WhatsAppZAPIManager />}
+      {tipoWhatsApp === 'evolution' && <WhatsAppEvolutionManager />}
+    </Box>
+  );
+};
+
+// Gerenciador para Z-API
+const WhatsAppZAPIManager = () => {
+  const [mode, setMode] = useState('create'); // 'create' or 'configure'
+  const [config, setConfig] = useState({
+    phoneNumber: '',
+    instanceId: '',
+    apiToken: '',
+    webhookUrl: '',
+    status: 'desconectado'
+  });
+  const [qrCode, setQrCode] = useState('');
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleCreateInstance = async () => {
+    if (!config.phoneNumber) {
+      alert('Por favor, preencha o número do telefone');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/whatsapp/zapi/activate', {
+        phoneNumber: config.phoneNumber,
+        webhookUrl: config.webhookUrl
+      });
+
+      alert(`Instância criada com sucesso! Instance ID: ${response.data.instanceId}`);
+      setConfig(prev => ({ ...prev, instanceId: response.data.instanceId }));
+
+      // Agora pode obter o QR
+      await handleGetQR();
+    } catch (error) {
+      console.error('Erro ao criar instância:', error);
+      alert(`Erro: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfigureInstance = async () => {
+    if (!config.instanceId || !config.apiToken) {
+      alert('Por favor, preencha Instance ID e API Token');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post('/whatsapp/zapi/activate', {
+        instanceId: config.instanceId,
+        apiToken: config.apiToken,
+        webhookUrl: config.webhookUrl
+      });
+
+      alert('Instância configurada com sucesso!');
+      await handleGetQR();
+    } catch (error) {
+      console.error('Erro ao configurar instância:', error);
+      alert(`Erro: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivateInstance = async () => {
+    if (mode === 'create') {
+      await handleCreateInstance();
+    } else {
+      await handleConfigureInstance();
+    }
+  };
+
+  const handleGetQR = async () => {
+    if (!config.instanceId) {
+      alert('Por favor, preencha o Instance ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.get(`/whatsapp/zapi/qr/${config.instanceId}`);
+      const data = response.data;
+      
+      if (data.qrCode) {
+        setQrCode(data.qrCode);
+        setQrModalOpen(true);
+      } else {
+        alert(`Erro: ${data.error || 'Não foi possível gerar QR Code'}`);
+      }
     } catch (error) {
       console.error('Erro ao gerar QR:', error);
+      alert(`Erro: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleVerificarStatus = async () => {
-    setStatusChecking(true);
+
+  const handleCheckStatus = async () => {
+    if (!config.instanceId) {
+      alert('Por favor, preencha o Instance ID');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await onVerificarStatus();
+      const response = await api.get(`/whatsapp/zapi/status/${config.instanceId}`);
+      const data = response.data;
+      
+      setConfig(prev => ({ ...prev, status: data.status }));
+      alert(`Status: ${data.status}`);
     } catch (error) {
       console.error('Erro ao verificar status:', error);
+      alert(`Erro: ${error.response?.data?.error || error.message}`);
     } finally {
-      setStatusChecking(false);
+      setLoading(false);
     }
   };
-  
-  React.useEffect(() => {
-    // Verificar status automaticamente a cada 5 segundos se estiver conectando
-    if (isConnecting) {
-      const interval = setInterval(() => {
-        onVerificarStatus();
-      }, 5000);
-      return () => clearInterval(interval);
+
+  const handleSendMessage = async () => {
+    const phone = prompt('Digite o número do telefone (com código do país):');
+    const message = prompt('Digite a mensagem:');
+    
+    if (!phone || !message || !config.instanceId) {
+      alert('Dados incompletos');
+      return;
     }
-  }, [isConnecting, onVerificarStatus]);
-  
+
+    setLoading(true);
+    try {
+      await api.post('/whatsapp/zapi/send', {
+        instanceId: config.instanceId,
+        phone,
+        message
+      });
+
+      alert('Mensagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      alert(`Erro: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <>
-      <Card>
-        <CardHeader 
-          title="WhatsApp Business API" 
-          subheader={
-            isConnected 
-              ? `✅ Conectado: ${whatsapp.numero || 'Número não disponível'}` 
-              : '❌ Desconectado'
-          }
-        />
-        <CardContent>
-          {isConnected ? (
-            <Box sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="h6" color="success.main">
-                ✅ WhatsApp Conectado!
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Número: {whatsapp.numero}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Nome: {whatsapp.nome}
-              </Typography>
-              <Button 
-                variant="outlined" 
-                onClick={handleVerificarStatus} 
-                disabled={statusChecking}
-                sx={{ mt: 2 }}
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Card>
+          <CardHeader 
+            title="Z-API WhatsApp Business" 
+            subheader="Configuração da integração Z-API"
+          />
+          <CardContent>
+            <Box mb={3}>
+              <FormControl component="fieldset">
+                <FormLabel component="legend">Modo de Configuração</FormLabel>
+                <RadioGroup
+                  row
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                >
+                  <FormControlLabel value="create" control={<Radio />} label="Criar Nova Instância" />
+                  <FormControlLabel value="configure" control={<Radio />} label="Configurar Instância Existente" />
+                </RadioGroup>
+              </FormControl>
+            </Box>
+
+            <Grid container spacing={2}>
+              {mode === 'create' ? (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Número do Telefone"
+                    value={config.phoneNumber}
+                    onChange={(e) => setConfig(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    placeholder="+5511999999999"
+                    helperText="Número com código do país (ex: +5511999999999)"
+                  />
+                </Grid>
+              ) : (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Instance ID"
+                      value={config.instanceId}
+                      onChange={(e) => setConfig(prev => ({ ...prev, instanceId: e.target.value }))}
+                      placeholder="ID da instância Z-API existente"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="API Token"
+                      type="password"
+                      value={config.apiToken}
+                      onChange={(e) => setConfig(prev => ({ ...prev, apiToken: e.target.value }))}
+                      placeholder="Token da API Z-API"
+                    />
+                  </Grid>
+                </>
+              )}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Webhook URL (opcional)"
+                  value={config.webhookUrl}
+                  onChange={(e) => setConfig(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                  placeholder="https://seusistema.com/webhook/whatsapp"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={2} mb={2}>
+              <PhoneIcon color="primary" />
+              <Typography variant="h6">Status da Conexão</Typography>
+              <Chip
+                label={config.status}
+                color={config.status === 'conectado' ? 'success' : 'default'}
+                size="small"
+              />
+            </Box>
+            
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <Button
+                variant="contained"
+                onClick={handleActivateInstance}
+                disabled={loading}
               >
-                {statusChecking ? 'Verificando...' : 'Verificar Status'}
+                {loading ? <CircularProgress size={16} /> : mode === 'create' ? 'Criar Instância' : 'Configurar Instância'}
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<QrCodeIcon />}
+                onClick={handleGetQR}
+                disabled={loading}
+              >
+                Gerar QR Code
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={handleCheckStatus}
+                disabled={loading}
+              >
+                Verificar Status
+              </Button>
+              
+              <Button
+                variant="outlined"
+                onClick={handleSendMessage}
+                disabled={loading || config.status !== 'conectado'}
+              >
+                Testar Envio
               </Button>
             </Box>
-          ) : (
-            <Box>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Token da API"
-                    value={whatsapp.token || ''}
-                    placeholder="Digite o token do WhatsApp Business"
-                    type="password"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number ID"
-                    value={whatsapp.phone_number_id || ''}
-                    placeholder="ID do número de telefone"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button 
-                    variant="contained" 
-                    onClick={handleGerarQR}
-                    startIcon={<QrCodeIcon />}
-                    fullWidth
-                  >
-                    Gerar QR Code para Conectar
-                  </Button>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-      
+          </CardContent>
+        </Card>
+      </Grid>
+
       {/* Modal do QR Code */}
-      <Dialog open={qrModalOpen} onClose={() => setQrModalOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={qrModalOpen} 
+        onClose={() => setQrModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
-          📱 Conectar WhatsApp
+          <Box display="flex" alignItems="center" gap={1}>
+            <QrCodeIcon />
+            Conectar WhatsApp - Z-API
+          </Box>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            {whatsapp.qrCode ? (
+          <Box textAlign="center" py={2}>
+            {qrCode ? (
               <>
-                <img 
-                  src={whatsapp.qrCode} 
-                  alt="QR Code WhatsApp" 
-                  style={{ maxWidth: '100%', height: 'auto' }}
-                />
-                <Typography variant="body2" sx={{ mt: 2 }}>
-                  1. Abra o WhatsApp no seu celular
-                </Typography>
-                <Typography variant="body2">
-                  2. Vá em Configurações → Aparelhos conectados
-                </Typography>
-                <Typography variant="body2">
-                  3. Toque em "Conectar um aparelho"
-                </Typography>
-                <Typography variant="body2">
+                <Box mb={2}>
+                  <img 
+                    src={qrCode}
+                    alt="QR Code WhatsApp Z-API"
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                  />
+                </Box>
+                <Typography variant="body2" color="textSecondary">
+                  1. Abra o WhatsApp no seu celular<br/>
+                  2. Vá em Configurações → Aparelhos conectados<br/>
+                  3. Toque em "Conectar um aparelho"<br/>
                   4. Aponte a câmera para este QR Code
                 </Typography>
               </>
             ) : (
-              <Typography>Gerando QR Code...</Typography>
+              <Typography>Carregando QR Code...</Typography>
             )}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setQrModalOpen(false)}>Fechar</Button>
-          <Button onClick={handleGerarQR} variant="contained">
-            Gerar Novo QR
+          <Button onClick={handleGetQR} variant="contained">
+            Atualizar QR
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Grid>
   );
 };
 
-const ConfiguracoesManager = () => {
-  const [tabAtiva, setTabAtiva] = useState(0); // Sempre começar na primeira aba
-  const [backupModalOpen, setBackupModalOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  
-  const {
-    configuracoes,
-    loading,
-    error,
-    salvarConfiguracoes,
-    exportarConfiguracoes,
-    importarConfiguracoes,
-    verificarStatusWhatsApp,
-    gerarQRCodeWhatsApp,
-    carregarConfiguracoes
-  } = useConfiguracoes();
-
-  // Debug: log das configurações
-  console.log('🎛️ ConfiguracoesManager - Estado atual:', {
-    loading,
-    error,
-    configuracoes: configuracoes ? Object.keys(configuracoes) : null
+// Gerenciador para Evolution/Meta API
+const WhatsAppEvolutionManager = () => {
+  const [instances, setInstances] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [qrCode, setQrCode] = useState(null);
+  const [selectedInstance, setSelectedInstance] = useState('');
+  const [status, setStatus] = useState(null);
+  const [formData, setFormData] = useState({
+    instanceName: '',
+    apiUrl: '',
+    apiKey: ''
   });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Abas da configuração
-  const abas = [
-    {
-      label: 'WhatsApp',
-      icon: <IntegrationIcon />,
-      component: 'whatsapp',
-      description: 'Configurações do WhatsApp Business'
-    },
-    {
-      label: 'Integrações',
-      icon: <IntegrationIcon />,
-      component: 'integracoes',
-      description: 'Twilio, Telegram, Mailchimp, SMTP'
-    },
-    {
-      label: 'Inteligência Artificial',
-      icon: <TemplateIcon />,
-      component: 'ai',
-      description: 'Claude, Gemini, Hugging Face'
-    },
-    {
-      label: 'PIX & Pagamentos',
-      icon: <BusinessIcon />,
-      component: 'pix',
-      description: 'Configurações bancárias e PIX'
-    },
-    {
-      label: 'Sistema & CRM',
-      icon: <SettingsIcon />,
-      component: 'sistema',
-      description: 'Configurações gerais e CRM'
-    },
-    {
-      label: 'LGPD & Privacidade',
-      icon: <SecurityIcon />,
-      component: 'lgpd',
-      description: 'Consentimentos e privacidade'
-    },
-    {
-      label: 'E-mail',
-      icon: <TemplateIcon />,
-      component: 'email',
-      description: 'SMTP e Mailchimp'
+  // Carregar configurações existentes
+  const loadConfig = async () => {
+    try {
+      const response = await api.get('/whatsapp/evolution/config');
+      if (response.data.success) {
+        setInstances(response.data.instances);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar config Evolution:', error);
     }
-  ];
+  };
 
-  // Carregar configurações na inicialização
   useEffect(() => {
-    carregarConfiguracoes();
-  }, [carregarConfiguracoes]);
+    loadConfig();
+  }, []);
 
-  // Função para salvar todas as configurações
-  const handleSalvarConfiguracoes = async () => {
+  // Ativar/configurar Evolution API
+  const handleActivate = async () => {
+    if (!formData.instanceName.trim()) {
+      setSnackbar({ open: true, message: 'Nome da instância é obrigatório', severity: 'error' });
+      return;
+    }
+
+    setLoading(true);
     try {
-      await salvarConfiguracoes();
-      setSnackbar({
-        open: true,
-        message: '✅ Configurações salvas com sucesso!',
-        severity: 'success'
-      });
+      const response = await api.post('/whatsapp/evolution/activate', formData);
+      if (response.data.success) {
+        setSnackbar({ open: true, message: response.data.message, severity: 'success' });
+        setFormData({ instanceName: '', apiUrl: '', apiKey: '' });
+        loadConfig(); // Recarregar lista
+      }
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `❌ Erro ao salvar: ${error.message}`,
-        severity: 'error'
-      });
+      const message = error.response?.data?.message || 'Erro ao configurar Evolution API';
+      setSnackbar({ open: true, message, severity: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Função para exportar configurações
-  const handleExportarConfiguracoes = async () => {
-    try {
-      const dadosExportacao = await exportarConfiguracoes();
-      
-      // Criar e baixar arquivo JSON
-      const blob = new Blob([JSON.stringify(dadosExportacao, null, 2)], {
-        type: 'application/json'
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `configuracoes-saee-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+  // Obter QR Code
+  const handleGetQR = async () => {
+    if (!selectedInstance) {
+      setSnackbar({ open: true, message: 'Selecione uma instância', severity: 'error' });
+      return;
+    }
 
-      setSnackbar({
-        open: true,
-        message: '📁 Configurações exportadas com sucesso!',
-        severity: 'success'
-      });
+    setLoading(true);
+    try {
+      const response = await api.get(`/whatsapp/evolution/qr/${selectedInstance}`);
+      if (response.data.success) {
+        setQrCode(response.data.qrCode);
+        setSnackbar({ open: true, message: 'QR Code gerado com sucesso', severity: 'success' });
+      }
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `❌ Erro ao exportar: ${error.message}`,
-        severity: 'error'
-      });
+      const message = error.response?.data?.message || 'Erro ao obter QR Code';
+      setSnackbar({ open: true, message, severity: 'error' });
+      setQrCode(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Função para importar configurações
-  const handleImportarConfiguracoes = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      const fileContent = await file.text();
-      const configuracaoImportada = JSON.parse(fileContent);
-      
-      await importarConfiguracoes(configuracaoImportada);
-      
-      setSnackbar({
-        open: true,
-        message: '📂 Configurações importadas com sucesso!',
-        severity: 'success'
-      });
-      
-      // Recarregar configurações
-      carregarConfiguracoes();
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `❌ Erro ao importar: ${error.message}`,
-        severity: 'error'
-      });
+  // Verificar Status
+  const handleCheckStatus = async () => {
+    if (!selectedInstance) {
+      setSnackbar({ open: true, message: 'Selecione uma instância', severity: 'error' });
+      return;
     }
-  };
 
-  const handleTabChange = (event, novaTab) => {
-    setTabAtiva(novaTab);
-  };
-
-  // Renderizar conteúdo da aba ativa
-  const renderConteudoAba = () => {
-    const componente = abas[tabAtiva]?.component;
-
-    switch (componente) {
-      case 'whatsapp':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              📱 WhatsApp Business
-            </Typography>
-            <Grid container spacing={3}>
-              {/* WhatsApp Business API com QR Code */}
-              <Grid item xs={12}>
-                <WhatsAppIntegration 
-                  configuracoes={configuracoes}
-                  onGerarQR={gerarQRCodeWhatsApp}
-                  onVerificarStatus={verificarStatusWhatsApp}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Configurações Avançadas" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="API Token"
-                          value={configuracoes?.whatsapp?.api_token || ''}
-                          placeholder="Token da API WhatsApp"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Webhook URL"
-                          value={configuracoes?.whatsapp?.webhook_url || ''}
-                          placeholder="URL do webhook"
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="QR Timeout (segundos)"
-                          value={configuracoes?.whatsapp?.qr_timeout || ''}
-                          placeholder="120"
-                          type="number"
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="Session Path"
-                          value={configuracoes?.whatsapp?.session_path || ''}
-                          placeholder="Caminho da sessão"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'integracoes':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              🔗 Integrações Externas
-            </Typography>
-            <Grid container spacing={3}>
-              {/* Twilio */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Twilio SMS/Voice" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Account SID"
-                          value={configuracoes?.integracoes?.twilio_account_sid || ''}
-                          placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Auth Token"
-                          value={configuracoes?.integracoes?.twilio_auth_token || ''}
-                          placeholder="Token de autenticação"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="WhatsApp Number"
-                          value={configuracoes?.integracoes?.twilio_whatsapp_number || ''}
-                          placeholder="+14155238886"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Telegram */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Telegram Bot" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Bot Token"
-                          value={configuracoes?.integracoes?.telegram_bot_token || ''}
-                          placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxyz"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Chat ID"
-                          value={configuracoes?.integracoes?.telegram_chat_id || ''}
-                          placeholder="-1001234567890"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Status"
-                          value={configuracoes?.integracoes?.telegram_ativo ? 'Ativo' : 'Inativo'}
-                          disabled
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Mailchimp */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Mailchimp Marketing" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="API Key"
-                          value={configuracoes?.integracoes?.mailchimp_api_key || ''}
-                          placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Server Prefix"
-                          value={configuracoes?.integracoes?.mailchimp_server_prefix || ''}
-                          placeholder="us1"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="List ID"
-                          value={configuracoes?.integracoes?.mailchimp_list_id || ''}
-                          placeholder="xxxxxxxxxx"
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="From Name"
-                          value={configuracoes?.integracoes?.mailchimp_from_name || ''}
-                          placeholder="Sua Clínica"
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="From Email"
-                          value={configuracoes?.integracoes?.mailchimp_from_email || ''}
-                          placeholder="contato@clinica.com"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* SMTP */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="SMTP Email" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={8}>
-                        <TextField
-                          fullWidth
-                          label="Host SMTP"
-                          value={configuracoes?.integracoes?.smtp_host || ''}
-                          placeholder="smtp.gmail.com"
-                        />
-                      </Grid>
-                      <Grid item xs={4}>
-                        <TextField
-                          fullWidth
-                          label="Porta"
-                          value={configuracoes?.integracoes?.smtp_port || ''}
-                          placeholder="587"
-                          type="number"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Usuário"
-                          value={configuracoes?.integracoes?.smtp_user || ''}
-                          placeholder="seu-email@gmail.com"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Senha"
-                          value={configuracoes?.integracoes?.smtp_password || ''}
-                          placeholder="sua-senha-de-app"
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Conexão Segura"
-                          value={configuracoes?.integracoes?.smtp_secure ? 'TLS' : 'Não'}
-                          disabled
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'ai':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              🤖 Inteligência Artificial
-            </Typography>
-            <Grid container spacing={3}>
-              {/* Claude AI */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Claude AI (Anthropic)" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="API Key"
-                          value={configuracoes?.ai?.claude_api_key || ''}
-                          placeholder="sk-ant-api03-..."
-                          type="password"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Modelo"
-                          value={configuracoes?.ai?.claude_model || ''}
-                          placeholder="claude-3-sonnet-20240229"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Max Tokens"
-                          value={configuracoes?.ai?.claude_max_tokens || ''}
-                          placeholder="4096"
-                          type="number"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Status"
-                          value={configuracoes?.ai?.claude_ativo ? 'Ativo' : 'Inativo'}
-                          disabled
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Google Gemini */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Google Gemini AI" />
-                  <CardContent>
-                    <TextField
-                      fullWidth
-                      label="API Key"
-                      value={configuracoes?.ai?.gemini_api_key || ''}
-                      placeholder="AIzaSy..."
-                      type="password"
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Hugging Face */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Hugging Face AI" />
-                  <CardContent>
-                    <TextField
-                      fullWidth
-                      label="API Key"
-                      value={configuracoes?.ai?.huggingface_api_key || ''}
-                      placeholder="hf_..."
-                      type="password"
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'pix':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              💰 PIX e Configurações Bancárias
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={8}>
-                <Card>
-                  <CardHeader title="Configurações PIX" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Chave PIX"
-                          value={configuracoes?.pix?.chave_pix || ''}
-                          placeholder="email@exemplo.com ou CPF/CNPJ"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Nome do Titular"
-                          value={configuracoes?.pix?.nome_titular || ''}
-                          placeholder="Nome completo do titular da conta"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Banco"
-                          value={configuracoes?.pix?.banco || ''}
-                          placeholder="Nome do banco (ex: Itaú, Bradesco)"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'sistema':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              ⚙️ Configurações do Sistema
-            </Typography>
-            <Grid container spacing={3}>
-              {/* Configurações Gerais */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Configurações Gerais" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Ambiente"
-                          value={configuracoes?.sistema?.ambiente || ''}
-                          placeholder="production, development"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Debug Mode"
-                          value={configuracoes?.sistema?.debug_mode ? 'Ativo' : 'Inativo'}
-                          disabled
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Log Level"
-                          value={configuracoes?.sistema?.log_level || ''}
-                          placeholder="info, debug, error"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Max Upload Size (MB)"
-                          value={configuracoes?.sistema?.max_upload_size || ''}
-                          placeholder="10"
-                          type="number"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Configurações CRM */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="CRM e Automação" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Período de Inatividade (dias)"
-                          value={configuracoes?.crm?.periodo_inatividade || ''}
-                          placeholder="30"
-                          type="number"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Cron Confirmação"
-                          value={configuracoes?.sistema?.cron_confirmacao || ''}
-                          placeholder="0 9 * * *"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Cron Lembretes"
-                          value={configuracoes?.sistema?.cron_lembretes || ''}
-                          placeholder="0 18 * * *"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          fullWidth
-                          label="Cron Relatórios"
-                          value={configuracoes?.sistema?.cron_relatorios || ''}
-                          placeholder="0 6 * * 1"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'lgpd':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              🔒 LGPD e Privacidade
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Card>
-                  <CardHeader title="Texto de Consentimento LGPD" />
-                  <CardContent>
-                    <TextField
-                      fullWidth
-                      label="Texto do Consentimento"
-                      value={configuracoes?.lgpd?.texto_consentimento || ''}
-                      placeholder="Autorizo o uso dos meus dados pessoais conforme a Lei Geral de Proteção de Dados..."
-                      multiline
-                      rows={6}
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 'email':
-        return (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              📧 Configurações de E-mail
-            </Typography>
-            <Grid container spacing={3}>
-              {/* SMTP */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Servidor SMTP" />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={8}>
-                        <TextField
-                          fullWidth
-                          label="Host SMTP"
-                          value={configuracoes?.email?.smtp_host || ''}
-                          placeholder="smtp.gmail.com"
-                        />
-                      </Grid>
-                      <Grid item xs={4}>
-                        <TextField
-                          fullWidth
-                          label="Porta"
-                          value={configuracoes?.email?.smtp_port || ''}
-                          placeholder="587"
-                          type="number"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Mailchimp */}
-              <Grid item xs={12} md={6}>
-                <Card>
-                  <CardHeader title="Mailchimp" />
-                  <CardContent>
-                    <TextField
-                      fullWidth
-                      label="API Key"
-                      value={configuracoes?.email?.mailchimp_api_key || ''}
-                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-us1"
-                      type="password"
-                    />
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      default:
-        return <Typography>Seção não encontrada</Typography>;
+    setLoading(true);
+    try {
+      const response = await api.get(`/whatsapp/evolution/status/${selectedInstance}`);
+      if (response.data.success) {
+        setStatus(response.data);
+        setSnackbar({ open: true, message: `Status: ${response.data.status}`, severity: 'info' });
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Erro ao verificar status';
+      setSnackbar({ open: true, message, severity: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 2 }}>
-        <Box display="flex" alignItems="center" gap={2} mb={2}>
-          <SettingsIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              Configurações do Sistema
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Hub administrativo para personalizar integrações, operações e segurança
-            </Typography>
-          </Box>
-        </Box>
+    <Grid container spacing={3}>
+      {/* Configuração */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardHeader
+            title="Configurar Evolution API"
+            subheader="Registre uma nova instância Evolution API"
+          />
+          <CardContent>
+            <TextField
+              fullWidth
+              label="Nome da Instância"
+              value={formData.instanceName}
+              onChange={(e) => setFormData({...formData, instanceName: e.target.value})}
+              margin="normal"
+              placeholder="Ex: minha-clinica"
+              helperText="Nome único para identificar sua instância"
+            />
+            <TextField
+              fullWidth
+              label="URL da API (Opcional)"
+              value={formData.apiUrl}
+              onChange={(e) => setFormData({...formData, apiUrl: e.target.value})}
+              margin="normal"
+              placeholder="https://api.evolution.com"
+              helperText="URL da API Evolution (se não informado, será solicitado depois)"
+            />
+            <TextField
+              fullWidth
+              label="API Key (Opcional)"
+              value={formData.apiKey}
+              onChange={(e) => setFormData({...formData, apiKey: e.target.value})}
+              margin="normal"
+              type="password"
+              placeholder="Sua chave API Evolution"
+              helperText="Chave de API do Evolution (se não informado, será solicitado depois)"
+            />
+            <Box mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleActivate}
+                disabled={loading}
+                fullWidth
+              >
+                {loading ? <CircularProgress size={24} /> : 'Registrar Instância'}
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
 
-        {/* Indicador de carregamento */}
-        {loading && <LinearProgress sx={{ mt: 2 }} />}
+      {/* Gerenciamento */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardHeader
+            title="Gerenciar Instâncias"
+            subheader="Controle suas instâncias Evolution API"
+          />
+          <CardContent>
+            {instances.length > 0 && (
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Selecionar Instância</InputLabel>
+                <Select
+                  value={selectedInstance}
+                  onChange={(e) => setSelectedInstance(e.target.value)}
+                >
+                  {instances.map((instance) => (
+                    <MenuItem key={instance.instanceId} value={instance.instanceId}>
+                      {instance.instanceName} - {instance.status}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
 
-        {/* Alertas de erro */}
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
+            <Box display="flex" gap={1} mt={2}>
+              <Button
+                variant="outlined"
+                onClick={handleGetQR}
+                disabled={loading || !selectedInstance}
+                fullWidth
+              >
+                Obter QR Code
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleCheckStatus}
+                disabled={loading || !selectedInstance}
+                fullWidth
+              >
+                Verificar Status
+              </Button>
+            </Box>
+
+            {status && (
+              <Box mt={2}>
+                <Alert severity={status.status === 'connected' ? 'success' : 'warning'}>
+                  Status: {status.status}
+                  {status.phoneNumber && ` - ${status.phoneNumber}`}
+                </Alert>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* QR Code */}
+      {qrCode && (
+        <Grid item xs={12}>
+          <Card>
+            <CardHeader
+              title="QR Code para Conexão"
+              subheader="Escaneie com o WhatsApp no seu celular"
+            />
+            <CardContent>
+              <Box 
+                display="flex" 
+                flexDirection="column"
+                alignItems="center"
+                p={3}
+                sx={{ 
+                  minHeight: '450px',
+                  justifyContent: 'center'
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    maxWidth: '450px',
+                    minHeight: '350px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '12px',
+                    backgroundColor: 'white',
+                    p: 2,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <img
+                    src={`data:image/png;base64,${qrCode}`}
+                    alt="QR Code WhatsApp"
+                    style={{ 
+                      width: '100%',
+                      height: 'auto',
+                      maxWidth: 'none',
+                      maxHeight: 'none',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </Box>
+              </Box>
+              <Box mt={2}>
+                <Alert severity="info">
+                  Abra o WhatsApp no seu celular, vá em Configurações {'>'} WhatsApp Web {'>'} Escanear QR Code
+                </Alert>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      )}
+
+      {/* Lista de Instâncias */}
+      {instances.length > 0 && (
+        <Grid item xs={12}>
+          <Card>
+            <CardHeader title="Instâncias Configuradas" />
+            <CardContent>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Nome</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>API URL</TableCell>
+                      <TableCell>Telefone</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {instances.map((instance) => (
+                      <TableRow key={instance.instanceId}>
+                        <TableCell>{instance.instanceName}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={instance.status}
+                            color={instance.status === 'connected' ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{instance.apiUrl}</TableCell>
+                        <TableCell>{instance.phoneNumber || 'Não conectado'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      )}
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({...snackbar, open: false})}
+      >
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({...snackbar, open: false})}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Grid>
+  );
+};
+
+// Componente principal do gerenciador de configurações
+const ConfiguracoesManager = () => {
+  const [tabAtiva, setTabAtiva] = useState(0);
+  const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  
+  const { loading } = useConfiguracoes();
+
+  const handleTabChange = (event, newValue) => {
+    setTabAtiva(newValue);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const renderTabContent = () => {
+    switch (tabAtiva) {
+      case 0: // WhatsApp
+        return <WhatsAppManager />;
+      case 1: // Integrações Externas
+        return (
+          <Alert severity="info">
+            Outras integrações externas serão implementadas em breve.
           </Alert>
-        )}
-      </Paper>
+        );
+      case 2: // Horários Profissionais
+        return (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Para configurar horários específicos de um profissional, acesse o menu "Profissionais Médicos" 
+            e edite o profissional desejado.
+          </Alert>
+        );
+      case 3: // Templates e CRM
+        return (
+          <Alert severity="info">
+            Templates e configurações de CRM em desenvolvimento.
+          </Alert>
+        );
+      case 4: // Segurança e Privacidade
+        return (
+          <Alert severity="info">
+            Configurações de segurança e privacidade em desenvolvimento.
+          </Alert>
+        );
+      default:
+        return null;
+    }
+  };
 
-      {/* Navegação por abas */}
+  return (
+    <Box sx={{ width: '100%' }}>
+      {loading && <LinearProgress />}
+      
       <Paper sx={{ mb: 2 }}>
         <Tabs
           value={tabAtiva}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          {abas.map((aba, index) => (
-            <Tab
-              key={index}
-              icon={aba.icon}
-              label={
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">
-                    {aba.label}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {aba.description}
-                  </Typography>
-                </Box>
-              }
-              iconPosition="start"
-              sx={{ 
-                minHeight: 80,
-                alignItems: 'flex-start',
-                textAlign: 'left'
-              }}
-            />
-          ))}
+          <Tab 
+            icon={<PhoneIcon />} 
+            label="WhatsApp" 
+            id="tab-whatsapp"
+          />
+          <Tab 
+            icon={<IntegrationIcon />} 
+            label="Integrações Externas" 
+            id="tab-integracoes"
+          />
+          <Tab 
+            icon={<ScheduleIcon />} 
+            label="Horários Profissionais" 
+            id="tab-operacoes"
+          />
+          <Tab 
+            icon={<TemplateIcon />} 
+            label="Templates e CRM" 
+            id="tab-templates"
+          />
+          <Tab 
+            icon={<SecurityIcon />} 
+            label="Segurança e Privacidade" 
+            id="tab-seguranca"
+          />
         </Tabs>
       </Paper>
 
-      {/* Conteúdo principal */}
-      <Box sx={{ flex: 1, overflow: 'auto', pb: 10 }}>
-        {renderConteudoAba()}
+      <Box sx={{ py: 2 }}>
+        {renderTabContent()}
       </Box>
 
-      {/* FAB para salvar */}
+      {/* Snackbar para notificações */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Botão flutuante para backup */}
       <Fab
         color="primary"
-        aria-label="salvar configurações"
-        sx={{ position: 'fixed', bottom: 80, right: 16 }}
-        onClick={handleSalvarConfiguracoes}
-        disabled={loading}
-      >
-        <SaveIcon />
-      </Fab>
-
-      {/* FAB para backup */}
-      <Fab
-        color="secondary"
-        aria-label="backup configurações"
         sx={{ position: 'fixed', bottom: 16, right: 16 }}
         onClick={() => setBackupModalOpen(true)}
       >
         <BackupIcon />
       </Fab>
 
-      {/* Modal de Backup */}
-      <Dialog open={backupModalOpen} onClose={() => setBackupModalOpen(false)}>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <BackupIcon />
-            Backup das Configurações
-          </Box>
-        </DialogTitle>
+      {/* Modal de backup */}
+      <Dialog
+        open={backupModalOpen}
+        onClose={() => setBackupModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Backup e Restauração</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            Gerencie seus backups de configuração para garantir a segurança dos dados.
+          <Typography paragraph>
+            Faça backup das suas configurações ou restaure de um backup anterior.
           </Typography>
-          
-          <Box display="flex" flexDirection="column" gap={2} mt={3}>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={handleExportarConfiguracoes}
-              fullWidth
-            >
-              Exportar Configurações Atuais
+          <Box display="flex" gap={2} flexDirection="column">
+            <Button startIcon={<DownloadIcon />} variant="outlined">
+              Fazer Backup
             </Button>
-            
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<UploadIcon />}
-              fullWidth
-            >
-              Importar Configurações
-              <input
-                type="file"
-                accept=".json"
-                hidden
-                onChange={handleImportarConfiguracoes}
-              />
+            <Button startIcon={<UploadIcon />} variant="outlined">
+              Restaurar Backup
             </Button>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBackupModalOpen(false)}>
-            Fechar
-          </Button>
+          <Button onClick={() => setBackupModalOpen(false)}>Fechar</Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar para notificações */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
