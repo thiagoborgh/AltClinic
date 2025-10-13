@@ -22,7 +22,7 @@ class MultiTenantDatabaseManager {
 
     this.masterDb = null;
     this.tenantConnections = new Map();
-    this.databasesPath = path.join(__dirname, '../../databases');
+    this.databasesPath = path.join(__dirname, '../../data');
 
     this.init();
   }

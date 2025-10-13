@@ -207,7 +207,7 @@ async function createTenantDatabase(databaseName) {
   const sqlite3 = require('sqlite3').verbose();
   
   try {
-    const dbPath = path.join(__dirname, '../../databases/', `${databaseName}.db`);
+    const dbPath = path.join(__dirname, '../../data/', `${databaseName}.db`);
     
     // Criar diretório se não existir
     const dbDir = path.dirname(dbPath);
