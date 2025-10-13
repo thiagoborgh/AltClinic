@@ -136,17 +136,19 @@ class SaeeApp {
   setupRoutes() {
     console.log('🔧 Configurando rotas da aplicação...');
     
-    // Health check
-    this.app.get('/health', async (req, res) => {
+    // Health check (múltiplas rotas para compatibilidade)
+    const healthCheckHandler = async (req, res) => {
       try {
         const whatsappStatus = await this.tenantWhatsApp.isWhatsAppAvailable();
         const developmentInfo = this.tenantWhatsApp.getDevelopmentInfo();
         
         res.json({
           success: true,
+          status: 'ok',
           message: 'SAEE API está funcionando',
           timestamp: new Date().toISOString(),
-          version: '1.0.0',
+          uptime: process.uptime(),
+          version: '2.0.0',
           environment: process.env.NODE_ENV || 'development',
           whatsapp: whatsappStatus ? 'available_via_admin' : 'not_configured',
           development: developmentInfo
@@ -154,15 +156,21 @@ class SaeeApp {
       } catch (error) {
         res.json({
           success: true,
+          status: 'ok',
           message: 'SAEE API está funcionando',
           timestamp: new Date().toISOString(),
-          version: '1.0.0',
+          uptime: process.uptime(),
+          version: '2.0.0',
           environment: process.env.NODE_ENV || 'development',
           whatsapp: 'admin_connection_error',
           development: this.tenantWhatsApp.getDevelopmentInfo()
         });
       }
-    });
+    };
+    
+    // Registrar health check em múltiplas rotas
+    this.app.get('/health', healthCheckHandler);
+    this.app.get('/api/health', healthCheckHandler);
 
     // Status WhatsApp via Admin
     this.app.get('/whatsapp/status', async (req, res) => {
