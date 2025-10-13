@@ -37,31 +37,96 @@ Este guia mostra como configurar todas as integrações gratuitas para o MVP do 
 5. Escolha "Read"
 6. Cole no arquivo `.env`: `HUGGINGFACE_API_KEY=sua_chave_aqui`
 
-## 📱 3. Twilio WhatsApp (GRATUITO para desenvolvimento)
+## 📱 3. WhatsApp Business API (Meta - RECOMENDADO para produção)
 
 ### Recursos:
 
-- ✅ WhatsApp oficial via API
-- ✅ Sandbox gratuito para testes
-- ✅ Webhook para receber mensagens
+- ✅ WhatsApp oficial via Meta
 - ✅ Mais estável que WhatsApp Web.js
+- ✅ Suporte a templates pré-aprovados
+- ✅ Webhooks em tempo real
+- ✅ Suporte empresarial completo
 
 ### Como configurar:
 
-1. Acesse: https://console.twilio.com/
-2. Crie uma conta gratuita ($15 de crédito inicial)
-3. Vá em "Messaging" > "Try it out" > "Send a WhatsApp message"
-4. Configure o sandbox seguindo as instruções
-5. Copie as credenciais:
-   - Account SID: `TWILIO_ACCOUNT_SID=sua_sid_aqui`
-   - Auth Token: `TWILIO_AUTH_TOKEN=sua_token_aqui`
-   - Phone Number: `TWILIO_PHONE_NUMBER=whatsapp:+14155238886`
+#### **Passo 1: Criar Aplicação no Facebook Developers**
 
-### Configuração do Webhook:
+1. Acesse: https://developers.facebook.com/
+2. Clique em **"My Apps"** → **"Create App"**
+3. Escolha **"Business"** como tipo de app
+4. Preencha:
+   - **App Name:** `AltClinic WhatsApp`
+   - **App Contact Email:** seu-email@clinica.com
+   - **Business Account:** Selecione ou crie uma conta business
 
-1. No console Twilio, vá em "Messaging" > "Settings" > "WhatsApp sandbox settings"
-2. Em "When a message comes in", coloque: `https://seu-dominio.com/webhook/twilio`
-3. Método: POST
+#### **Passo 2: Adicionar Produto WhatsApp**
+
+1. Na dashboard do app, clique **"Add Product"**
+2. Procure por **"WhatsApp"** e clique em **"Set Up"**
+3. Aceite os termos de serviço
+
+#### **Passo 3: Configurar Webhook**
+
+1. Vá para **"WhatsApp" → "Configuration"**
+2. Em **"Webhook"**, clique **"Add Callback URL"**
+3. Configure:
+   - **Callback URL:** `https://seudominio.com/api/whatsapp/webhook/meta`
+   - **Verify Token:** `altclinic_webhook_verify_2025`
+4. Selecione estes eventos:
+   - ✅ `messages`
+   - ✅ `message_deliveries`
+   - ✅ `message_status`
+
+#### **Passo 4: Criar System User e Token**
+
+1. Vá para **"Business Manager"** (https://business.facebook.com/)
+2. Acesse **"Users" → "System Users"**
+3. Clique **"Add"** para criar um System User
+4. Dê permissões de **"Manage WhatsApp"**
+5. Clique no usuário criado → **"Generate Token"**
+6. Selecione seu app e dê permissão **"whatsapp_business_management"**
+7. **COPIE O TOKEN** (não poderá vê-lo novamente!)
+
+#### **Passo 5: Configurar Número de Telefone**
+
+1. No **"WhatsApp" → "Getting Started"**
+2. Clique **"Add Phone Number"**
+3. Adicione o número da clínica
+4. Verifique via SMS ou chamada
+5. Anote o **"Phone Number ID"** gerado
+
+#### **Passo 6: Configurar no .env**
+
+```bash
+# WhatsApp Business API (Meta)
+WA_APP_ID=1234567890123456
+WA_SYSTEM_USER_TOKEN=EAAKk8xYZ...[token completo aqui]
+WA_WEBHOOK_VERIFY_TOKEN=altclinic_webhook_verify_2025
+WA_PHONE_NUMBER_ID=123456789012345
+WA_BUSINESS_ACCOUNT_ID=123456789012345
+```
+
+### Testando a Configuração:
+
+1. Inicie o servidor: `npm run dev`
+2. Acesse: `http://localhost:3001/configuracoes`
+3. Vá para a seção **"WhatsApp"**
+4. Digite o número da clínica (formato: +55DDDXXXXXXX)
+5. Clique em **"Ativar WhatsApp"**
+6. Escaneie o QR Code no **WhatsApp Business App**
+7. Aguarde a confirmação de ativação
+
+### Limites Gratuitos:
+
+- **Test Numbers:** Até 5 números para desenvolvimento
+- **Mensagens:** 250 mensagens/dia por número de teste
+- **Templates:** Até 10 templates para aprovação
+
+### Custo em Produção:
+
+- **Mensagens:** A partir de $0.005 por mensagem
+- **Setup:** Gratuito para começar
+- **Templates:** Gratuito (sujeito a aprovação)
 
 ## 🤖 4. Telegram Bot (TOTALMENTE GRATUITO)
 

@@ -180,11 +180,49 @@ npm start
 
 ## 🔧 Configuração dos Bots
 
-### WhatsApp Bot
+### WhatsApp Business API (Meta) - RECOMENDADO
+
+#### Configuração Completa:
+
+1. **Siga o guia detalhado:** `WHATSAPP_META_SETUP.md`
+2. **Configure variáveis no `.env`:**
+
+   ```bash
+   WA_APP_ID=1234567890123456
+   WA_SYSTEM_USER_TOKEN=EAAKk8xYZ...[token completo]
+   WA_WEBHOOK_VERIFY_TOKEN=altclinic_webhook_verify_2025
+   WA_PHONE_NUMBER_ID=123456789012345
+   WA_BUSINESS_ACCOUNT_ID=123456789012345
+   ```
+
+3. **Teste a configuração:**
+
+   ```bash
+   node test-whatsapp-meta.js
+   ```
+
+4. **Ative no frontend:**
+   - Acesse: `http://localhost:3001/configuracoes`
+   - Vá para "WhatsApp"
+   - Digite o número da clínica
+   - Clique "Ativar WhatsApp"
+   - Escaneie o QR Code no WhatsApp Business App
+
+#### Recursos:
+
+- ✅ WhatsApp oficial via Meta
+- ✅ Webhooks em tempo real
+- ✅ Templates pré-aprovados
+- ✅ Suporte empresarial completo
+- ✅ Até 250 mensagens/dia grátis
+
+### WhatsApp Web.js (Alternativo)
 
 1. Execute o backend: `npm run dev`
 2. Escaneie o QR Code que aparece no terminal
 3. O bot estará conectado e pronto
+
+**Nota:** WhatsApp Web.js pode ser bloqueado pelo WhatsApp. Use Meta API para produção.
 
 ### Telegram Bot
 
