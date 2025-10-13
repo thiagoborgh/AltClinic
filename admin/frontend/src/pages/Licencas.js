@@ -857,7 +857,7 @@ const Licencas = () => {
                   label="Plano"
                   onChange={(e) => setFormData({ ...formData, planoTenant: e.target.value })}
                 >
-                  <MenuItem value="trial">Trial (30 dias)</MenuItem>
+                  <MenuItem value="trial">Trial (15 dias)</MenuItem>
                   <MenuItem value="basic">Básico</MenuItem>
                   <MenuItem value="premium">Premium</MenuItem>
                 </Select>

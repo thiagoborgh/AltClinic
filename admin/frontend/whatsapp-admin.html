@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin WhatsApp - AltClinic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-stat {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+        }
+        .card-stat-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+        }
+        .card-stat-warning {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+            border: none;
+        }
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+        }
+        .btn-custom:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        .status-active {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-inactive {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .message-preview {
+            max-height: 100px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+        .log-success {
+            border-left-color: #28a745;
+        }
+        .log-error {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="bi bi-whatsapp"></i>
+                            WhatsApp Admin
+                        </h4>
+                        <small class="text-light">AltClinic SaaS</small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white active" href="#dashboard" onclick="showSection('dashboard')">
+                                <i class="bi bi-speedometer2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#connections" onclick="showSection('connections')">
+                                <i class="bi bi-plug"></i>
+                                Conexões
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#tenants" onclick="showSection('tenants')">
+                                <i class="bi bi-building"></i>
+                                Tenants
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#routines" onclick="showSection('routines')">
+                                <i class="bi bi-gear"></i>
+                                Rotinas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#logs" onclick="showSection('logs')">
+                                <i class="bi bi-list-ul"></i>
+                                Logs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="#test" onclick="showSection('test')">
+                                <i class="bi bi-check-circle"></i>
+                                Testes
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-whatsapp text-success"></i>
+                        Gerenciamento WhatsApp
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-custom" onclick="refreshData()">
+                                <i class="bi bi-arrow-clockwise"></i> Atualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Section -->
+                <div id="dashboard" class="content-section">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card card-stat">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 id="totalConnections">2</h3>
+                                            <p class="mb-0">Conexões Ativas</p>
+                                        </div>
+                                        <div>
+                                            <i class="bi bi-plug fs-1"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat-success">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 id="totalTenants">3</h3>
+                                            <p class="mb-0">Tenants Configurados</p>
+                                        </div>
+                                        <div>
+                                            <i class="bi bi-building fs-1"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat-warning">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 id="todayMessages">127</h3>
+                                            <p class="mb-0">Mensagens Hoje</p>
+                                        </div>
+                                        <div>
+                                            <i class="bi bi-chat-text fs-1"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 id="activeRoutines">8</h3>
+                                            <p class="mb-0">Rotinas Ativas</p>
+                                        </div>
+                                        <div>
+                                            <i class="bi bi-gear fs-1"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-activity"></i> Status das Conexões</h5>
+                                </div>
+                                <div class="card-body" id="connectionsStatus">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <strong>Z-API (Desenvolvimento)</strong><br>
+                                            <small class="text-muted">Instance: 3E82B061D75E61EBAF...</small>
+                                        </div>
+                                        <span class="status-active">
+                                            <i class="bi bi-check-circle"></i> Ativa
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <strong>ManyChat (Clínica A)</strong><br>
+                                            <small class="text-muted">Page ID: 9353710</small>
+                                        </div>
+                                        <span class="status-active">
+                                            <i class="bi bi-check-circle"></i> Ativa
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-graph-up"></i> Mensagens por Tipo</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Lembretes de Consulta</span>
+                                            <strong>45</strong>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: 60%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Cobranças</span>
+                                            <strong>32</strong>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" style="width: 40%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Confirmações</span>
+                                            <strong>28</strong>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: 35%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Boas-vindas</span>
+                                            <strong>22</strong>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" style="width: 30%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connections Section -->
+                <div id="connections" class="content-section" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3>Gerenciar Conexões WhatsApp</h3>
+                        <button class="btn btn-custom" onclick="showAddConnectionModal()">
+                            <i class="bi bi-plus-lg"></i> Nova Conexão
+                        </button>
+                    </div>
+
+                    <div class="row" id="connectionsList">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">Z-API Desenvolvimento</h5>
+                                        <small class="text-muted">Instância de testes</small>
+                                    </div>
+                                    <span class="badge bg-success">Ativa</span>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Tipo:</strong> Z-API</p>
+                                    <p><strong>Instance ID:</strong> 3E82B061D75E61EBAFEAD69A39353161</p>
+                                    <p><strong>Token:</strong> 8E1DFE5E6F2D7BF408038207</p>
+                                    <p><strong>Tenants Vinculados:</strong> 1</p>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="testConnection('zapi', '3E82B061D75E61EBAFEAD69A39353161')">
+                                            <i class="bi bi-check-circle"></i> Testar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i> Remover
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">ManyChat Clínica A</h5>
+                                        <small class="text-muted">Conexão principal</small>
+                                    </div>
+                                    <span class="badge bg-success">Ativa</span>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Tipo:</strong> ManyChat</p>
+                                    <p><strong>Page ID:</strong> 9353710</p>
+                                    <p><strong>Token:</strong> 8f05258497356cfe8a039e79200b2af4</p>
+                                    <p><strong>Tenants Vinculados:</strong> 2</p>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="testConnection('manychat', '9353710')">
+                                            <i class="bi bi-check-circle"></i> Testar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i> Remover
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Section -->
+                <div id="test" class="content-section" style="display: none;">
+                    <h3 class="mb-4">Centro de Testes</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-send"></i> Teste de Envio</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="testForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Tenant</label>
+                                            <select class="form-select" id="testTenant">
+                                                <option value="dev_tenant">Desenvolvimento</option>
+                                                <option value="clinic_a">Clínica A</option>
+                                                <option value="clinic_b">Clínica B</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Número WhatsApp</label>
+                                            <input type="text" class="form-control" id="testPhone" value="5511999887766" placeholder="5511999887766">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Tipo de Mensagem</label>
+                                            <select class="form-select" id="testMessageType">
+                                                <option value="appointment_reminder">Lembrete de Consulta</option>
+                                                <option value="payment_reminder">Lembrete de Pagamento</option>
+                                                <option value="appointment_confirmation">Confirmação de Agendamento</option>
+                                                <option value="welcome_message">Mensagem de Boas-vindas</option>
+                                                <option value="custom">Mensagem Personalizada</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3" id="customMessageDiv" style="display: none;">
+                                            <label class="form-label">Mensagem Personalizada</label>
+                                            <textarea class="form-control" id="customMessage" rows="4" placeholder="Digite sua mensagem personalizada..."></textarea>
+                                        </div>
+                                        <button type="button" class="btn btn-custom w-100" onclick="sendTestMessage()">
+                                            <i class="bi bi-send"></i> Enviar Teste
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-activity"></i> Resultado do Teste</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="testResult">
+                                        <div class="text-muted text-center py-4">
+                                            <i class="bi bi-info-circle fs-1"></i>
+                                            <p class="mt-2">Execute um teste para ver os resultados aqui</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-check2-all"></i> Histórico de Testes</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="testHistory">
+                                        <div class="text-muted text-center py-4">
+                                            <i class="bi bi-clock-history fs-1"></i>
+                                            <p class="mt-2">Nenhum teste executado ainda</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gerenciamento de seções
+        function showSection(sectionId) {
+            // Esconder todas as seções
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Mostrar seção selecionada
+            document.getElementById(sectionId).style.display = 'block';
+            
+            // Atualizar navegação ativa
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[href="#${sectionId}"]`).classList.add('active');
+        }
+
+        // Controle do formulário de teste
+        document.getElementById('testMessageType').addEventListener('change', function() {
+            const customDiv = document.getElementById('customMessageDiv');
+            if (this.value === 'custom') {
+                customDiv.style.display = 'block';
+            } else {
+                customDiv.style.display = 'none';
+            }
+        });
+
+        // Função para enviar mensagem de teste
+        async function sendTestMessage() {
+            const tenant = document.getElementById('testTenant').value;
+            const phone = document.getElementById('testPhone').value;
+            const messageType = document.getElementById('testMessageType').value;
+            const customMessage = document.getElementById('customMessage').value;
+
+            const resultDiv = document.getElementById('testResult');
+            
+            // Mostrar loading
+            resultDiv.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Enviando...</span>
+                    </div>
+                    <p class="mt-2">Enviando mensagem de teste...</p>
+                </div>
+            `;
+
+            try {
+                // Preparar dados para envio
+                const testData = {
+                    tenant_id: tenant,
+                    phone: phone,
+                    message_type: messageType
+                };
+                
+                if (messageType === 'custom' && customMessage) {
+                    testData.custom_message = customMessage;
+                }
+
+                // Fazer chamada real para a API
+                const response = await fetch('/api/test/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6><i class="bi bi-check-circle"></i> Mensagem Enviada com Sucesso!</h6>
+                            <p><strong>Tenant:</strong> ${tenant}</p>
+                            <p><strong>Telefone:</strong> ${phone}</p>
+                            <p><strong>Tipo:</strong> ${messageType}</p>
+                            <p><strong>ID da Mensagem:</strong> ${result.messageId || 'N/A'}</p>
+                            <p><strong>Provedor:</strong> ${result.provider || 'N/A'}</p>
+                            ${result.test_info ? `<p><strong>Test ID:</strong> ${result.test_info.test_id}</p>` : ''}
+                            <small class="text-muted">Enviado em: ${new Date().toLocaleString()}</small>
+                        </div>
+                    `;
+                    
+                    // Adicionar ao histórico
+                    addToTestHistory(messageType, tenant, phone, true);
+                } else {
+                    const errorMsg = result.error || result.message || 'Erro desconhecido';
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h6><i class="bi bi-x-circle"></i> Erro no Envio</h6>
+                            <p><strong>Erro:</strong> ${errorMsg}</p>
+                            <p><strong>Código:</strong> ${response.status}</p>
+                            ${result.details ? `<p><strong>Detalhes:</strong> ${result.details}</p>` : ''}
+                            <small class="text-muted">Falha em: ${new Date().toLocaleString()}</small>
+                        </div>
+                    `;
+                    
+                    // Adicionar ao histórico
+                    addToTestHistory(messageType, tenant, phone, false);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Erro de Conexão</h6>
+                        <p><strong>Erro:</strong> Não foi possível conectar com o servidor</p>
+                        <p><strong>Detalhes:</strong> ${error.message}</p>
+                        <small class="text-muted">Falha em: ${new Date().toLocaleString()}</small>
+                    </div>
+                `;
+                
+                // Adicionar ao histórico
+                addToTestHistory(messageType, tenant, phone, false);
+            }
+        }
+
+        // Adicionar ao histórico de testes
+        function addToTestHistory(messageType, tenant, phone, success) {
+            const historyDiv = document.getElementById('testHistory');
+            const logClass = success ? 'log-success' : 'log-error';
+            const badgeClass = success ? 'bg-success' : 'bg-danger';
+            const statusText = success ? 'Sucesso' : 'Erro';
+            
+            const newEntry = document.createElement('div');
+            newEntry.className = `log-entry ${logClass}`;
+            newEntry.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>${messageType.replace('_', ' ')}</strong> - ${tenant}
+                        <br><small class="text-muted">Para: ${phone}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${badgeClass}">${statusText}</span>
+                        <br><small class="text-muted">Agora</small>
+                    </div>
+                </div>
+            `;
+            
+            historyDiv.insertBefore(newEntry, historyDiv.firstChild);
+        }
+
+        // Testar conexão
+        async function testConnection(type, id) {
+            try {
+                const response = await fetch(`/api/connections/${id}/test`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Conexão ${type.toUpperCase()} testada com sucesso!\nTempo de resposta: ${result.response_time}ms`);
+                } else {
+                    alert(`Erro ao testar conexão ${type.toUpperCase()}:\n${result.message}`);
+                }
+            } catch (error) {
+                alert(`Erro ao testar conexão: ${error.message}`);
+            }
+        }
+
+        // Atualizar dados
+        async function refreshData() {
+            try {
+                // Recarregar dados do dashboard
+                await loadDashboardData();
+                await loadConnectionsData();
+                await loadTenantsData();
+                alert('Dados atualizados com sucesso!');
+            } catch (error) {
+                alert('Erro ao atualizar dados: ' + error.message);
+            }
+        }
+
+        // Carregar dados do dashboard
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard/stats');
+                const stats = await response.json();
+                
+                // Atualizar cards de estatísticas
+                document.querySelector('.card-stat h3').textContent = stats.totalConnections;
+                document.querySelector('.card-stat-success h3').textContent = stats.totalTenants;
+                document.querySelector('.card-stat-warning h3').textContent = stats.todayMessages;
+                
+                console.log('Dashboard atualizado:', stats);
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+            }
+        }
+
+        // Carregar dados das conexões
+        async function loadConnectionsData() {
+            try {
+                const response = await fetch('/api/connections');
+                const connections = await response.json();
+                console.log('Conexões carregadas:', connections);
+            } catch (error) {
+                console.error('Erro ao carregar conexões:', error);
+            }
+        }
+
+        // Carregar dados dos tenants
+        async function loadTenantsData() {
+            try {
+                const response = await fetch('/api/tenants');
+                const tenants = await response.json();
+                console.log('Tenants carregados:', tenants);
+            } catch (error) {
+                console.error('Erro ao carregar tenants:', error);
+            }
+        }
+
+        // Mostrar modal de nova conexão
+        function showAddConnectionModal() {
+            alert('Funcionalidade de adicionar conexão em desenvolvimento.\nPor enquanto, use o banco de dados para adicionar conexões.');
+        }
+
+        // Inicializar dashboard como seção ativa e carregar dados
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('dashboard');
+            
+            // Carregar dados iniciais
+            loadDashboardData();
+            loadConnectionsData();
+            loadTenantsData();
+        });
+    </script>
+</body>
+</html>
