@@ -78,7 +78,7 @@ class AuthUtil {
    * @param {Object} res - Response object
    * @param {Function} next - Next middleware
    */
-  authenticate(req, res, next) {
+  authenticate = (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
       

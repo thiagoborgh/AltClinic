@@ -39,7 +39,7 @@ class ProductionInitializer {
         telefone: null,
         plano: 'trial',
         status: 'active',
-        trial_expire_at: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 dias
+        trial_expire_at: new Date(Date.now() + (15 * 24 * 60 * 60 * 1000)), // 15 dias
         database_name: `tenant_demo-clinic_${Date.now()}`,
         config: JSON.stringify({
           maxUsuarios: 5,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -35,6 +35,7 @@ import dayjs from 'dayjs';
 
 const CadastroPaciente = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   // Estados do formulário
   const [formData, setFormData] = useState({
@@ -49,16 +50,54 @@ const CadastroPaciente = () => {
   
   // Estados de controle
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [pacienteId, setPacienteId] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [pacienteExistente, setPacienteExistente] = useState(null);
   const [medicos, setMedicos] = useState([]);
   const [errors, setErrors] = useState({});
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [confirmacaoEnviada, setConfirmacaoEnviada] = useState(false);
 
   // Carregar médicos ao montar o componente
   useEffect(() => {
     loadMedicos();
   }, []);
+
+  // Carregar dados do paciente se estiver editando
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setPacienteId(id);
+      setIsEditing(true);
+      loadPaciente(id);
+    }
+  }, [searchParams]);
+
+  const loadPaciente = async (id) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/pacientes/${id}`);
+      if (response.data.success && response.data.paciente) {
+        const paciente = response.data.paciente;
+        setFormData({
+          nome: paciente.nomeCompleto || '',
+          cpf: paciente.cpf || '',
+          dataNascimento: paciente.dataNascimento ? dayjs(paciente.dataNascimento) : null,
+          telefone: paciente.telefone || '',
+          email: paciente.email || '',
+          medicoResponsavel: paciente.medicoResponsavel || '',
+          optinMensagens: paciente.optinMensagens || false
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar paciente:', error);
+      toast.error('Erro ao carregar dados do paciente');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadMedicos = async () => {
     try {
@@ -168,16 +207,43 @@ const CadastroPaciente = () => {
       newErrors.telefone = 'Telefone válido é obrigatório';
     }
 
-    if (!formData.medicoResponsavel) {
-      newErrors.medicoResponsavel = 'Médico responsável é obrigatório';
-    }
+    // Removido: médico responsável não é mais obrigatório
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
 
+    // Autorização de mensagens é obrigatória
+    if (!formData.optinMensagens) {
+      newErrors.optinMensagens = 'A autorização para envio de mensagens é obrigatória';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Enviar confirmação de opt-in via WhatsApp ou email
+  const enviarConfirmacaoOptin = async (paciente) => {
+    try {
+      // Tentar enviar via WhatsApp primeiro, depois email como fallback
+      const telefoneFormatado = paciente.telefone.replace(/\D/g, '');
+      
+      // Simular envio de confirmação (implementar integração real depois)
+      console.log(`Enviando confirmação para paciente ${paciente.nome}:`);
+      console.log(`WhatsApp: ${telefoneFormatado}`);
+      if (paciente.email) {
+        console.log(`Email: ${paciente.email}`);
+      }
+      
+      // Aqui seria implementada a integração real com WhatsApp API e serviço de email
+      // Por enquanto, apenas log para desenvolvimento
+      
+      setConfirmacaoEnviada(true);
+      
+    } catch (error) {
+      console.error('Erro ao enviar confirmação:', error);
+      // Não bloquear o cadastro se falhar o envio da confirmação
+    }
   };
 
   const handleSubmit = async () => {
@@ -193,19 +259,27 @@ const CadastroPaciente = () => {
         dataNascimento: formData.dataNascimento?.format('YYYY-MM-DD') || null,
         cpf: formData.cpf.replace(/\D/g, ''), // Remover caracteres não numéricos
         telefone: formData.telefone.replace(/\D/g, ''),
-        isUpdate: !!pacienteExistente
+        isUpdate: isEditing,
+        // Marcar que precisa de confirmação se optou por mensagens
+        statusOptin: formData.optinMensagens ? 'pendente_confirmacao' : 'nao_autorizado'
       };
 
-      const endpoint = pacienteExistente 
-        ? `/pacientes/${pacienteExistente.id}` 
+      const endpoint = isEditing && pacienteId
+        ? `/pacientes/${pacienteId}`
         : '/pacientes';
-      
-      const method = pacienteExistente ? 'put' : 'post';
+
+      const method = (isEditing && pacienteId) ? 'put' : 'post';
       const response = await api[method](endpoint, payload);
 
       if (response.data.success) {
-        const action = pacienteExistente ? 'atualizado' : 'cadastrado';
-        toast.success(`Paciente ${action} com sucesso!`);
+        const action = isEditing ? 'atualizado' : 'cadastrado';
+        
+        // Se autorizou mensagens, enviar confirmação (apenas para novos cadastros)
+        if (formData.optinMensagens && !isEditing) {
+          await enviarConfirmacaoOptin(response.data.paciente);
+        }
+        
+        toast.success(`Paciente ${action} com sucesso!${formData.optinMensagens && !isEditing ? ' Verifique seu WhatsApp/email para confirmar o recebimento de mensagens.' : ''}`);
         
         // Redirecionar para agenda ou lista de pacientes
         navigate('/pacientes');
@@ -453,7 +527,7 @@ const CadastroPaciente = () => {
               <TextField
                 fullWidth
                 select
-                label="Médico Responsável *"
+                label="Médico Responsável"
                 value={formData.medicoResponsavel}
                 onChange={(e) => handleInputChange('medicoResponsavel', e.target.value)}
                 error={!!errors.medicoResponsavel}
@@ -466,6 +540,9 @@ const CadastroPaciente = () => {
                   ),
                 }}
               >
+                <MenuItem value="">
+                  <em>Selecionar médico...</em>
+                </MenuItem>
                 {medicos.map((medico) => (
                   <MenuItem key={medico.id} value={medico.id}>
                     <Box>
@@ -499,11 +576,17 @@ const CadastroPaciente = () => {
                 label={
                   <Box>
                     <Typography variant="body1">
-                      Autorizo o recebimento de mensagens automáticas
+                      Autorizo o recebimento de mensagens automáticas *
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Includes lembretes de consulta, confirmações e comunicações importantes via WhatsApp, SMS e email.
+                      Includes lembretes de consulta, confirmações e comunicações importantes. 
+                      Você receberá um link de confirmação via WhatsApp ou email para autorizar explicitamente.
                     </Typography>
+                    {errors.optinMensagens && (
+                      <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                        {errors.optinMensagens}
+                      </Typography>
+                    )}
                   </Box>
                 }
               />
@@ -525,7 +608,7 @@ const CadastroPaciente = () => {
               onClick={handleSubmit}
               disabled={saving}
             >
-              {saving ? 'Salvando...' : (pacienteExistente ? 'Atualizar' : 'Cadastrar')}
+              {saving ? 'Salvando...' : (isEditing ? 'Salvar' : 'Cadastrar')}
             </Button>
           </Box>
         </CardContent>

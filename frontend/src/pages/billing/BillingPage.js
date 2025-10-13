@@ -19,12 +19,15 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  CircularProgress,
+  Skeleton
 } from '@mui/material';
 import {
   CheckCircle,
   Settings
 } from '@mui/icons-material';
+import api from '../../services/api';
 
 const BillingPage = () => {
   const [billingInfo, setBillingInfo] = useState(null);
@@ -89,16 +92,8 @@ const BillingPage = () => {
 
   const loadBillingInfo = async () => {
     try {
-      const response = await fetch('/api/billing/info', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setBillingInfo(data.billing);
-      }
+      const response = await api.get('/billing/info');
+      setBillingInfo(response.data.billing);
     } catch (error) {
       console.error('Erro ao carregar informações de cobrança:', error);
       setError('Erro ao carregar informações de cobrança');
@@ -107,16 +102,8 @@ const BillingPage = () => {
 
   const loadUsage = async () => {
     try {
-      const response = await fetch('/api/billing/usage', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setUsage(data);
-      }
+      const response = await api.get('/billing/usage');
+      setUsage(response.data);
     } catch (error) {
       console.error('Erro ao carregar uso:', error);
     } finally {
@@ -126,21 +113,8 @@ const BillingPage = () => {
 
   const handleUpgrade = async (plano) => {
     try {
-      const response = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ plano })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        window.location.href = data.checkoutUrl;
-      } else {
-        setError('Erro ao processar upgrade');
-      }
+      const response = await api.post('/billing/checkout', { plano });
+      window.location.href = response.data.checkoutUrl;
     } catch (error) {
       console.error('Erro no upgrade:', error);
       setError('Erro ao processar upgrade');
@@ -189,10 +163,50 @@ const BillingPage = () => {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <LinearProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Carregando informações de cobrança...
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <CircularProgress size={24} sx={{ mr: 2 }} />
+          <Typography variant="h6">
+            Carregando informações de cobrança...
+          </Typography>
+        </Box>
+
+        {/* Skeleton para informações de cobrança */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3 }}>
+              <Skeleton variant="text" width="60%" height={40} sx={{ mb: 2 }} />
+              <Skeleton variant="rectangular" width="100%" height={100} sx={{ mb: 2 }} />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Skeleton variant="rectangular" width={120} height={36} />
+                <Skeleton variant="rectangular" width={120} height={36} />
+              </Box>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3 }}>
+              <Skeleton variant="text" width="80%" height={30} sx={{ mb: 2 }} />
+              <Skeleton variant="rectangular" width="100%" height={60} />
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {/* Skeleton para planos */}
+        <Box sx={{ mt: 4 }}>
+          <Skeleton variant="text" width="40%" height={40} sx={{ mb: 3 }} />
+          <Grid container spacing={3}>
+            {[1, 2, 3].map((i) => (
+              <Grid item xs={12} md={4} key={i}>
+                <Paper sx={{ p: 3 }}>
+                  <Skeleton variant="text" width="60%" height={30} sx={{ mb: 2 }} />
+                  <Skeleton variant="text" width="40%" height={40} sx={{ mb: 2 }} />
+                  <Skeleton variant="rectangular" width="100%" height={80} sx={{ mb: 2 }} />
+                  <Skeleton variant="rectangular" width="100%" height={40} />
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       </Container>
     );
   }
@@ -215,7 +229,23 @@ const BillingPage = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => {
+                setError('');
+                loadBillingInfo();
+                loadUsage();
+              }}
+            >
+              Tentar Novamente
+            </Button>
+          }
+        >
           {error}
         </Alert>
       )}

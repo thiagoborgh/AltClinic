@@ -7,6 +7,118 @@ const { sendWhatsAppMessage } = require('../utils/bot');
 const aiService = require('../utils/ai');
 
 /**
+ * Função para validar se agendamento está dentro dos horários do profissional
+ */
+async function validateProfessionalSchedule(clinica_id, appointment_datetime, duration_minutes = 60) {
+  try {
+    const dbManager = require('../models/database');
+    const db = dbManager.getDb();
+
+    const appointmentDate = new Date(appointment_datetime);
+    const dayOfWeek = appointmentDate.getDay();
+    const appointmentTime = appointmentDate.toTimeString().slice(0, 5); // HH:MM
+    const dateString = appointmentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Verificar se há exceções para a data específica
+    const exceptions = db.prepare(`
+      SELECT * FROM professional_schedules 
+      WHERE clinica_id = ? 
+        AND is_exception_day = 1 
+        AND exception_date = ?
+        AND is_active = 1
+    `).all(clinica_id, dateString);
+
+    let availableSchedules = [];
+
+    if (exceptions.length > 0) {
+      // Usar exceções se existirem
+      availableSchedules = exceptions;
+    } else {
+      // Buscar horários regulares para o dia da semana
+      availableSchedules = db.prepare(`
+        SELECT * FROM professional_schedules 
+        WHERE clinica_id = ? 
+          AND day_of_week = ? 
+          AND is_exception_day = 0
+          AND is_active = 1
+      `).all(clinica_id, dayOfWeek);
+    }
+
+    if (availableSchedules.length === 0) {
+      return {
+        available: false,
+        message: 'Profissional não atende neste dia'
+      };
+    }
+
+    // Verificar se o horário está dentro de algum dos períodos disponíveis
+    for (const schedule of availableSchedules) {
+      const startTime = schedule.start_time;
+      const endTime = schedule.end_time;
+      const pauseStart = schedule.pause_start;
+      const pauseEnd = schedule.pause_end;
+
+      // Verificar se está dentro do horário de funcionamento
+      if (appointmentTime >= startTime && appointmentTime < endTime) {
+        // Calcular horário de fim do agendamento
+        const appointmentEnd = new Date(appointmentDate.getTime() + duration_minutes * 60000);
+        const appointmentEndTime = appointmentEnd.toTimeString().slice(0, 5);
+
+        // Verificar se não termina após o horário de fechamento
+        if (appointmentEndTime > endTime) {
+          continue;
+        }
+
+        // Verificar conflito com pausa se existir
+        if (pauseStart && pauseEnd) {
+          // Agendamento começa durante a pausa
+          if (appointmentTime >= pauseStart && appointmentTime < pauseEnd) {
+            continue;
+          }
+
+          // Agendamento termina durante a pausa ou atravessa a pausa
+          if (appointmentEndTime > pauseStart && appointmentTime < pauseEnd) {
+            continue;
+          }
+        }
+
+        // Se chegou até aqui, o horário é válido
+        return {
+          available: true,
+          message: 'Agendamento dentro do horário de funcionamento',
+          schedule_info: {
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            pause_start: schedule.pause_start,
+            pause_end: schedule.pause_end,
+            professional_name: schedule.professional_name
+          }
+        };
+      }
+    }
+
+    return {
+      available: false,
+      message: 'Agendamento fora do horário de funcionamento',
+      schedule_info: availableSchedules.map(s => ({
+        start_time: s.start_time,
+        end_time: s.end_time,
+        pause_start: s.pause_start,
+        pause_end: s.pause_end,
+        professional_name: s.professional_name
+      }))
+    };
+
+  } catch (error) {
+    console.error('Erro ao validar horário do profissional:', error);
+    return {
+      available: false,
+      message: 'Erro ao validar horário do profissional'
+    };
+  }
+}
+
+/**
  * @route POST /agendamentos
  * @desc Cria novo agendamento
  */
@@ -47,6 +159,21 @@ router.post('/', authUtil.authenticate, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Procedimento não encontrado'
+      });
+    }
+
+    // Verificar se o agendamento está dentro dos horários do profissional
+    const validateScheduleResult = await validateProfessionalSchedule(
+      req.user.clinica_id,
+      data_hora,
+      procedimento.duracao_minutos
+    );
+
+    if (!validateScheduleResult.available) {
+      return res.status(400).json({
+        success: false,
+        message: `Agendamento não permitido: ${validateScheduleResult.message}`,
+        schedule_info: validateScheduleResult.schedule_info
       });
     }
 
@@ -95,7 +222,7 @@ router.post('/', authUtil.authenticate, async (req, res) => {
                       `📍 Local: ${agendamento.equipamento_nome}\n\n` +
                       `Nos vemos em breve! 😊`;
 
-      await sendWhatsAppMessage(paciente.telefone, mensagem);
+      await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
       
       // Registrar mensagem no CRM
       db.prepare(`
@@ -291,7 +418,7 @@ router.put('/:id', authUtil.authenticate, async (req, res) => {
                         `💆‍♀️ Procedimento: ${agendamentoAtualizado.procedimento_nome}\n\n` +
                         `Nos vemos na nova data! 😊`;
 
-        await sendWhatsAppMessage(paciente.telefone, mensagem);
+        await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
         
         // Registrar mensagem no CRM
         const dbManager = require('../models/database');
@@ -377,7 +504,7 @@ router.put('/:id/status', authUtil.authenticate, async (req, res) => {
       }
 
       if (mensagem) {
-        await sendWhatsAppMessage(paciente.telefone, mensagem);
+        await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
         
         // Registrar mensagem no CRM
         const dbManager = require('../models/database');
@@ -521,6 +648,89 @@ router.get('/disponibilidade', authUtil.authenticate, async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao verificar disponibilidade:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+/**
+ * @route POST /agendamentos/:id/lembrete
+ * @desc Envia lembrete para agendamento específico
+ */
+router.post('/:id/lembrete', authUtil.authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo = 'manual' } = req.body;
+
+    // Buscar agendamento
+    const agendamento = AgendamentoModel.findById(id);
+    if (!agendamento) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agendamento não encontrado'
+      });
+    }
+
+    // Verificar se agendamento pertence à clínica
+    if (agendamento.clinica_id !== req.user.clinica_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Agendamento não pertence à sua clínica'
+      });
+    }
+
+    // Buscar dados do paciente
+    const paciente = PacienteModel.findById(agendamento.paciente_id);
+    if (!paciente) {
+      return res.status(404).json({
+        success: false,
+        message: 'Paciente não encontrado'
+      });
+    }
+
+    // Preparar mensagem de lembrete
+    const dataAgendamento = new Date(agendamento.data_agendamento);
+    const dataFormatada = dataAgendamento.toLocaleString('pt-BR');
+
+    let mensagem = `⏰ *Lembrete de Consulta*\n\n` +
+                  `Olá ${paciente.nome}!\n\n` +
+                  `Lembrando seu agendamento:\n` +
+                  `📅 Data: ${dataFormatada}\n` +
+                  `💆‍♀️ Procedimento: ${agendamento.procedimento_nome}\n` +
+                  `🏥 Local: ${agendamento.equipamento_nome}\n\n`;
+
+    // Adicionar instruções de preparo se houver
+    if (agendamento.preparo_texto) {
+      mensagem += `📋 *Preparo necessário:*\n${agendamento.preparo_texto}\n\n`;
+    }
+
+    mensagem += `Nos vemos em breve! 😊`;
+
+    // Enviar mensagem via WhatsApp Business API
+    const sucesso = await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
+
+    // Registrar mensagem no CRM
+    const dbManager = require('../models/database');
+    const db = dbManager.getDb();
+    db.prepare(`
+      INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
+      VALUES (?, ?, ?, ?)
+    `).run(paciente.id, 'lembrete', mensagem, sucesso ? 'enviada' : 'erro');
+
+    res.json({
+      success: true,
+      message: sucesso ? 'Lembrete enviado com sucesso' : 'Falha ao enviar lembrete',
+      data: {
+        enviado: sucesso,
+        paciente: paciente.nome,
+        telefone: paciente.telefone
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao enviar lembrete:', error.message);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

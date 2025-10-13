@@ -4,10 +4,12 @@ import { Box } from '@mui/material';
 
 // Hooks
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { useTrialManager } from './hooks/useTrialManager';
 
 // Components
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LicenseSelector from './components/Auth/LicenseSelector';
+import TrialExpiredModal from './components/TrialExpiredModal';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -19,18 +21,19 @@ import OnboardingPage from './pages/OnboardingPage';
 import MultiTenantLogin from './pages/MultiTenantLogin';
 import LandingPage from './pages/LandingPage';
 import ResetPassword from './pages/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import Agendamentos from './pages/Agendamentos';
+import DashboardNew from './pages/DashboardNew';
+import AgendaNova from './pages/AgendaNova';
+import AgendaLite from './pages/AgendaLite';
 import ListaPacientes from './pages/ListaPacientes';
 import CadastroPaciente from './pages/CadastroPaciente';
 import ProfissionaisMedicos from './pages/ProfissionaisMedicos';
 import SalaEspera from './pages/SalaEspera';
-import Financeiro from './pages/Financeiro';
-import CRM from './pages/CRM';
+import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
+import CRMDashboard from './pages/crm/CRMDashboard';
 import Relatorios from './pages/Relatorios';
-import Configuracoes from './pages/Configuracoes';
+import Configuracoes from './pages/Configuracoes.js';
 
-// Componente interno que usa o contexto de auth
+import BillingPage from './pages/billing/BillingPage';
 const AppContent = () => {
   const { 
     isAuthenticated, 
@@ -41,7 +44,14 @@ const AppContent = () => {
     user, 
     selectLicense,
     loginLoading
-  } = useAuth();  if (loading) {
+  } = useAuth();
+
+  // Hook para gerenciar trial
+  const {
+    showTrialExpiredModal,
+    closeTrialExpiredModal,
+    handleUpgrade
+  } = useTrialManager();  if (loading) {
     console.log('Mostrando tela de loading');
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,16 +96,18 @@ const AppContent = () => {
         {/* Layout protegido com rotas aninhadas */}
         {isAuthenticated && (
           <Route path="/" element={<DashboardLayout />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="agendamentos" element={<Agendamentos />} />
+            <Route path="dashboard" element={<DashboardNew />} />
+            <Route path="agendamentos" element={<AgendaNova />} />
+            <Route path="agenda-lite" element={<AgendaLite />} />
             <Route path="pacientes" element={<ListaPacientes />} />
             <Route path="cadastro-paciente" element={<CadastroPaciente />} />
             <Route path="profissionais" element={<ProfissionaisMedicos />} />
             <Route path="espera" element={<SalaEspera />} />
-            <Route path="financeiro" element={<Financeiro />} />
-            <Route path="crm" element={<CRM />} />
+            <Route path="financeiro" element={<FinanceiroDashboard />} />
+            <Route path="crm" element={<CRMDashboard />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="billing" element={<BillingPage />} />
             {/* <Route path="billing" element={<BillingPage />} /> */}
           </Route>
         )}
@@ -114,6 +126,13 @@ const AppContent = () => {
         user={user}
         onSelectLicense={selectLicense}
         loading={loginLoading}
+      />
+
+      {/* Modal de Trial Expirado */}
+      <TrialExpiredModal
+        open={showTrialExpiredModal}
+        onClose={closeTrialExpiredModal}
+        onUpgrade={handleUpgrade}
       />
     </Box>
   );

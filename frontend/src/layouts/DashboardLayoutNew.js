@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Sidebar from '../components/common/Sidebar';
 import { PacienteProvider } from '../contexts/PacienteContext';
+import TrialBanner from '../components/TrialBanner';
 
 const DashboardLayoutContent = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -22,6 +23,9 @@ const DashboardLayoutContent = () => {
       
       {/* Navbar */}
       <Navbar onMenuClick={handleDrawerToggle} />
+      
+      {/* Trial Banner - aparece para usuários em trial */}
+      <TrialBanner />
       
       {/* Sidebar */}
       <Sidebar 

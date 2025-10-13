@@ -108,6 +108,50 @@ router.get('/info', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/billing/usage
+ * Obter informações de uso do tenant
+ */
+router.get('/usage', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant não encontrado' });
+    }
+
+    // Mock de dados de uso - em produção, calcular baseado no banco
+    const usage = {
+      users: {
+        current: 2,
+        limit: tenant.plano === 'starter' ? 3 : tenant.plano === 'professional' ? 10 : 999,
+        percentage: tenant.plano === 'starter' ? 67 : tenant.plano === 'professional' ? 20 : 1
+      },
+      patients: {
+        current: 45,
+        limit: tenant.plano === 'starter' ? 500 : tenant.plano === 'professional' ? 2000 : 99999,
+        percentage: tenant.plano === 'starter' ? 9 : tenant.plano === 'professional' ? 2 : 0
+      },
+      messages: {
+        current: 1250,
+        limit: tenant.plano === 'starter' ? 1000 : tenant.plano === 'professional' ? 5000 : 99999,
+        percentage: tenant.plano === 'starter' ? 125 : tenant.plano === 'professional' ? 25 : 1
+      },
+      storage: {
+        current: 2.1,
+        limit: tenant.plano === 'starter' ? 5 : tenant.plano === 'professional' ? 25 : 100,
+        percentage: tenant.plano === 'starter' ? 42 : tenant.plano === 'professional' ? 8 : 2
+      }
+    };
+
+    res.json({ success: true, usage });
+  } catch (error) {
+    console.error('Erro ao obter informações de uso:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+/**
  * POST /api/billing/portal
  * Criar sessão do portal de cobrança
  */

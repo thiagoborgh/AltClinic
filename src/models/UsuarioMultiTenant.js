@@ -15,11 +15,15 @@ class UsuarioMultiTenantModel {
    * Obter conexão do banco do tenant
    */
   getTenantDb(tenantId) {
-    if (!this.tenantConnections.has(tenantId)) {
+    try {
+      // Não usar cache para debug
       const tenantDb = multiTenantDb.getTenantDb(tenantId);
-      this.tenantConnections.set(tenantId, tenantDb);
+      console.log('🔧 getTenantDb: returning fresh connection for tenant:', tenantId);
+      return tenantDb;
+    } catch (error) {
+      console.log('🔧 getTenantDb error:', error.message);
+      return null;
     }
-    return this.tenantConnections.get(tenantId);
   }
 
   /**
@@ -43,9 +47,9 @@ class UsuarioMultiTenantModel {
       const finalPermissions = permissions || defaultPermissions;
       
       const result = tenantDb.prepare(`
-        INSERT INTO usuarios (tenant_id, nome, role, email, senha_hash, permissions, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'active')
-      `).run(tenantId, nome, role, email, senhaHash, JSON.stringify(finalPermissions));
+        INSERT INTO usuarios (nome, role, email, senha, status)
+        VALUES (?, ?, ?, ?, 'active')
+      `).run(nome, role, email, senhaHash);
       
       return this.findById(result.lastInsertRowid, tenantId);
       
@@ -66,15 +70,11 @@ class UsuarioMultiTenantModel {
   findById(id, tenantId) {
     const tenantDb = this.getTenantDb(tenantId);
     const usuario = tenantDb.prepare(`
-      SELECT id, tenant_id, nome, email, role, permissions, avatar, telefone, 
-             crm, especialidade, status, last_login, created_at, updated_at
+      SELECT id, nome, email, role, telefone, avatar, 
+             status, last_login, created_at, updated_at
       FROM usuarios 
-      WHERE id = ? AND tenant_id = ?
-    `).get(id, tenantId);
-    
-    if (usuario) {
-      usuario.permissions = JSON.parse(usuario.permissions || '{}');
-    }
+      WHERE id = ?
+    `).get(id);
     
     return usuario;
   }
@@ -87,23 +87,31 @@ class UsuarioMultiTenantModel {
    */
   findByEmail(email, tenantId) {
     console.log('🔧 findByEmail called with:', email, 'tenantId:', tenantId);
-    const tenantDb = this.getTenantDb(tenantId);
-    console.log('🔧 tenantDb obtained for tenant:', tenantId);
+    try {
+      const tenantDb = this.getTenantDb(tenantId);
+      if (!tenantDb) {
+        console.log('🔧 findByEmail: tenantDb is null');
+        return null;
+      }
+      console.log('🔧 tenantDb obtained for tenant:', tenantId);
 
-    const usuario = tenantDb.prepare(`
-      SELECT id, tenant_id, nome, email, senha_hash, role, permissions, avatar, telefone,
-             crm, especialidade, status, last_login, created_at, updated_at
-      FROM usuarios
-      WHERE email = ? AND tenant_id = ?
-    `).get(email, tenantId);
+      const usuario = tenantDb.prepare(`
+        SELECT id, nome, email, senha, role, telefone, avatar,
+               status, last_login, created_at, updated_at
+        FROM usuarios
+        WHERE email = ?
+      `).get(email);
 
-    console.log('🔧 Query result:', usuario ? 'User found' : 'User not found');
-    if (usuario) {
-      console.log('🔧 User data:', { id: usuario.id, email: usuario.email, tenant_id: usuario.tenant_id });
-      usuario.permissions = JSON.parse(usuario.permissions || '{}');
+      console.log('🔧 Query result:', usuario ? 'User found' : 'User not found');
+      if (usuario) {
+        console.log('🔧 User data:', { id: usuario.id, email: usuario.email });
+      }
+
+      return usuario;
+    } catch (error) {
+      console.log('🔧 findByEmail error:', error.message);
+      return null;
     }
-
-    return usuario;
   }
 
   /**
@@ -111,9 +119,9 @@ class UsuarioMultiTenantModel {
    * @param {string} email - Email do usuário
    * @param {string} senha - Senha do usuário
    * @param {string} tenantId - ID do tenant
-   * @returns {Object|null} - Dados do usuário autenticado
+   * @returns {Object} - Resultado da autenticação com informações detalhadas
    */
-  authenticate(email, senha, tenantId) {
+  async authenticate(email, senha, tenantId) {
     console.log('🔧 UsuarioMultiTenant.authenticate called with:', email, 'tenantId:', tenantId);
     console.log('🔧 authenticate: Starting authentication process');
 
@@ -121,24 +129,38 @@ class UsuarioMultiTenantModel {
     
     if (!usuario) {
       console.log('🔧 UsuarioMultiTenant.authenticate: User not found');
-      return null;
+      return { 
+        success: false, 
+        error: 'USER_NOT_FOUND', 
+        message: 'Usuário não encontrado' 
+      };
     }
     
     console.log('🔧 UsuarioMultiTenant.authenticate: User found, verifying password');
-    // Por enquanto, verificar senha de forma síncrona
-    const bcrypt = require('bcryptjs');
-    const senhaValida = bcrypt.compareSync(senha, usuario.senha_hash);
+    console.log('🔧 authUtil.verifyPassword type:', typeof authUtil.verifyPassword);
+    console.log('🔧 senha param:', senha);
+    console.log('🔧 usuario.senha:', usuario.senha);
+    // Usar authUtil para verificar senha
+    const senhaValida = await authUtil.verifyPassword(senha, usuario.senha);
+    console.log('🔧 UsuarioMultiTenant.authenticate: senhaValida =', senhaValida);
     
     if (!senhaValida) {
       console.log('🔧 UsuarioMultiTenant.authenticate: Invalid password');
-      return null;
+      return { 
+        success: false, 
+        error: 'INVALID_PASSWORD', 
+        message: 'Senha incorreta' 
+      };
     }
     
     // Remover hash da senha do retorno
     delete usuario.senha_hash;
     
     console.log('🔧 UsuarioMultiTenant.authenticate: Authentication successful');
-    return usuario;
+    return { 
+      success: true, 
+      user: usuario 
+    };
   }
 
   /**
@@ -154,31 +176,30 @@ class UsuarioMultiTenantModel {
   async listByTenant(tenantId, filters = {}) {
     const tenantDb = this.getTenantDb(tenantId);
     let query = `
-      SELECT id, nome, role, email, permissions, avatar, telefone, 
-             crm, especialidade, status, last_login, created_at
+      SELECT id, nome, role, email, telefone, avatar, 
+             status, last_login, created_at
       FROM usuarios 
-      WHERE tenant_id = ?
     `;
-    const params = [tenantId];
+    const params = [];
+    let whereAdded = false;
 
     if (filters.role) {
-      query += ' AND role = ?';
+      query += whereAdded ? ' AND role = ?' : ' WHERE role = ?';
       params.push(filters.role);
+      whereAdded = true;
     }
 
     if (filters.status) {
-      query += ' AND status = ?';
+      query += whereAdded ? ' AND status = ?' : ' WHERE status = ?';
       params.push(filters.status);
+      whereAdded = true;
     }
 
     query += ' ORDER BY created_at DESC';
 
     const usuarios = tenantDb.prepare(query).all(...params);
     
-    return usuarios.map(usuario => {
-      usuario.permissions = JSON.parse(usuario.permissions || '{}');
-      return usuario;
-    });
+    return usuarios;
   }
 
   /**
@@ -194,21 +215,13 @@ class UsuarioMultiTenantModel {
           nome = COALESCE(?, nome),
           role = COALESCE(?, role),
           email = COALESCE(?, email),
-          permissions = COALESCE(?, permissions),
-          avatar = COALESCE(?, avatar),
           telefone = COALESCE(?, telefone),
-          crm = COALESCE(?, crm),
-          especialidade = COALESCE(?, especialidade),
           status = COALESCE(?, status),
           updated_at = datetime('now')
-        WHERE id = ? AND tenant_id = ?
+        WHERE id = ?
       `;
       
-      const permissionsJson = permissions ? JSON.stringify(permissions) : null;
-      
-      tenantDb.prepare(query).run(
-        nome, role, email, permissionsJson, avatar, telefone, crm, especialidade, status, id, tenantId
-      );
+      tenantDb.prepare(query).run(nome, role, email, telefone, status, id);
       
       return this.findById(id, tenantId);
       
@@ -229,10 +242,10 @@ class UsuarioMultiTenantModel {
     
     tenantDb.prepare(`
       UPDATE usuarios SET 
-        senha_hash = ?,
+        senha = ?,
         updated_at = datetime('now')
-      WHERE id = ? AND tenant_id = ?
-    `).run(senhaHash, id, tenantId);
+      WHERE id = ?
+    `).run(senhaHash, id);
     
     return true;
   }
@@ -244,8 +257,8 @@ class UsuarioMultiTenantModel {
     const tenantDb = this.getTenantDb(tenantId);
     tenantDb.prepare(`
       UPDATE usuarios SET last_login = datetime('now')
-      WHERE id = ? AND tenant_id = ?
-    `).run(id, tenantId);
+      WHERE id = ?
+    `).run(id);
   }
 
   /**
@@ -299,8 +312,8 @@ class UsuarioMultiTenantModel {
     const result = tenantDb.prepare(`
       SELECT COUNT(*) as total 
       FROM usuarios 
-      WHERE tenant_id = ? AND status = 'active'
-    `).get(tenantId);
+      WHERE status = 'active'
+    `).get();
     
     return result.total;
   }
@@ -318,17 +331,9 @@ class UsuarioMultiTenantModel {
     const tenantDb = this.getTenantDb(tenantId);
     
     const result = tenantDb.prepare(`
-      INSERT INTO usuarios (tenant_id, nome, email, role, status, invite_token, invite_expire_at, permissions)
-      VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)
-    `).run(
-      tenantId, 
-      nome, 
-      email, 
-      role, 
-      inviteToken, 
-      inviteExpireAt.toISOString(),
-      JSON.stringify(this.getDefaultPermissions(role))
-    );
+      INSERT INTO usuarios (nome, email, role, status)
+      VALUES (?, ?, ?, 'pending')
+    `).run(nome, email, role);
     
     // TODO: Enviar email de convite
     // await emailService.sendInvite(email, inviteToken, tenant);
@@ -384,8 +389,8 @@ class UsuarioMultiTenantModel {
       UPDATE usuarios SET 
         status = 'inactive',
         updated_at = datetime('now')
-      WHERE id = ? AND tenant_id = ?
-    `).run(id, tenantId);
+      WHERE id = ?
+    `).run(id);
     
     return true;
   }

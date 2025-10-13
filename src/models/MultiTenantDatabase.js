@@ -298,6 +298,36 @@ class MultiTenantDatabaseManager {
         FOREIGN KEY (conversa_id) REFERENCES whatsapp_conversas(id)
       );
 
+      -- Z-API - Instâncias WhatsApp por tenant
+      CREATE TABLE whatsapp_instances (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id TEXT NOT NULL,
+        instance_id TEXT NOT NULL UNIQUE,
+        phone_number TEXT,
+        status TEXT DEFAULT 'pending', -- pending, active, blocked, configured
+        api_token TEXT,
+        api_url TEXT,
+        api_key TEXT,
+        webhook_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(client_id)
+      );
+
+      -- Z-API - Controle de uso mensal por tenant
+      CREATE TABLE whatsapp_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id TEXT NOT NULL,
+        month INTEGER NOT NULL, -- 1-12
+        year INTEGER NOT NULL, -- 2025, 2026, etc.
+        used_messages INTEGER DEFAULT 0,
+        limit_messages INTEGER NOT NULL,
+        plan_type TEXT NOT NULL, -- trial, starter, professional, enterprise
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(client_id, month, year)
+      );
+
       -- Configurações do tenant
       CREATE TABLE configuracoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,6 +349,22 @@ class MultiTenantDatabaseManager {
         condicoes TEXT, -- JSON
         acoes TEXT NOT NULL, -- JSON
         ativo BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Horários dos profissionais
+      CREATE TABLE professional_schedules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id TEXT NOT NULL,
+        professional_id INTEGER,
+        professional_name TEXT NOT NULL,
+        day_of_week INTEGER NOT NULL, -- 0=Domingo, 1=Segunda, etc.
+        start_time TEXT NOT NULL, -- HH:MM
+        end_time TEXT NOT NULL, -- HH:MM
+        pause_start TEXT, -- HH:MM
+        pause_end TEXT, -- HH:MM
+        is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -346,8 +392,13 @@ class MultiTenantDatabaseManager {
       CREATE INDEX idx_faturas_vencimento ON faturas(vencimento);
       CREATE INDEX idx_whatsapp_conversas_tenant ON whatsapp_conversas(tenant_id);
       CREATE INDEX idx_whatsapp_mensagens_conversa ON whatsapp_mensagens(conversa_id);
+      CREATE INDEX idx_whatsapp_instances_client ON whatsapp_instances(client_id);
+      CREATE INDEX idx_whatsapp_instances_instance ON whatsapp_instances(instance_id);
+      CREATE INDEX idx_whatsapp_usage_client_month ON whatsapp_usage(client_id, month, year);
       CREATE INDEX idx_activity_logs_tenant ON activity_logs(tenant_id);
       CREATE INDEX idx_usuarios_email ON usuarios(email);
+      CREATE INDEX idx_professional_schedules_tenant ON professional_schedules(tenant_id);
+      CREATE INDEX idx_professional_schedules_professional ON professional_schedules(professional_id);
     `;
 
     console.log(`📋 Executando schema SQL para tenant ${tenantId}...`);
@@ -373,11 +424,14 @@ class MultiTenantDatabaseManager {
         SELECT database_name FROM tenants WHERE id = ?
       `).get(tenantId);
 
+      console.log(`🔗 Tenant query result for ${tenantId}:`, tenant);
+
       if (!tenant) {
         throw new Error(`Tenant não encontrado: ${tenantId}`);
       }
 
-      const dbPath = path.join(this.databasesPath, `${tenant.database_name}.db`);
+      const dbPath = path.join(this.databasesPath, tenant.database_name);
+      console.log(`🔗 Opening database: ${dbPath}`);
 
       if (!fs.existsSync(dbPath)) {
         throw new Error(`Database do tenant não encontrado: ${dbPath}`);
@@ -474,11 +528,11 @@ class MultiTenantDatabaseManager {
 // Instância singleton
 const multiTenantDb = new MultiTenantDatabaseManager();
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Fechando conexões do database...');
-  multiTenantDb.closeAll();
-  process.exit(0);
-});
+// Graceful shutdown - movido para app.js para evitar conflitos
+// process.on('SIGINT', () => {
+//   console.log('\n🛑 Fechando conexões do database...');
+//   multiTenantDb.closeAll();
+//   process.exit(0);
+// });
 
 module.exports = multiTenantDb;

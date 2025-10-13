@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const dbManager = require('../models/database');
 const PacienteModel = require('../models/Paciente');
 const AgendamentoModel = require('../models/Agendamento');
+const WhatsAppTemplates = require('../models/WhatsAppTemplates');
 const { sendWhatsAppMessage, sendTelegramMessage } = require('../utils/bot');
 const { sendEmail } = require('../utils/mailchimp');
 // Evitar carregar IA em ambiente de teste para reduzir efeitos colaterais
@@ -232,45 +233,44 @@ class CronJobManager {
    */
   async sendInactivePatientMessage(paciente, clinica) {
     try {
-      // Gerar mensagem personalizada com IA
+      // Buscar template de reativação
+      const template = WhatsAppTemplates.findByTipo(clinica.id, 'inativo');
+
       let mensagem;
-      try {
-        const context = {
-          nomeClinica: clinica.nome,
-          nomeCliente: paciente.nome,
-          ultimoAtendimento: paciente.ultimo_atendimento
+      if (template) {
+        // Usar template personalizado
+        const dadosTemplate = {
+          nome_paciente: paciente.nome,
+          dias_inativos: Math.floor(paciente.dias_sem_atendimento)
         };
-        
-        mensagem = await aiService.gerarRespostaBot(
-          'cliente inativo há muito tempo', 
-          context
-        );
-      } catch (error) {
-        // Fallback se IA não estiver disponível
+        const processed = WhatsAppTemplates.processTemplate(template, dadosTemplate);
+        mensagem = processed.conteudo;
+      } else {
+        // Fallback se não houver template
         const diasSemAtendimento = Math.floor(paciente.dias_sem_atendimento);
         mensagem = `Olá ${paciente.nome}! 😊\n\nSentimos sua falta na ${clinica.nome}! ` +
                   `Faz ${diasSemAtendimento} dias desde seu último atendimento.\n\n` +
                   `Que tal agendar uma nova sessão? Temos novidades especiais para você! 💄✨\n\n` +
                   `Responda esta mensagem para agendar.`;
       }
-      
+
       // Tentar enviar por WhatsApp primeiro
-      let sucesso = await this.sendMessage(paciente.telefone, mensagem, 'whatsapp');
-      
+      let sucesso = await this.sendMessage(paciente.telefone, mensagem, 'whatsapp', clinica.id);
+
       // Se falhar, tentar por email
       if (!sucesso && paciente.email) {
         sucesso = await this.sendMessage(paciente.email, mensagem, 'email');
       }
-      
+
       // Registrar tentativa de envio
       this.registrarMensagemCRM(paciente.id, 'inativo', mensagem, sucesso ? 'enviada' : 'erro');
-      
+
       if (sucesso) {
         console.log(`📱 Mensagem de reativação enviada para ${paciente.nome}`);
       } else {
         console.log(`⚠️  Falha ao enviar mensagem para ${paciente.nome}`);
       }
-      
+
     } catch (error) {
       console.error(`❌ Erro ao enviar mensagem para paciente ${paciente.nome}:`, error.message);
     }
@@ -283,24 +283,39 @@ class CronJobManager {
    */
   async sendConfirmationMessage(agendamento, clinica) {
     try {
-      const dataFormatada = new Date(agendamento.data_hora).toLocaleString('pt-BR');
-      
-      const mensagem = `🗓️ *Confirmação de Agendamento*\n\n` +
-                      `Olá ${agendamento.paciente_nome}!\n\n` +
-                      `Confirme seu agendamento:\n` +
-                      `📅 Data: ${dataFormatada}\n` +
-                      `💆‍♀️ Procedimento: ${agendamento.procedimento_nome}\n` +
-                      `🏥 Local: ${clinica.nome}\n\n` +
-                      `Responda *SIM* para confirmar ou *REMARCAR* se precisar alterar.`;
-      
-      const sucesso = await this.sendMessage(agendamento.paciente_telefone, mensagem, 'whatsapp');
-      
+      // Buscar template de confirmação
+      const template = WhatsAppTemplates.findByTipo(clinica.id, 'confirmacao');
+
+      let mensagem;
+      if (template) {
+        // Usar template personalizado
+        const dadosTemplate = {
+          nome_paciente: agendamento.paciente_nome,
+          data_agendamento: new Date(agendamento.data_hora).toLocaleString('pt-BR'),
+          procedimento: agendamento.procedimento_nome
+        };
+        const processed = WhatsAppTemplates.processTemplate(template, dadosTemplate);
+        mensagem = processed.conteudo;
+      } else {
+        // Fallback se não houver template
+        const dataFormatada = new Date(agendamento.data_hora).toLocaleString('pt-BR');
+        mensagem = `🗓️ *Confirmação de Agendamento*\n\n` +
+                  `Olá ${agendamento.paciente_nome}!\n\n` +
+                  `Confirme seu agendamento:\n` +
+                  `📅 Data: ${dataFormatada}\n` +
+                  `💆‍♀️ Procedimento: ${agendamento.procedimento_nome}\n` +
+                  `🏥 Local: ${clinica.nome}\n\n` +
+                  `Responda *SIM* para confirmar ou *REMARCAR* se precisar alterar.`;
+      }
+
+      const sucesso = await this.sendMessage(agendamento.paciente_telefone, mensagem, 'whatsapp', clinica.id);
+
       this.registrarMensagemCRM(agendamento.paciente_id, 'confirmacao', mensagem, sucesso ? 'enviada' : 'erro');
-      
+
       if (sucesso) {
         console.log(`✅ Confirmação enviada para ${agendamento.paciente_nome}`);
       }
-      
+
     } catch (error) {
       console.error(`❌ Erro ao enviar confirmação para agendamento ${agendamento.id}:`, error.message);
     }
@@ -313,30 +328,46 @@ class CronJobManager {
    */
   async sendAppointmentReminder(agendamento, clinica) {
     try {
-      const dataFormatada = new Date(agendamento.data_hora).toLocaleString('pt-BR');
-      
-      let mensagem = `⏰ *Lembrete de Agendamento*\n\n` +
-                    `Olá ${agendamento.paciente_nome}!\n\n` +
-                    `Seu agendamento está próximo:\n` +
-                    `📅 Data: ${dataFormatada}\n` +
-                    `💆‍♀️ Procedimento: ${agendamento.procedimento_nome}\n` +
-                    `🏥 Local: ${clinica.nome}`;
-      
-      // Adicionar instruções de preparo se houver
-      if (agendamento.preparo_texto) {
-        mensagem += `\n\n📋 *Preparo necessário:*\n${agendamento.preparo_texto}`;
+      // Buscar template de lembrete
+      const template = WhatsAppTemplates.findByTipo(clinica.id, 'lembrete');
+
+      let mensagem;
+      if (template) {
+        // Usar template personalizado
+        const dadosTemplate = {
+          nome_paciente: agendamento.paciente_nome,
+          data_agendamento: new Date(agendamento.data_hora).toLocaleString('pt-BR'),
+          procedimento: agendamento.procedimento_nome,
+          preparo: agendamento.preparo_texto
+        };
+        const processed = WhatsAppTemplates.processTemplate(template, dadosTemplate);
+        mensagem = processed.conteudo;
+      } else {
+        // Fallback se não houver template
+        const dataFormatada = new Date(agendamento.data_hora).toLocaleString('pt-BR');
+        mensagem = `⏰ *Lembrete de Agendamento*\n\n` +
+                  `Olá ${agendamento.paciente_nome}!\n\n` +
+                  `Seu agendamento está próximo:\n` +
+                  `📅 Data: ${dataFormatada}\n` +
+                  `💆‍♀️ Procedimento: ${agendamento.procedimento_nome}\n` +
+                  `🏥 Local: ${clinica.nome}`;
+
+        // Adicionar instruções de preparo se houver
+        if (agendamento.preparo_texto) {
+          mensagem += `\n\n📋 *Preparo necessário:*\n${agendamento.preparo_texto}`;
+        }
+
+        mensagem += `\n\nNos vemos em breve! 😊`;
       }
-      
-      mensagem += `\n\nNos vemos em breve! 😊`;
-      
-      const sucesso = await this.sendMessage(agendamento.paciente_telefone, mensagem, 'whatsapp');
-      
+
+      const sucesso = await this.sendMessage(agendamento.paciente_telefone, mensagem, 'whatsapp', clinica.id);
+
       this.registrarMensagemCRM(agendamento.paciente_id, 'lembrete', mensagem, sucesso ? 'enviada' : 'erro');
-      
+
       if (sucesso) {
         console.log(`📱 Lembrete enviado para ${agendamento.paciente_nome}`);
       }
-      
+
     } catch (error) {
       console.error(`❌ Erro ao enviar lembrete para agendamento ${agendamento.id}:`, error.message);
     }
@@ -378,13 +409,14 @@ class CronJobManager {
    * @param {string} destinatario - Telefone ou email
    * @param {string} mensagem - Conteúdo da mensagem
    * @param {string} canal - Canal de envio
+   * @param {number} clientId - ID da clínica (opcional, para WhatsApp Business)
    * @returns {boolean} - Sucesso no envio
    */
-  async sendMessage(destinatario, mensagem, canal = 'whatsapp') {
+  async sendMessage(destinatario, mensagem, canal = 'whatsapp', clientId = null) {
     try {
       switch (canal) {
         case 'whatsapp':
-          return await sendWhatsAppMessage(destinatario, mensagem);
+          return await sendWhatsAppMessage(destinatario, mensagem, clientId);
         case 'telegram':
           return await sendTelegramMessage(destinatario, mensagem);
         case 'email':

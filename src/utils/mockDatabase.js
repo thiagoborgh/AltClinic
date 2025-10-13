@@ -201,7 +201,7 @@ class MockMultiTenantDatabase {
         smsEnabled: true,
         features: ['agenda', 'crm', 'financeiro', 'prontuarios']
       }),
-      trial_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      trial_expires_at: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
     });
 
     const tenantId = demoTenant.lastInsertRowid;

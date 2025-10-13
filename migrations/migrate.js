@@ -173,6 +173,123 @@ const migrations = [
         executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `
+  },
+  {
+    version: 4,
+    name: 'create_whatsapp_tables',
+    up: `
+      -- Tabela para armazenar tokens e configurações do WhatsApp por cliente
+      CREATE TABLE IF NOT EXISTS whatsapp_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        phone_id TEXT,
+        phone_number TEXT,
+        token TEXT, -- Token criptografado com AES-256
+        status TEXT DEFAULT 'not_configured', -- not_configured, pending_qr, active, blocked, expired
+
+        -- Credenciais específicas da Meta API por cliente
+        wa_app_id TEXT,
+        wa_system_user_token TEXT, -- Token criptografado
+        wa_webhook_verify_token TEXT,
+        wa_business_account_id TEXT,
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(client_id),
+        UNIQUE(phone_id)
+      );
+
+      -- Tabela para controlar uso mensal do WhatsApp por cliente
+      CREATE TABLE IF NOT EXISTS whatsapp_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        month INTEGER NOT NULL, -- 1-12
+        year INTEGER NOT NULL, -- 2025, 2026, etc.
+        used_messages INTEGER DEFAULT 0,
+        limit_messages INTEGER NOT NULL,
+        plan_type TEXT NOT NULL, -- trial, starter, professional, enterprise
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(client_id, month, year)
+      );
+
+      -- Índices para performance
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_tokens_client_id ON whatsapp_tokens(client_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_tokens_phone_id ON whatsapp_tokens(phone_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_usage_client_month_year ON whatsapp_usage(client_id, month, year);
+    `
+  },
+  {
+    version: 5,
+    name: 'create_whatsapp_upgrades',
+    up: `
+      -- Tabela para controlar upgrades do WhatsApp
+      CREATE TABLE IF NOT EXISTS whatsapp_upgrades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        plan_type TEXT NOT NULL, -- starter, professional, enterprise
+        stripe_session_id TEXT UNIQUE NOT NULL,
+        status TEXT DEFAULT 'pending', -- pending, completed, failed, cancelled
+        amount INTEGER NOT NULL, -- valor em centavos
+        completed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE
+      );
+
+      -- Índice para performance
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_upgrades_client_id ON whatsapp_upgrades(client_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_upgrades_stripe_session ON whatsapp_upgrades(stripe_session_id);
+    `
+  },
+  {
+    version: 6,
+    name: 'create_whatsapp_message_status',
+    up: `
+      -- Tabela para controlar status das mensagens WhatsApp
+      CREATE TABLE IF NOT EXISTS whatsapp_message_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT NOT NULL,
+        client_id INTEGER NOT NULL,
+        status TEXT NOT NULL, -- sent, delivered, read, failed
+        timestamp TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(message_id),
+        FOREIGN KEY (client_id) REFERENCES tenants(id) ON DELETE CASCADE
+      );
+
+      -- Índice para performance
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_message_status_client_id ON whatsapp_message_status(client_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_message_status_message_id ON whatsapp_message_status(message_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_message_status_timestamp ON whatsapp_message_status(timestamp);
+    `
+  },
+  {
+    version: 7,
+    name: 'add_meta_api_credentials_fields',
+    up: `
+      -- Adicionar campos para credenciais da Meta API por tenant
+      ALTER TABLE whatsapp_tokens ADD COLUMN phone_number TEXT;
+      ALTER TABLE whatsapp_tokens ADD COLUMN wa_app_id TEXT;
+      ALTER TABLE whatsapp_tokens ADD COLUMN wa_system_user_token TEXT;
+      ALTER TABLE whatsapp_tokens ADD COLUMN wa_webhook_verify_token TEXT;
+      ALTER TABLE whatsapp_tokens ADD COLUMN wa_business_account_id TEXT;
+
+      -- Atualizar status padrão para novas configurações
+      UPDATE whatsapp_tokens SET status = 'not_configured' WHERE status IS NULL OR status = '';
+    `,
+    down: `
+      -- Remover campos adicionados (SQLite não suporta DROP COLUMN diretamente)
+      -- Para rollback, seria necessário recriar a tabela sem estes campos
+      -- Mas para simplificar, apenas limpamos os valores
+      UPDATE whatsapp_tokens SET
+        phone_number = NULL,
+        wa_app_id = NULL,
+        wa_system_user_token = NULL,
+        wa_webhook_verify_token = NULL,
+        wa_business_account_id = NULL;
+    `
   }
 ];
 

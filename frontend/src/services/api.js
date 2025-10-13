@@ -58,9 +58,19 @@ api.interceptors.request.use(
     }
 
     // Adicionar header X-Tenant-Slug se existir no localStorage
-    const tenantSlug = localStorage.getItem('tenantSlug');
-    if (tenantSlug && !config.headers['X-Tenant-Slug']) {
+    let tenantSlug = localStorage.getItem('tenantSlug');
+    console.log('🌐 API: tenantSlug from localStorage:', tenantSlug);
+    
+    // Fallback para desenvolvimento - definir tenantSlug se não existir
+    if (!tenantSlug) {
+      console.warn('🌐 API: No tenantSlug found, setting fallback to "teste"');
+      tenantSlug = 'teste';
+      localStorage.setItem('tenantSlug', tenantSlug);
+    }
+    
+    if (!config.headers['X-Tenant-Slug']) {
       config.headers['X-Tenant-Slug'] = tenantSlug;
+      console.log('🌐 API: Added X-Tenant-Slug header:', tenantSlug);
     }
 
     return config;
@@ -269,6 +279,32 @@ export const financeiroService = {
   
   // Todos os dados
   getTodosDados: () => api.get('/financeiro/todos'),
+};
+
+// Professional Service
+export const professionalService = {
+  // Buscar horários de profissionais
+  getSchedules: (professionalId) => {
+    const params = professionalId ? { professionalId } : {};
+    return api.get('/professional/schedule', { params });
+  },
+  
+  // Buscar horários por profissional específico
+  getSchedulesByProfessional: (professionalId) => 
+    api.get('/professional/schedule', { params: { professionalId } }),
+    
+  // Buscar todos os profissionais
+  getProfessionals: () => api.get('/professional'),
+  
+  // Debug de horários
+  debugSchedules: () => api.get('/professional/schedule-debug'),
+  
+  // Bulk update de horários
+  bulkUpdate: (schedules) => api.post('/professional/schedule/bulk-update', { schedules }),
+  
+  // Deletar todos os horários de um profissional
+  deleteAllSchedules: (professionalId) => 
+    api.delete('/professional/schedules/all', { params: { professionalId } }),
 };
 
 export default api;

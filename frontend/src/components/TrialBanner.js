@@ -44,7 +44,7 @@ const TrialBanner = () => {
     return null;
   }
 
-  const trialProgress = trialDaysLeft <= 30 ? ((30 - trialDaysLeft) / 30) * 100 : 0;
+  const trialProgress = trialDaysLeft <= 15 ? ((15 - trialDaysLeft) / 15) * 100 : 0;
   const urgency = trialDaysLeft <= 7 ? 'error' : trialDaysLeft <= 15 ? 'warning' : 'info';
 
   return (
@@ -98,7 +98,7 @@ const TrialBanner = () => {
                   🚀 Você está no período de teste gratuito!
                 </Typography>
                 <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                  Aproveite todos os recursos premium por {trialDaysLeft} dias restantes
+                  Aproveite todos os recursos premium por {trialDaysLeft} dias restantes (Trial de 15 dias)
                 </Typography>
               </Box>
             </Box>
@@ -110,7 +110,7 @@ const TrialBanner = () => {
                   Progresso do trial
                 </Typography>
                 <Typography variant="body2">
-                  {trialDaysLeft} de 30 dias restantes
+                  {trialDaysLeft} de 15 dias restantes
                 </Typography>
               </Box>
               <LinearProgress
@@ -184,7 +184,7 @@ const TrialBanner = () => {
                 </Button>
                 
                 <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                  A partir de R$ 68/mês
+                  A partir de R$ 199/mês
                 </Typography>
               </Box>
             </Box>
@@ -192,7 +192,7 @@ const TrialBanner = () => {
         </Grid>
 
         {/* Features Preview */}
-        <Collapse in={trialDaysLeft > 15}>
+        <Collapse in={trialDaysLeft > 7}>
           <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
             <Typography variant="h6" gutterBottom>
               🎯 O que você ganha com o upgrade:

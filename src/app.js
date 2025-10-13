@@ -8,6 +8,7 @@ const path = require('path');
 // Importar rotas
 const authRoutes = require('./routes/auth');
 const agendamentosRoutes = require('./routes/agendamentos');
+const agendaAgendamentosRoutes = require('./routes/agenda-agendamentos');
 const propostasRoutes = require('./routes/propostas');
 const crmRoutes = require('./routes/crm');
 const prontuariosRoutes = require('./routes/prontuarios');
@@ -22,19 +23,22 @@ const prontuarioRoutes = require('./routes/prontuario-simple');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 const atendimentosRoutes = require('./routes/atendimentos');
+const professionalRoutes = require('./routes/professional');
+const manyChatRoutes = require('./routes/manychat');
 
 // Importar middlewares
 const { extractTenant } = require('./middleware/tenant');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
-const { botManager } = require('./utils/bot');
 const ProductionInitializer = require('./utils/productionInitializer');
+const TenantWhatsAppService = require('./services/TenantWhatsAppService');
 
 class SaeeApp {
   constructor() {
     this.app = express();
     this.port = process.env.PORT || 3000;
+    this.tenantWhatsApp = new TenantWhatsAppService();
     
     this.setupMiddlewares();
     this.setupRoutes();
@@ -98,6 +102,9 @@ class SaeeApp {
     // Servir arquivos estáticos (imagens de prontuário)
     this.app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+    // Servir arquivos estáticos (imagens, logos, etc.)
+    this.app.use('/images', express.static(path.join(__dirname, '../public/images')));
+
     // Servir arquivos estáticos do frontend em produção
     if (process.env.NODE_ENV === 'production') {
       // Middleware para definir MIME types corretos
@@ -130,14 +137,50 @@ class SaeeApp {
     console.log('🔧 Configurando rotas da aplicação...');
     
     // Health check
-    this.app.get('/health', (req, res) => {
-      res.json({
-        success: true,
-        message: 'SAEE API está funcionando',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        environment: process.env.NODE_ENV || 'development'
-      });
+    this.app.get('/health', async (req, res) => {
+      try {
+        const whatsappStatus = await this.tenantWhatsApp.isWhatsAppAvailable();
+        const developmentInfo = this.tenantWhatsApp.getDevelopmentInfo();
+        
+        res.json({
+          success: true,
+          message: 'SAEE API está funcionando',
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          environment: process.env.NODE_ENV || 'development',
+          whatsapp: whatsappStatus ? 'available_via_admin' : 'not_configured',
+          development: developmentInfo
+        });
+      } catch (error) {
+        res.json({
+          success: true,
+          message: 'SAEE API está funcionando',
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          environment: process.env.NODE_ENV || 'development',
+          whatsapp: 'admin_connection_error',
+          development: this.tenantWhatsApp.getDevelopmentInfo()
+        });
+      }
+    });
+
+    // Status WhatsApp via Admin
+    this.app.get('/whatsapp/status', async (req, res) => {
+      try {
+        const status = await this.tenantWhatsApp.checkConnection();
+        const usage = await this.tenantWhatsApp.getUsageStats();
+        
+        res.json({
+          success: true,
+          connection: status,
+          usage: usage
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error.message
+        });
+      }
     });
 
     // Rotas da API
@@ -164,43 +207,38 @@ class SaeeApp {
     this.app.use('/api/ai', extractTenant);
     this.app.use('/api/automacao', extractTenant);
     this.app.use('/api/agendamentos', extractTenant);
+    this.app.use('/api/agenda/agendamentos', extractTenant);
     this.app.use('/api/propostas', extractTenant);
     this.app.use('/api/crm', extractTenant);
     this.app.use('/api/prontuarios', extractTenant);
     this.app.use('/api/financeiro', extractTenant);
     this.app.use('/api/configuracoes', extractTenant);
     this.app.use('/api/atendimentos', extractTenant);
+    this.app.use('/api/professional', extractTenant);
+    this.app.use('/api/manychat', extractTenant);
     
     // Rotas de auth (SOMENTE as que não precisam de tenant)
     console.log('🔧 Configurando rota /api/auth...');
     this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/agendamentos', agendamentosRoutes);
+    this.app.use('/api/agenda/agendamentos', agendaAgendamentosRoutes);
     this.app.use('/api/prontuarios', prontuariosRoutes);
     this.app.use('/api/financeiro', financeiroRoutes);
     this.app.use('/api/configuracoes', configuracoesRoutes);
     this.app.use('/api/atendimentos', atendimentosRoutes);
+    this.app.use('/api/professional', professionalRoutes);
+    this.app.use('/api/manychat', manyChatRoutes);
 
-    // Webhook do Twilio para WhatsApp/SMS
-    this.app.post('/webhook/twilio', (req, res) => {
+    // Webhook do ManyChat (substituindo Twilio/WhatsApp)
+    this.app.post('/webhook/manychat', (req, res) => {
       try {
-        console.log('📥 Webhook Twilio recebido:', req.body);
+        console.log('📥 Webhook ManyChat recebido:', req.body);
         
-        const messageData = botManager.processTwilioWebhook(req);
+        // Processar webhook do ManyChat será feito pelas rotas /api/manychat/webhook
         
-        // Processar mensagem de forma assíncrona
-        botManager.handleWebhookMessage(messageData).catch(error => {
-          console.error('❌ Erro ao processar webhook:', error.message);
-        });
-        
-        // Responder ao Twilio rapidamente
-        res.set('Content-Type', 'text/xml');
-        res.send(`<?xml version="1.0" encoding="UTF-8"?>
-          <Response>
-            <Message>Mensagem recebida! Em breve nossa equipe entrará em contato.</Message>
-          </Response>
-        `);
-        
+        res.status(200).json({ status: 'received' });
       } catch (error) {
-        console.error('❌ Erro no webhook Twilio:', error.message);
+        console.error('❌ Erro no webhook ManyChat:', error.message);
         res.status(500).send('Error');
       }
     });
@@ -215,12 +253,6 @@ class SaeeApp {
         switch (type) {
           case 'chat':
             result = await aiService.chat(message);
-            break;
-          case 'bot':
-            result = await aiService.gerarRespostaBot(message, {
-              nomeClinica: 'Clínica Teste',
-              nomeCliente: 'Cliente Teste'
-            });
             break;
           case 'anamnese':
             result = await aiService.gerarSugestoesAnamnese(
@@ -255,7 +287,7 @@ class SaeeApp {
           api: 'online',
           database: 'connected',
           cron_jobs: cronManager.getStatus(),
-          bots: botManager.getStatus(),
+          manychat: 'configured',
           uptime: process.uptime(),
           memory_usage: process.memoryUsage(),
           node_version: process.version
@@ -347,8 +379,7 @@ class SaeeApp {
           // Parar cron jobs
           cronManager.stop();
           
-          // Parar bots
-          await botManager.stop();
+          // Bots removidos - usando apenas ManyChat
           
           // Fechar conexão com banco
           const dbManager = require('./models/database');
@@ -414,7 +445,7 @@ class SaeeApp {
         
         if (process.env.NODE_ENV === 'development') {
           console.log('🔧 Modo desenvolvimento ativo');
-          console.log('📱 Aguardando conexão dos bots...\n');
+          console.log('📱 ManyChat configurado para comunicação...\n');
         }
       });
 

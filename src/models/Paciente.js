@@ -12,15 +12,15 @@ class PacienteModel {
    * @returns {Object} - Paciente criado
    */
   create(pacienteData) {
-    const { clinica_id, nome, telefone, email } = pacienteData;
+    const { tenant_id, nome, telefone, email, cpf, dataNascimento, endereco, observacoes, status } = pacienteData;
     
     try {
       const result = this.db.prepare(`
-        INSERT INTO paciente (clinica_id, nome, telefone, email)
-        VALUES (?, ?, ?, ?)
-      `).run(clinica_id, nome, telefone, email);
+        INSERT INTO pacientes (tenant_id, nome, telefone, email, cpf, data_nascimento, endereco, observacoes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(tenant_id, nome, telefone, email, cpf, dataNascimento, endereco || null, observacoes || null, status || 'ativo');
       
-      return this.findById(result.lastInsertRowid);
+      return result.lastInsertRowid;
       
     } catch (error) {
       throw error;
@@ -272,33 +272,20 @@ class PacienteModel {
     } = options;
 
     let query = `
-      SELECT 
+      SELECT
         id,
         nome as nomeCompleto,
         email,
         telefone,
         cpf,
         data_nascimento as dataNascimento,
-        endereco_completo as endereco,
-        estado_civil as estadoCivil,
-        profissao,
-        convenio_nome as convenio,
+        endereco as endereco,
         observacoes,
         created_at as criadoEm,
-        ultimo_atendimento as ultimoAtendimento,
-        CASE 
-          WHEN ultimo_atendimento > datetime('now', '-90 days') THEN 'ativo'
-          ELSE 'inativo'
-        END as status,
-        CASE 
-          WHEN EXISTS(SELECT 1 FROM prontuario WHERE paciente_id = paciente.id) THEN 1
-          ELSE 0
-        END as temProntuario
-      FROM paciente
+        status
+      FROM pacientes
       WHERE 1=1
-    `;
-
-    const params = [];
+    `;    const params = [];
 
     // Filtro de busca
     if (search) {
@@ -309,15 +296,12 @@ class PacienteModel {
 
     // Filtro de status
     if (status !== 'todos') {
-      if (status === 'ativo') {
-        query += ` AND ultimo_atendimento > datetime('now', '-90 days')`;
-      } else if (status === 'inativo') {
-        query += ` AND (ultimo_atendimento IS NULL OR ultimo_atendimento <= datetime('now', '-90 days'))`;
-      }
+      query += ` AND status = ?`;
+      params.push(status);
     }
 
     // Ordem
-    const validOrderBy = ['nome', 'email', 'created_at', 'ultimo_atendimento'];
+    const validOrderBy = ['nome', 'email', 'created_at'];
     const validOrder = ['ASC', 'DESC'];
     
     if (validOrderBy.includes(orderBy) && validOrder.includes(order.toUpperCase())) {
@@ -336,7 +320,7 @@ class PacienteModel {
       // Contar total
       let countQuery = `
         SELECT COUNT(*) as total
-        FROM paciente
+        FROM pacientes
         WHERE 1=1
       `;
       
@@ -349,11 +333,8 @@ class PacienteModel {
       }
 
       if (status !== 'todos') {
-        if (status === 'ativo') {
-          countQuery += ` AND ultimo_atendimento > datetime('now', '-90 days')`;
-        } else if (status === 'inativo') {
-          countQuery += ` AND (ultimo_atendimento IS NULL OR ultimo_atendimento <= datetime('now', '-90 days'))`;
-        }
+        countQuery += ` AND status = ?`;
+        countParams.push(status);
       }
 
       const total = this.db.prepare(countQuery).get(...countParams).total;
@@ -386,23 +367,17 @@ class PacienteModel {
       const query = `
         SELECT 
           id,
-          nome as nomeCompleto,
+          nome,
           email,
           telefone,
           cpf,
-          data_nascimento as dataNascimento,
-          endereco_completo as endereco,
-          estado_civil as estadoCivil,
-          profissao,
-          convenio_nome as convenio,
+          data_nascimento,
+          endereco,
           observacoes,
-          created_at as criadoEm,
-          ultimo_atendimento as ultimoAtendimento,
-          CASE 
-            WHEN ultimo_atendimento > datetime('now', '-90 days') THEN 'ativo'
-            ELSE 'inativo'
-          END as status
-        FROM paciente
+          status,
+          created_at,
+          updated_at
+        FROM pacientes
         WHERE id = ?
       `;
 
@@ -412,6 +387,7 @@ class PacienteModel {
 
       return {
         ...paciente,
+        nomeCompleto: paciente.nome,
         idade: paciente.dataNascimento ? differenceInYears(new Date(), parseISO(paciente.dataNascimento)) : null,
         endereco: paciente.endereco ? JSON.parse(paciente.endereco) : null,
         convenio: paciente.convenio ? JSON.parse(paciente.convenio) : null
@@ -430,12 +406,24 @@ class PacienteModel {
   async buscarPorCpf(cpf) {
     try {
       const query = `
-        SELECT id, nome, cpf, email
-        FROM paciente
+        SELECT 
+          id,
+          nome,
+          email,
+          telefone,
+          cpf,
+          data_nascimento,
+          endereco,
+          observacoes,
+          status,
+          created_at,
+          updated_at
+        FROM pacientes
         WHERE cpf = ?
       `;
 
-      return this.db.prepare(query).get(cpf);
+      const paciente = this.db.prepare(query).get(cpf);
+      return paciente || null;
     } catch (error) {
       console.error('Erro ao buscar paciente por CPF:', error);
       throw error;
@@ -465,21 +453,18 @@ class PacienteModel {
       } = dadosPaciente;
 
       const query = `
-        INSERT INTO paciente (
+        INSERT INTO pacientes (
           nome,
           email,
           telefone,
           cpf,
           data_nascimento,
-          endereco_completo,
-          estado_civil,
-          profissao,
-          convenio_nome,
+          endereco,
           observacoes,
           tenant_id,
-          criado_por,
+          status,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       `;
 
       const result = this.db.prepare(query).run(
@@ -489,12 +474,9 @@ class PacienteModel {
         cpf,
         dataNascimento,
         endereco ? JSON.stringify(endereco) : null,
-        estadoCivil,
-        profissao,
-        convenio ? JSON.stringify(convenio) : null,
         observacoes,
         tenant_id,
-        criado_por
+        'ativo'
       );
 
       return await this.buscarPorId(result.lastInsertRowid);
@@ -527,18 +509,14 @@ class PacienteModel {
       } = dadosAtualizacao;
 
       const query = `
-        UPDATE paciente SET
+        UPDATE pacientes SET
           nome = ?,
           email = ?,
           telefone = ?,
           cpf = ?,
           data_nascimento = ?,
-          endereco_completo = ?,
-          estado_civil = ?,
-          profissao = ?,
-          convenio_nome = ?,
+          endereco = ?,
           observacoes = ?,
-          atualizado_por = ?,
           updated_at = datetime('now')
         WHERE id = ?
       `;
@@ -550,11 +528,7 @@ class PacienteModel {
         cpf,
         dataNascimento,
         endereco ? JSON.stringify(endereco) : null,
-        estadoCivil,
-        profissao,
-        convenio ? JSON.stringify(convenio) : null,
         observacoes,
-        atualizado_por,
         id
       );
 

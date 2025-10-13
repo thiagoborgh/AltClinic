@@ -22,7 +22,8 @@ import {
   Assessment as RelatoriosIcon,
   Settings as ConfiguracoesIcon,
   LocalHospital as MedicosIcon,
-  AccessTime as EsperaIcon
+  AccessTime as EsperaIcon,
+  CreditCard as LicencasIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -69,6 +70,11 @@ const menuItems = [
     text: 'Relatórios',
     icon: RelatoriosIcon,
     path: '/relatorios'
+  },
+  {
+    text: 'Licenças',
+    icon: LicencasIcon,
+    path: '/billing'
   },
   {
     text: 'Configurações',

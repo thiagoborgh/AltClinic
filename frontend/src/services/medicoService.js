@@ -122,10 +122,14 @@ class MedicoService {
    */
   async alterarStatusMedico(id, ativo) {
     try {
-      const response = await api.patch(`/medicos/${id}/status`, { ativo });
+      console.log('🩺 MedicoService: alterarStatusMedico called with id:', id, 'ativo:', ativo);
+      const url = `/professional/medico/${id}/status`;  // Remover /api pois já está no baseURL
+      console.log('🩺 MedicoService: URL:', url);
+      const response = await api.patch(url, { ativo });
       return response.data;
     } catch (error) {
-      console.error('Erro ao alterar status do médico:', error);
+      console.error('🩺 MedicoService: Erro ao alterar status do médico:', error);
+      console.error('🩺 MedicoService: Error response:', error.response?.data);
       throw new Error('Falha ao alterar status do médico');
     }
   }

@@ -64,6 +64,9 @@ import {
   Settings,
   PersonAdd,
   LocalHospital,
+  MedicalServices,
+  Group,
+  Assignment,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -84,7 +87,7 @@ const agendamentosMock = [
     title: 'Maria Silva - Limpeza de Pele',
     paciente: { nome: 'Maria Silva', telefone: '(11) 99999-9999', avatar: 'M' },
     procedimento: 'Limpeza de Pele',
-    medico: 'Dr. João',
+    medico: 'Dra. Maria Santos',
     start: '2025-09-16T09:00:00',
     end: '2025-09-16T10:00:00',
     status: 'confirmado',
@@ -99,7 +102,7 @@ const agendamentosMock = [
     title: 'Ana Costa - Botox',
     paciente: { nome: 'Ana Costa', telefone: '(11) 88888-8888', avatar: 'A' },
     procedimento: 'Botox',
-    medico: 'Dra. Maria',
+    medico: 'Dra. Maria Santos',
     start: '2025-09-16T10:30:00',
     end: '2025-09-16T11:30:00',
     status: 'pendente',
@@ -114,7 +117,7 @@ const agendamentosMock = [
     title: 'João Santos - Preenchimento',
     paciente: { nome: 'João Santos', telefone: '(11) 77777-7777', avatar: 'J' },
     procedimento: 'Preenchimento',
-    medico: 'Dr. Carlos',
+    medico: 'Dr. Carlos Lima',
     start: '2025-09-16T14:00:00',
     end: '2025-09-16T15:30:00',
     status: 'confirmado',
@@ -126,10 +129,10 @@ const agendamentosMock = [
   },
   {
     id: 4,
-    title: 'Pedro Lima - Peeling',
+    title: 'Pedro Lima - Consulta Cardiológica',
     paciente: { nome: 'Pedro Lima', telefone: '(11) 66666-6666', avatar: 'P' },
-    procedimento: 'Peeling',
-    medico: 'Dra. Ana',
+    procedimento: 'Consulta Cardiológica',
+    medico: 'Dr. João Silva',
     start: '2025-09-17T15:30:00',
     end: '2025-09-17T16:30:00',
     status: 'cancelado',
@@ -137,6 +140,36 @@ const agendamentosMock = [
     observacoes: 'Cancelado pelo paciente',
     backgroundColor: '#f44336', // vermelho para cancelado
     borderColor: '#f44336',
+    textColor: '#ffffff',
+  },
+  {
+    id: 5,
+    title: 'Carmen Rodrigues - Fisioterapia',
+    paciente: { nome: 'Carmen Rodrigues', telefone: '(11) 55555-5555', avatar: 'C' },
+    procedimento: 'Fisioterapia',
+    medico: 'Dr. Carlos Lima',
+    start: '2025-09-18T08:00:00',
+    end: '2025-09-18T09:00:00',
+    status: 'realizado',
+    valor: 120,
+    observacoes: 'Sessão de reabilitação',
+    backgroundColor: '#2196f3', // azul para realizado
+    borderColor: '#2196f3',
+    textColor: '#ffffff',
+  },
+  {
+    id: 6,
+    title: 'Roberto Silva - Eletrocardiograma',
+    paciente: { nome: 'Roberto Silva', telefone: '(11) 44444-4444', avatar: 'R' },
+    procedimento: 'Eletrocardiograma',
+    medico: 'Dr. João Silva',
+    start: '2025-09-18T14:30:00',
+    end: '2025-09-18T15:00:00',
+    status: 'em-atendimento',
+    valor: 80,
+    observacoes: 'Exame de rotina',
+    backgroundColor: '#9c27b0', // roxo para em atendimento
+    borderColor: '#9c27b0',
     textColor: '#ffffff',
   },
 ];
@@ -164,6 +197,7 @@ const Agendamentos = () => {
     pacientes: [],
     procedimentos: [],
     medicos: [],
+    especialidades: [],
   });
 
   // Estados para o modal de novo agendamento
@@ -204,6 +238,7 @@ const Agendamentos = () => {
     pacientes: [],
     procedimentos: [],
     medicos: [],
+    especialidades: [],
   });
 
   // Função para obter eventos filtrados
@@ -212,7 +247,9 @@ const Agendamentos = () => {
       const matchesSearch = !searchTerm ||
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.paciente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.procedimento?.toLowerCase().includes(searchTerm.toLowerCase());
+        event.procedimento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.medico?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (medicosDisponiveis.find(m => m.nome === event.medico)?.especialidade || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = appliedFilters.status.length === 0 ||
         appliedFilters.status.includes(event.status);
@@ -226,8 +263,15 @@ const Agendamentos = () => {
       const matchesMedico = appliedFilters.medicos.length === 0 ||
         appliedFilters.medicos.includes(event.medico);
 
+      // Filtro por especialidade - precisa verificar a especialidade do médico
+      const matchesEspecialidade = appliedFilters.especialidades.length === 0 ||
+        appliedFilters.especialidades.some(esp => {
+          const medicoObj = medicosDisponiveis.find(m => m.nome === event.medico);
+          return medicoObj && medicoObj.especialidade === esp;
+        });
+
       return matchesSearch && matchesStatus && matchesPaciente &&
-             matchesProcedimento && matchesMedico;
+             matchesProcedimento && matchesMedico && matchesEspecialidade;
     });
   };
 
@@ -359,12 +403,14 @@ const Agendamentos = () => {
       pacientes: [],
       procedimentos: [],
       medicos: [],
+      especialidades: [],
     });
     setAppliedFilters({
       status: [],
       pacientes: [],
       procedimentos: [],
       medicos: [],
+      especialidades: [],
     });
   };
 
@@ -374,8 +420,11 @@ const Agendamentos = () => {
     const pacientes = [...new Set(events.map(e => e.paciente?.nome).filter(Boolean))];
     const procedimentos = [...new Set(events.map(e => e.procedimento).filter(Boolean))];
     const medicos = [...new Set(events.map(e => e.medico).filter(Boolean))];
+    
+    // Obter especialidades dos médicos disponíveis
+    const especialidades = [...new Set(medicosDisponiveis.map(m => m.especialidade).filter(Boolean))];
 
-    return { status, pacientes, procedimentos, medicos };
+    return { status, pacientes, procedimentos, medicos, especialidades };
   };
 
   const filterOptions = getFilterOptions();
@@ -396,7 +445,8 @@ const Agendamentos = () => {
               borderColor: appliedFilters.status.length > 0 ||
                           appliedFilters.pacientes.length > 0 ||
                           appliedFilters.procedimentos.length > 0 ||
-                          appliedFilters.medicos.length > 0
+                          appliedFilters.medicos.length > 0 ||
+                          appliedFilters.especialidades.length > 0
                           ? 'primary.main' : 'grey.300'
             }}
           >
@@ -404,13 +454,15 @@ const Agendamentos = () => {
             {(appliedFilters.status.length +
               appliedFilters.pacientes.length +
               appliedFilters.procedimentos.length +
-              appliedFilters.medicos.length) > 0 && (
+              appliedFilters.medicos.length +
+              appliedFilters.especialidades.length) > 0 && (
               <Badge
                 badgeContent={
                   appliedFilters.status.length +
                   appliedFilters.pacientes.length +
                   appliedFilters.procedimentos.length +
-                  appliedFilters.medicos.length
+                  appliedFilters.medicos.length +
+                  appliedFilters.especialidades.length
                 }
                 color="primary"
                 sx={{ ml: 1 }}
@@ -435,7 +487,7 @@ const Agendamentos = () => {
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
-                placeholder="Buscar agendamentos..."
+                placeholder="Buscar por paciente, profissional, especialidade ou procedimento..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -599,7 +651,8 @@ const Agendamentos = () => {
           <Stack spacing={3}>
             {/* Status */}
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle fontSize="small" />
                 Status
               </Typography>
               {filterOptions.status.map(status => (
@@ -636,7 +689,8 @@ const Agendamentos = () => {
 
             {/* Pacientes */}
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Group fontSize="small" />
                 Pacientes
               </Typography>
               {filterOptions.pacientes.map(paciente => (
@@ -667,7 +721,8 @@ const Agendamentos = () => {
 
             {/* Procedimentos */}
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Assignment fontSize="small" />
                 Procedimentos
               </Typography>
               {filterOptions.procedimentos.map(procedimento => (
@@ -698,7 +753,8 @@ const Agendamentos = () => {
 
             {/* Médicos */}
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocalHospital fontSize="small" />
                 Profissionais
               </Typography>
               {filterOptions.medicos.map(medico => (
@@ -723,6 +779,38 @@ const Agendamentos = () => {
                     />
                   }
                   label={medico}
+                />
+              ))}
+            </Box>
+
+            {/* Especialidades */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MedicalServices fontSize="small" />
+                Especialidades
+              </Typography>
+              {filterOptions.especialidades.map(especialidade => (
+                <FormControlLabel
+                  key={especialidade}
+                  control={
+                    <Checkbox
+                      checked={filters.especialidades.includes(especialidade)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFilters(prev => ({
+                            ...prev,
+                            especialidades: [...prev.especialidades, especialidade]
+                          }));
+                        } else {
+                          setFilters(prev => ({
+                            ...prev,
+                            especialidades: prev.especialidades.filter(esp => esp !== especialidade)
+                          }));
+                        }
+                      }}
+                    />
+                  }
+                  label={especialidade}
                 />
               ))}
             </Box>

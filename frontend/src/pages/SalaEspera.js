@@ -270,6 +270,7 @@ const SalaEspera = () => {
   };
 
   const getInitials = (nome) => {
+    if (!nome || typeof nome !== 'string') return '?';
     return nome
       .split(' ')
       .map(word => word.charAt(0))

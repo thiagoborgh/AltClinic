@@ -46,13 +46,13 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'starter',
       nome: 'Starter',
-      preco: 97,
-      precoDesconto: 68, // 30% off
+      preco: 199,
+      precoDesconto: 139, // 30% off primeiros 30 dias
       descricao: 'Perfeito para começar',
       recursos: [
         'Até 3 usuários',
         'Agendamentos ilimitados',
-        'WhatsApp integrado',
+        'WhatsApp integrado (500 msg/mês)',
         'Relatórios básicos',
         'Suporte por email',
         'Backup automático'
@@ -66,13 +66,13 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'professional',
       nome: 'Professional',
-      preco: 197,
-      precoDesconto: 138, // 30% off
+      preco: 399,
+      precoDesconto: 279, // 30% off primeiros 30 dias
       descricao: 'Ideal para clínicas em crescimento',
       recursos: [
         'Até 10 usuários',
         'Agendamentos ilimitados',
-        'WhatsApp + Email + SMS',
+        'WhatsApp + Email + SMS (2500 msg/mês)',
         'Relatórios avançados',
         'Suporte prioritário',
         'Backup automático',
@@ -86,15 +86,37 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
       popular: true
     },
     {
+      id: 'business',
+      nome: 'Business',
+      preco: 599,
+      precoDesconto: 419, // 30% off primeiros 30 dias
+      descricao: 'Para clínicas em expansão',
+      recursos: [
+        'Até 25 usuários',
+        'Agendamentos ilimitados',
+        'Todos os canais de comunicação (5000 msg/mês)',
+        'Relatórios personalizados',
+        'Suporte prioritário',
+        'Backup em tempo real',
+        'API personalizada',
+        'Integrações avançadas',
+        'Multi-especialidades'
+      ],
+      limitacoes: [
+        'Sem white-label'
+      ],
+      popular: false
+    },
+    {
       id: 'enterprise',
       nome: 'Enterprise',
-      preco: 397,
-      precoDesconto: 278, // 30% off
+      preco: 799,
+      precoDesconto: 559, // 30% off primeiros 30 dias
       descricao: 'Solução completa para grandes clínicas',
       recursos: [
         'Usuários ilimitados',
         'Agendamentos ilimitados',
-        'Todos os canais de comunicação',
+        'Todos os canais de comunicação (10000 msg/mês)',
         'Relatórios personalizados',
         'Suporte 24/7',
         'Backup em tempo real',
@@ -113,6 +135,9 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
   const handleUpgrade = async () => {
     setLoading(true);
     try {
+      // Simular processamento (remover em produção)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const response = await fetch(`/api/trial/${user.tenant_id}/upgrade`, {
         method: 'POST',
         headers: {
@@ -135,9 +160,12 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
         }, 3000);
       } else {
         console.error('Erro no upgrade:', data.message);
+        // Adicionar feedback de erro
+        alert('Erro ao processar upgrade. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro ao fazer upgrade:', error);
+      alert('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setLoading(false);
     }

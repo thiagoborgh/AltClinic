@@ -99,7 +99,7 @@ class UserService {
         email: user.email,
         tempPassword: tempPassword,
         loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login/${tenant.slug}`,
-        trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR')}</p>`
+        trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR')}</p>`
       };
 
       const emailResult = await sendEmail({

@@ -1,28 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
   Button,
-  TextField,
   Stack,
-  Chip,
   Grid,
   Paper,
-  Tab,
-  Tabs,
-  IconButton,
-  Badge,
   Tooltip,
   Alert,
+  AlertTitle
 } from '@mui/material';
 import {
   CalendarMonth,
   Add,
   ViewWeek,
   ViewDay,
-  Refresh,
   FilterList,
   AutoAwesome,
   Settings,
@@ -36,18 +30,20 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '../styles/agenda.css';
 
 // Components
-import AgendamentoModal from '../components/agenda/AgendamentoModal';
-import EquipamentosModal from '../components/agenda/EquipamentosModal';
-import LembretesModal from '../components/agenda/LembretesModal';
-import RelatoriosAgenda from '../components/agenda/RelatoriosAgenda';
-import FiltrosAgenda from '../components/agenda/FiltrosAgenda';
+import AgendamentoModal from '../components/agenda/AgendamentoModalNew';
+import EquipamentosModal from '../components/agenda/EquipamentosModalNew';
+import LembretesModal from '../components/agenda/LembretesModalNew';
+import RelatoriosAgenda from '../components/agenda/RelatoriosAgendaNew';
+import FiltrosAgenda from '../components/agenda/FiltrosAgendaNew';
 
 // Hooks
-import { useAgenda } from '../hooks/useAgenda';
+import { useAgenda } from '../hooks/useAgendaNew';
 import { useToast } from '../hooks/useToast';
+import { useProfessionalSchedules } from '../hooks/useProfessionalSchedules';
+import { useNavigate } from 'react-router-dom';
 
 // Mock data
-import { mockAgendamentos, mockEquipamentos } from '../data/mockAgenda';
+import { mockAgendamentos } from '../data/mockAgenda';
 
 // Configuração do moment
 moment.locale('pt-br');
@@ -64,7 +60,6 @@ const statusColors = {
 };
 
 const AgendaNova = () => {
-  const [selectedTab, setSelectedTab] = useState(0);
   const [view, setView] = useState('week');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -84,15 +79,73 @@ const AgendaNova = () => {
   });
 
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const {
     agendamentos,
-    loading,
     criarAgendamento,
     editarAgendamento,
-    cancelarAgendamento,
-    remarcerAgendamento,
     buscarHorariosSugeridos
   } = useAgenda();
+
+  // Hook para horários dinâmicos dos profissionais
+  const {
+    getCalendarTimeSlots,
+    isTimeSlotValid
+  } = useProfessionalSchedules(filtros.profissional);
+
+  // Configurar horários dinâmicos baseados no profissional selecionado
+  const timeSlots = useMemo(() => {
+    const slots = getCalendarTimeSlots();
+    console.log('TimeSlots calculados:', slots);
+    return slots;
+  }, [getCalendarTimeSlots]);
+
+  // Função segura para mudanças de filtros
+  const handleFiltrosChange = (novosFiltros) => {
+    try {
+      console.log('Alterando filtros:', novosFiltros);
+      setFiltros(novosFiltros);
+    } catch (error) {
+      console.warn('Erro ao alterar filtros:', error);
+      // Não quebrar a aplicação, apenas logar o erro
+    }
+  };
+
+  // Funções wrapper para converter dados do modal
+  const handleCriarAgendamento = async (dadosModal) => {
+    // Converter dados do modal para o formato esperado pelo hook
+    const dadosConvertidos = {
+      paciente: dadosModal.paciente,
+      procedimento: dadosModal.procedimento,
+      profissional: dadosModal.profissional,
+      equipamento: dadosModal.equipamento,
+      dataHora: dadosModal.start,
+      duracao: dadosModal.end ? Math.round((new Date(dadosModal.end) - new Date(dadosModal.start)) / (1000 * 60)) : 60,
+      observacoes: dadosModal.observacoes,
+      valor: dadosModal.valor,
+      status: 'pendente'
+    };
+    
+    await criarAgendamento(dadosConvertidos);
+  };
+
+  const handleEditarAgendamento = async (id, dadosModal) => {
+    // Para edição, incluir o ID
+    const dadosConvertidos = {
+      id,
+      paciente: dadosModal.paciente,
+      procedimento: dadosModal.procedimento,
+      profissional: dadosModal.profissional,
+      equipamento: dadosModal.equipamento,
+      dataHora: dadosModal.start,
+      duracao: dadosModal.end ? Math.round((new Date(dadosModal.end) - new Date(dadosModal.start)) / (1000 * 60)) : 60,
+      observacoes: dadosModal.observacoes,
+      valor: dadosModal.valor,
+      status: dadosModal.status || 'pendente'
+    };
+    
+    await editarAgendamento(id, dadosConvertidos);
+  };
 
   // Usar mock data se não houver dados da API
   const agendamentosData = agendamentos.length > 0 ? agendamentos : mockAgendamentos;
@@ -101,20 +154,55 @@ const AgendaNova = () => {
   const events = useMemo(() => {
     return agendamentosData
       .filter(agendamento => {
-        if (filtros.especialidade && agendamento.especialidade !== filtros.especialidade) return false;
-        if (filtros.profissional && agendamento.profissional !== filtros.profissional) return false;
-        if (filtros.equipamento && agendamento.equipamento !== filtros.equipamento) return false;
-        if (filtros.status && agendamento.status !== filtros.status) return false;
+        // Filtro por especialidade
+        if (filtros.especialidade && filtros.especialidade !== '' && agendamento.especialidade !== filtros.especialidade) {
+          return false;
+        }
+        
+        // Filtro por profissional
+        if (filtros.profissional && filtros.profissional !== '' && agendamento.profissional !== filtros.profissional) {
+          return false;
+        }
+        
+        // Filtro por equipamento
+        if (filtros.equipamento && filtros.equipamento !== '' && agendamento.equipamento !== filtros.equipamento) {
+          return false;
+        }
+        
+        // Filtro por status
+        if (filtros.status && filtros.status !== '' && agendamento.status !== filtros.status) {
+          return false;
+        }
+        
         return true;
       })
-      .map(agendamento => ({
-        id: agendamento.id,
-        title: `${agendamento.paciente} - ${agendamento.procedimento}`,
-        start: new Date(agendamento.dataHora),
-        end: new Date(new Date(agendamento.dataHora).getTime() + agendamento.duracao * 60000),
-        resource: agendamento,
-        allDay: false
-      }));
+      .map(agendamento => {
+        // Lidar com diferentes formatos de data
+        let startDate, endDate;
+        
+        if (agendamento.start && agendamento.end) {
+          // Formato dos dados mock
+          startDate = new Date(agendamento.start);
+          endDate = new Date(agendamento.end);
+        } else if (agendamento.dataHora && agendamento.duracao) {
+          // Formato do hook
+          startDate = new Date(agendamento.dataHora);
+          endDate = new Date(new Date(agendamento.dataHora).getTime() + agendamento.duracao * 60000);
+        } else {
+          // Fallback
+          startDate = new Date();
+          endDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+        }
+        
+        return {
+          id: agendamento.id,
+          title: agendamento.title || `${agendamento.paciente?.nome || agendamento.paciente || 'Paciente'} - ${agendamento.procedimento}`,
+          start: startDate,
+          end: endDate,
+          resource: agendamento,
+          allDay: false
+        };
+      });
   }, [agendamentosData, filtros]);
 
   // Estatísticas rápidas
@@ -138,6 +226,12 @@ const AgendaNova = () => {
   };
 
   const handleSelectSlot = ({ start, end }) => {
+    // Validar se o horário está dentro da configuração do profissional
+    if (filtros.profissional && !isTimeSlotValid(start, filtros.profissional)) {
+      showToast('Horário fora do período de atendimento do profissional', 'warning');
+      return;
+    }
+
     setSelectedEvent({
       dataHora: start,
       duracao: 60,
@@ -304,6 +398,24 @@ const AgendaNova = () => {
         </Stack>
       </Box>
 
+      {/* Banner Nova Agenda */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <AlertTitle>🎉 Nova Agenda Disponível!</AlertTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2">
+            Experimente nossa nova agenda lite com foco em receita e slots dinâmicos.
+          </Typography>
+          <Button 
+            variant="outlined" 
+            size="small"
+            onClick={() => navigate('/agenda-lite')}
+            sx={{ ml: 2 }}
+          >
+            Testar Agenda Lite
+          </Button>
+        </Box>
+      </Alert>
+
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -357,7 +469,7 @@ const AgendaNova = () => {
       </Grid>
 
       {/* Filtros */}
-      <FiltrosAgenda filtros={filtros} onFiltrosChange={setFiltros} />
+      <FiltrosAgenda filtros={filtros} onFiltrosChange={handleFiltrosChange} />
 
       {/* Calendar */}
       <Paper sx={{ p: 2, height: 600 }}>
@@ -376,6 +488,10 @@ const AgendaNova = () => {
           date={selectedDate}
           onNavigate={setSelectedDate}
           eventPropGetter={eventStyleGetter}
+          min={timeSlots.min}
+          max={timeSlots.max}
+          step={timeSlots.step}
+          timeslots={timeSlots.timeslots}
           messages={{
             next: 'Próximo',
             previous: 'Anterior',
@@ -409,8 +525,8 @@ const AgendaNova = () => {
       <AgendamentoModal
         open={agendamentoModalOpen}
         onClose={() => setAgendamentoModalOpen(false)}
-        agendamento={selectedEvent}
-        onSave={selectedEvent?.id ? editarAgendamento : criarAgendamento}
+        event={selectedEvent}
+        onSave={selectedEvent?.id ? handleEditarAgendamento : handleCriarAgendamento}
       />
 
       <EquipamentosModal

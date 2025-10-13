@@ -13,6 +13,23 @@ const extractTenant = async (req, res, next) => {
     // Extrair tenant do subdomínio ou header
     let tenantSlug = null;
     
+    // Opção 0: JWT Token (prioridade máxima para APIs autenticadas)
+    let isFromJwt = false;
+    if (!tenantSlug && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const token = req.headers.authorization.substring(7);
+        const decoded = jwt.decode(token);
+        if (decoded && decoded.tenantId) {
+          tenantSlug = decoded.tenantId;
+          isFromJwt = true;
+          console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no JWT token:', tenantSlug);
+        }
+      } catch (error) {
+        console.log('🏥 MIDDLEWARE TENANT: Erro ao decodificar JWT:', error.message);
+      }
+    }
+    
     // Opção 1: Subdomínio (clinica-abc.altclinic.com) — ignorar em hosts locais/IP
     const host = (req.get('host') || '').toLowerCase();
     const isLocalHost = host.includes('localhost') || host.startsWith('127.0.0.1') || host.startsWith('::1');
@@ -54,12 +71,12 @@ const extractTenant = async (req, res, next) => {
     // Buscar tenant no database master
     const masterDb = multiTenantDb.getMasterDb();
     console.log('🏥 MIDDLEWARE TENANT: Master DB obtido');
-    console.log('🏥 MIDDLEWARE TENANT: Procurando tenant:', tenantSlug);
+    console.log('🏥 MIDDLEWARE TENANT: Procurando tenant:', tenantSlug, 'isFromJwt:', isFromJwt);
     
     const tenant = masterDb.prepare(`
       SELECT id, slug, nome, plano, status, config, billing, theme, trial_expire_at
       FROM tenants 
-      WHERE slug = ? AND status IN ('active', 'trial')
+      WHERE ${isFromJwt ? 'id' : 'slug'} = ? AND status IN ('active', 'trial')
     `).get(tenantSlug);
     
     console.log('🏥 MIDDLEWARE TENANT: Query executada para slug:', tenantSlug);
@@ -95,7 +112,11 @@ const extractTenant = async (req, res, next) => {
     req.tenant = tenant;
     req.tenantId = tenant.id;
     
+    // Obter conexão do database do tenant
+    req.db = multiTenantDb.getTenantDb(tenant.id);
+    
     console.log('🏥 MIDDLEWARE TENANT: Tenant ID definido:', req.tenantId);
+    console.log('🔗 Conexão com database do tenant estabelecida');
     
     // Log da requisição (opcional)
     console.log(`🏥 Request para tenant: ${tenant.nome} (${tenantSlug})`);

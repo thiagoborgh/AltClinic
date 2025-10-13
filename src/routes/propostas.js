@@ -75,7 +75,7 @@ router.post('/', authUtil.authenticate, async (req, res) => {
 
     // Enviar proposta via WhatsApp
     try {
-      await sendWhatsAppMessage(paciente.telefone, mensagemProposta);
+      await sendWhatsAppMessage(paciente.telefone, mensagemProposta, req.user.clinica_id);
       
       // Registrar envio
       db.prepare(`
@@ -225,7 +225,7 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
       
       mensagemConfirmacao += `\nObrigado por escolher nossa clínica! ✨`;
 
-      await sendWhatsAppMessage(proposta.paciente_telefone, mensagemConfirmacao);
+      await sendWhatsAppMessage(proposta.paciente_telefone, mensagemConfirmacao, req.user.clinica_id);
       
       // Registrar mensagem
       db.prepare(`
@@ -425,7 +425,7 @@ router.put('/:id/rejeitar', authUtil.authenticate, async (req, res) => {
       mensagem += `Estamos sempre dispostos a criar novas propostas que se adequem melhor às suas necessidades. `;
       mensagem += `Entre em contato conosco! 😊`;
 
-      await sendWhatsAppMessage(proposta.paciente_telefone, mensagem);
+      await sendWhatsAppMessage(proposta.paciente_telefone, mensagem, req.user.clinica_id);
       
     } catch (error) {
       console.error('Erro ao enviar mensagem de rejeição:', error.message);
@@ -519,7 +519,7 @@ Obrigado pela preferência! ✨
 
     // Enviar recibo via WhatsApp
     try {
-      await sendWhatsAppMessage(proposta.paciente_telefone, reciboTexto);
+      await sendWhatsAppMessage(proposta.paciente_telefone, reciboTexto, req.user.clinica_id);
     } catch (error) {
       console.error('Erro ao enviar recibo:', error.message);
     }

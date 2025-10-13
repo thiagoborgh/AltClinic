@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
         let trialExpireAt = null;
         if (tipoLicenca === 'freemium') {
             trialExpireAt = new Date();
-            trialExpireAt.setDate(trialExpireAt.getDate() + 30);
+            trialExpireAt.setDate(trialExpireAt.getDate() + 15);
         }
 
         // Configurações padrão

@@ -72,13 +72,13 @@ const LandingPage = () => {
   const planos = [
     {
       nome: 'Starter',
-      preco: 'R$ 97',
+      preco: 'R$ 199',
       periodo: '/mês',
       descricao: 'Perfeito para começar',
       recursos: [
         'Até 3 usuários',
         'Agendamentos ilimitados',
-        'WhatsApp integrado',
+        'WhatsApp integrado (500 msg/mês)',
         'Relatórios básicos',
         'Suporte por email',
         'Backup automático'
@@ -92,13 +92,13 @@ const LandingPage = () => {
     },
     {
       nome: 'Professional',
-      preco: 'R$ 197',
+      preco: 'R$ 399',
       periodo: '/mês',
       descricao: 'Ideal para clínicas em crescimento',
       recursos: [
         'Até 10 usuários',
         'Agendamentos ilimitados',
-        'WhatsApp + Email + SMS',
+        'WhatsApp + Email + SMS (2500 msg/mês)',
         'Relatórios avançados',
         'Suporte prioritário',
         'Backup automático',
@@ -113,14 +113,36 @@ const LandingPage = () => {
       trial: true
     },
     {
+      nome: 'Business',
+      preco: 'R$ 599',
+      periodo: '/mês',
+      descricao: 'Para clínicas em expansão',
+      recursos: [
+        'Até 25 usuários',
+        'Agendamentos ilimitados',
+        'Todos os canais de comunicação (5000 msg/mês)',
+        'Relatórios personalizados',
+        'Suporte prioritário',
+        'Backup em tempo real',
+        'API personalizada',
+        'Integrações avançadas',
+        'Multi-especialidades'
+      ],
+      limitacoes: [
+        'Sem white-label'
+      ],
+      popular: false,
+      trial: true
+    },
+    {
       nome: 'Enterprise',
-      preco: 'R$ 397',
+      preco: 'R$ 799',
       periodo: '/mês',
       descricao: 'Solução completa para grandes clínicas',
       recursos: [
         'Usuários ilimitados',
         'Agendamentos ilimitados',
-        'Todos os canais de comunicação',
+        'Todos os canais de comunicação (10000 msg/mês)',
         'Relatórios personalizados',
         'Suporte 24/7',
         'Backup em tempo real',
@@ -169,7 +191,7 @@ const LandingPage = () => {
   const faq = [
     {
       pergunta: 'Como funciona o período de teste gratuito?',
-      resposta: 'Você tem 30 dias para testar todas as funcionalidades sem compromisso. Não cobramos cartão de crédito no cadastro.'
+      resposta: 'Você tem 15 dias para testar todas as funcionalidades sem compromisso. Não cobramos cartão de crédito no cadastro.'
     },
     {
       pergunta: 'Posso migrar meus dados de outro sistema?',
@@ -334,7 +356,7 @@ const LandingPage = () => {
                     }
                   }}
                 >
-                  Teste Grátis 30 Dias
+                  Teste Grátis 15 Dias
                 </Button>
                 <Button
                   variant="outlined"
@@ -565,7 +587,7 @@ const LandingPage = () => {
               🎁 Oferta Especial de Lançamento
             </Typography>
             <Typography>
-              <strong>30 dias grátis</strong> para testar + <strong>30% de desconto</strong> nos primeiros 3 meses. 
+              <strong>15 dias grátis</strong> para testar + <strong>30% de desconto</strong> nos primeiros 3 meses. 
               Sem compromisso, cancele quando quiser.
             </Typography>
           </Alert>
@@ -717,11 +739,11 @@ const LandingPage = () => {
         fullWidth
       >
         <DialogTitle>
-          Comece seu teste gratuito de 30 dias
+          Comece seu teste gratuito de 15 dias
         </DialogTitle>
         <DialogContent>
           <Typography paragraph color="text.secondary">
-            Preencha os dados abaixo e tenha acesso completo ao Alt Clinic por 30 dias, sem compromisso.
+            Preencha os dados abaixo e tenha acesso completo ao Alt Clinic por 15 dias, sem compromisso.
           </Typography>
           
           <TextField
@@ -771,7 +793,7 @@ const LandingPage = () => {
           />
           
           <Alert severity="success" sx={{ mt: 2 }}>
-            ✅ 30 dias grátis • ✅ Sem cartão de crédito • ✅ Cancele quando quiser
+            ✅ 15 dias grátis • ✅ Sem cartão de crédito • ✅ Cancele quando quiser
           </Alert>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>

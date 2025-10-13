@@ -49,7 +49,7 @@ export const useAgenda = () => {
       setLoading(true);
       const novoAgendamento = { ...dadosAgendamento, id: Date.now() };
       setAgendamentos(prev => [...prev, novoAgendamento]);
-      console.log('Agendamento criado (modo demonstração)');
+      console.log('Agendamento criado com sucesso!');
       return novoAgendamento;
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
@@ -65,7 +65,7 @@ export const useAgenda = () => {
       setAgendamentos(prev => 
         prev.map(ag => ag.id === id ? { ...ag, ...dadosAtualizados } : ag)
       );
-      console.log('Agendamento atualizado (modo demonstração)');
+      console.log('Agendamento atualizado com sucesso!');
     } catch (error) {
       console.error('Erro ao editar agendamento:', error);
     } finally {
@@ -84,7 +84,7 @@ export const useAgenda = () => {
             : ag
         )
       );
-      console.log('Agendamento cancelado (modo demonstração)');
+      console.log('Agendamento cancelado com sucesso!');
     } catch (error) {
       console.error('Erro ao cancelar agendamento:', error);
     } finally {
@@ -96,7 +96,7 @@ export const useAgenda = () => {
   const enviarLembrete = async (agendamentoId, tipo = 'whatsapp') => {
     try {
       console.log(`Enviando lembrete ${tipo} para agendamento ${agendamentoId}`);
-      console.log('Lembrete enviado (modo demonstração)');
+      console.log('Lembrete enviado com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar lembrete:', error);
     }

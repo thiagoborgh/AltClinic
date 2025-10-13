@@ -168,6 +168,7 @@ const ListaPacientes = () => {
   };
 
   const getInitials = (nome) => {
+    if (!nome || typeof nome !== 'string') return '?';
     return nome
       .split(' ')
       .map(word => word.charAt(0))
@@ -257,11 +258,11 @@ const ListaPacientes = () => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                        {getInitials(paciente.nome)}
+                        {getInitials(paciente.nomeCompleto)}
                       </Avatar>
                       <Box>
                         <Typography variant="subtitle1" fontWeight="medium">
-                          {paciente.nome}
+                          {paciente.nomeCompleto}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           ID: {paciente.id}

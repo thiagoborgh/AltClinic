@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-// const dbManager = require('../models/database');
-// const PacienteModel = require('../models/Paciente');
+const multiTenantDb = require('../models/MultiTenantDatabase');
+const PacienteModel = require('../models/Paciente');
 const authUtil = require('../utils/auth');
 // const encryptionUtil = require('../utils/encryption');
 
@@ -61,29 +61,57 @@ const mockPacientes = [
  * @route GET /api/pacientes
  * @desc Lista todos os pacientes com filtros opcionais
  */
-router.get('/', async (req, res) => {
+router.get('/', authUtil.authenticate, async (req, res) => {
   try {
-    // Retornando dados mock para desenvolvimento sem autenticação
-    const pacientesFormatados = mockPacientes.map(p => ({
-      ...p,
-      endereco: typeof p.endereco === 'string' ? JSON.parse(p.endereco) : p.endereco,
-      convenio: typeof p.convenio === 'string' ? JSON.parse(p.convenio) : p.convenio,
-      idade: new Date().getFullYear() - new Date(p.dataNascimento).getFullYear()
-    }));
+    const tenant_id = req.tenant?.id;
+
+    if (!tenant_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant não identificado'
+      });
+    }
+
+    const db = multiTenantDb.getTenantDb(tenant_id);
+    const pacienteModel = new PacienteModel(db);
+
+    // Extrair parâmetros de query
+    const {
+      search,
+      status = 'ativo',
+      page = 1,
+      limit = 50,
+      orderBy = 'nome',
+      order = 'ASC'
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Buscar pacientes reais do banco
+    const result = await pacienteModel.listar({
+      search,
+      status,
+      limit: parseInt(limit),
+      offset,
+      orderBy,
+      order
+    });
+
+    const totalPages = Math.ceil(result.total / parseInt(limit));
 
     return res.json({
       success: true,
-      pacientes: pacientesFormatados,
-      total: pacientesFormatados.length,
-      page: 1,
-      totalPages: 1
+      pacientes: result.pacientes,
+      total: result.total,
+      page: parseInt(page),
+      totalPages
     });
   } catch (error) {
     console.error('Erro ao listar pacientes:', error);
     return res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -92,12 +120,12 @@ router.get('/', async (req, res) => {
  * @route GET /api/pacientes/:id
  * @desc Busca paciente por ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Buscar nos dados mock
-    const paciente = mockPacientes.find(p => p.id.toString() === id);
+    const pacienteModel = new PacienteModel(req.db);
+    const paciente = await pacienteModel.buscarPorId(id);
 
     if (!paciente) {
       return res.status(404).json({
@@ -106,16 +134,9 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    const pacienteFormatado = {
-      ...paciente,
-      endereco: typeof paciente.endereco === 'string' ? JSON.parse(paciente.endereco) : paciente.endereco,
-      convenio: typeof paciente.convenio === 'string' ? JSON.parse(paciente.convenio) : paciente.convenio,
-      idade: new Date().getFullYear() - new Date(paciente.dataNascimento).getFullYear()
-    };
-
     res.json({
       success: true,
-      paciente: pacienteFormatado
+      paciente: paciente
     });
 
   } catch (error) {
@@ -124,6 +145,56 @@ router.get('/:id', async (req, res) => {
       success: false,
       message: 'Erro interno do servidor',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @route POST /api/pacientes/test
+ * @desc Cria novo paciente (sem autenticação - apenas para teste)
+ */
+router.post('/test', async (req, res) => {
+  try {
+    const tenant_id = req.tenant?.id || 'test-tenant-1'; // Usar tenant do header ou padrão para teste
+
+    const db = multiTenantDb.getTenantDb(tenant_id);
+    const pacienteModel = new PacienteModel(db);
+
+    // Validar dados obrigatórios
+    const { nome, email, telefone, cpf, dataNascimento } = req.body;
+
+    if (!nome || !email || !telefone || !cpf || !dataNascimento) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome, email, telefone, CPF e data de nascimento são obrigatórios'
+      });
+    }
+
+    // Criar paciente
+    const pacienteData = {
+      nome,
+      email,
+      telefone,
+      cpf,
+      dataNascimento,
+      tenant_id,
+      created_at: new Date().toISOString(),
+      status: 'ativo'
+    };
+
+    const pacienteId = await pacienteModel.create(pacienteData);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Paciente criado com sucesso',
+      paciente: { id: pacienteId, ...pacienteData }
+    });
+  } catch (error) {
+    console.error('Erro ao criar paciente:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -144,7 +215,7 @@ router.post('/', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = await dbManager.getDatabase(tenant_id);
+    const db = multiTenantDb.getTenantDb(tenant_id);
     const pacienteModel = new PacienteModel(db);
 
     // Validar dados obrigatórios
@@ -209,7 +280,7 @@ router.put('/:id', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = await dbManager.getDatabase(tenant_id);
+    const db = multiTenantDb.getTenantDb(tenant_id);
     const pacienteModel = new PacienteModel(db);
 
     // Verificar se paciente existe
@@ -263,7 +334,7 @@ router.delete('/:id', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = await dbManager.getDatabase(tenant_id);
+    const db = multiTenantDb.getTenantDb(tenant_id);
     const pacienteModel = new PacienteModel(db);
 
     // Verificar se paciente existe
@@ -309,7 +380,7 @@ router.get('/:id/prontuario', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = await dbManager.getDatabase(tenant_id);
+    const db = multiTenantDb.getTenantDb(tenant_id);
     const pacienteModel = new PacienteModel(db);
 
     const prontuario = await pacienteModel.obterProntuario(id);
@@ -346,7 +417,7 @@ router.post('/:id/atendimento', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = await dbManager.getDatabase(tenant_id);
+    const db = multiTenantDb.getTenantDb(tenant_id);
     const pacienteModel = new PacienteModel(db);
 
     // Verificar se paciente existe

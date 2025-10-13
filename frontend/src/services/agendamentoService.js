@@ -1,6 +1,8 @@
 import api from './api';
 
 class AgendamentoService {
+  // ===== MÉTODOS ORIGINAIS =====
+  
   // Buscar agendamentos
   async getAgendamentos(filters = {}) {
     try {
@@ -17,6 +19,143 @@ class AgendamentoService {
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
       throw error;
+    }
+  }
+
+  // ===== MÉTODOS PARA AGENDA LITE =====
+
+  /**
+   * Buscar agendamentos da AgendaLite
+   * @param {Object} filtros - Filtros opcionais (data_inicio, data_fim)
+   * @returns {Promise<Array>} Lista de agendamentos
+   */
+  async buscarAgendamentosLite(filtros = {}) {
+    try {
+      console.log('🔍 API: Buscando agendamentos AgendaLite com filtros:', filtros);
+      
+      const params = new URLSearchParams();
+      if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
+      if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
+      
+      const response = await api.get(`/agenda/agendamentos?${params.toString()}`);
+      
+      console.log('✅ API: Agendamentos AgendaLite recebidos:', response.data);
+      
+      return response.data.success ? response.data.data : [];
+    } catch (error) {
+      console.error('❌ Erro ao buscar agendamentos AgendaLite:', error);
+      throw new Error('Erro ao carregar agendamentos');
+    }
+  }
+
+  /**
+   * Criar agendamento na AgendaLite
+   * @param {Object} agendamentoData - Dados do agendamento
+   * @returns {Promise<Object>} Agendamento criado
+   */
+  async criarAgendamentoLite(agendamentoData) {
+    try {
+      console.log('📝 API: Criando agendamento AgendaLite:', agendamentoData);
+      
+      const response = await api.post('/agenda/agendamentos', agendamentoData);
+      
+      console.log('✅ API: Agendamento AgendaLite criado:', response.data);
+      
+      if (response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || 'Erro ao criar agendamento');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar agendamento AgendaLite:', error);
+      throw new Error(error.response?.data?.message || 'Erro ao salvar agendamento');
+    }
+  }
+
+  /**
+   * Atualizar agendamento na AgendaLite
+   * @param {number} id - ID do agendamento
+   * @param {Object} agendamentoData - Dados atualizados
+   * @returns {Promise<Object>} Agendamento atualizado
+   */
+  async atualizarAgendamentoLite(id, agendamentoData) {
+    try {
+      console.log(`📝 API: Atualizando agendamento AgendaLite ${id}:`, agendamentoData);
+      
+      const response = await api.put(`/agenda/agendamentos/${id}`, agendamentoData);
+      
+      console.log('✅ API: Agendamento AgendaLite atualizado:', response.data);
+      
+      if (response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || 'Erro ao atualizar agendamento');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar agendamento AgendaLite:', error);
+      throw new Error(error.response?.data?.message || 'Erro ao atualizar agendamento');
+    }
+  }
+
+  /**
+   * Deletar agendamento na AgendaLite
+   * @param {number} id - ID do agendamento
+   * @returns {Promise<boolean>} Sucesso da operação
+   */
+  async deletarAgendamentoLite(id) {
+    try {
+      console.log(`🗑️ API: Deletando agendamento AgendaLite ${id}`);
+      
+      const response = await api.delete(`/agenda/agendamentos/${id}`);
+      
+      console.log('✅ API: Agendamento AgendaLite deletado:', response.data);
+      
+      return response.data.success;
+    } catch (error) {
+      console.error('❌ Erro ao deletar agendamento AgendaLite:', error);
+      throw new Error(error.response?.data?.message || 'Erro ao deletar agendamento');
+    }
+  }
+
+  /**
+   * Migrar dados do localStorage para o banco
+   * @param {Array} agendamentosLocalStorage - Agendamentos do localStorage
+   * @returns {Promise<Array>} Agendamentos migrados
+   */
+  async migrarLocalStorageParaBanco(agendamentosLocalStorage) {
+    try {
+      console.log('🔄 API: Migrando dados do localStorage para banco:', agendamentosLocalStorage);
+      
+      const agendamentosMigrados = [];
+      
+      for (const agendamento of agendamentosLocalStorage) {
+        try {
+          // Adaptar estrutura do localStorage para API
+          const agendamentoData = {
+            horario: agendamento.horario,
+            data: agendamento.data || new Date().toISOString().split('T')[0],
+            paciente: agendamento.paciente || '',
+            procedimento: agendamento.procedimento || 'Consulta',
+            status: agendamento.status || 'não confirmado',
+            valor: agendamento.valor || 0,
+            observacoes: agendamento.observacoes || ''
+          };
+          
+          const agendamentoCriado = await this.criarAgendamentoLite(agendamentoData);
+          agendamentosMigrados.push(agendamentoCriado);
+          
+          console.log(`✅ Agendamento migrado: ${agendamento.paciente} - ${agendamento.horario}`);
+        } catch (error) {
+          console.error(`❌ Erro ao migrar agendamento:`, agendamento, error);
+        }
+      }
+      
+      console.log(`🎉 Migração concluída: ${agendamentosMigrados.length} agendamentos migrados`);
+      
+      return agendamentosMigrados;
+    } catch (error) {
+      console.error('❌ Erro na migração:', error);
+      throw new Error('Erro ao migrar dados do localStorage');
     }
   }
 
@@ -171,4 +310,5 @@ class AgendamentoService {
   }
 }
 
-export default new AgendamentoService();
+const agendamentoService = new AgendamentoService();
+export default agendamentoService;
