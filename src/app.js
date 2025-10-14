@@ -307,6 +307,96 @@ class SaeeApp {
       }
     });
 
+    // Endpoint temporário para deletar usuário específico de um tenant
+    this.app.get('/api/cleanup-user/:email', async (req, res) => {
+      try {
+        const { email } = req.params;
+        const masterDb = this.multiTenantDb.getMasterDb();
+        
+        // Buscar usuário em master_users
+        const user = masterDb.prepare('SELECT * FROM master_users WHERE email = ?').get(email);
+        
+        if (!user) {
+          return res.json({
+            success: false,
+            message: 'Usuário não encontrado no master.db',
+            email
+          });
+        }
+
+        // Buscar tenant
+        const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(user.tenant_id);
+        
+        if (!tenant) {
+          return res.json({
+            success: false,
+            message: 'Tenant não encontrado',
+            email,
+            user
+          });
+        }
+
+        // Verificar se arquivo do tenant existe
+        const dbPath = path.join(__dirname, '../data', tenant.database_name);
+        const tenantFileExists = fs.existsSync(dbPath);
+
+        const analysis = {
+          email,
+          user: {
+            id: user.id,
+            tenant_id: user.tenant_id,
+            role: user.role,
+            created_at: user.created_at
+          },
+          tenant: {
+            id: tenant.id,
+            slug: tenant.slug,
+            nome: tenant.nome,
+            database: tenant.database_name,
+            fileExists: tenantFileExists,
+            path: dbPath
+          }
+        };
+
+        // Se ?execute=true, deletar
+        if (req.query.execute === 'true') {
+          // Deletar de master_users
+          masterDb.prepare('DELETE FROM master_users WHERE email = ?').run(email);
+          
+          // Se arquivo do tenant existe, deletar usuário de lá também
+          if (tenantFileExists) {
+            try {
+              const tenantDb = new (require('better-sqlite3'))(dbPath);
+              tenantDb.prepare('DELETE FROM usuario WHERE email = ?').run(email);
+              tenantDb.close();
+            } catch (err) {
+              console.warn('⚠️ Erro ao deletar do tenant DB:', err.message);
+            }
+          }
+
+          return res.json({
+            success: true,
+            action: 'USER_DELETED',
+            message: `Usuário ${email} removido com sucesso`,
+            deleted: analysis
+          });
+        }
+
+        // Análise apenas
+        return res.json({
+          success: true,
+          action: 'ANALYSIS_ONLY',
+          message: 'Para deletar, adicione ?execute=true',
+          analysis,
+          nextStep: `/api/cleanup-user/${email}?execute=true`
+        });
+
+      } catch (error) {
+        console.error('❌ Erro no cleanup de usuário:', error);
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
     // Status WhatsApp via Admin
     this.app.get('/whatsapp/status', async (req, res) => {
       try {
