@@ -311,7 +311,10 @@ class SaeeApp {
     this.app.get('/api/cleanup-user/:email', async (req, res) => {
       try {
         const { email } = req.params;
-        const masterDb = this.multiTenantDb.getMasterDb();
+        const multiTenantDb = require('./models/MultiTenantDatabase');
+        const fs = require('fs');
+        const path = require('path');
+        const masterDb = multiTenantDb.getMasterDb();
         
         // Buscar usuário em master_users
         const user = masterDb.prepare('SELECT * FROM master_users WHERE email = ?').get(email);
