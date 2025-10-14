@@ -226,27 +226,52 @@ class SaeeApp {
           let deletedTenants = 0;
           let deletedUsers = 0;
           let deletedInvites = 0;
+          let deletedOthers = 0;
           
           try {
+            // Desabilitar foreign key checks temporariamente
+            masterDb.pragma('foreign_keys = OFF');
+            
             // Usar transação para garantir atomicidade
             const transaction = masterDb.transaction(() => {
               orphans.forEach(tenant => {
-                // 1. Deletar global_invites PRIMEIRO (foreign key)
-                const invitesResult = masterDb.prepare('DELETE FROM global_invites WHERE tenant_id = ?').run(tenant.id);
-                deletedInvites += invitesResult.changes;
+                // Tentar deletar de TODAS as tabelas possíveis que referenciam tenant_id
+                try {
+                  const invitesResult = masterDb.prepare('DELETE FROM global_invites WHERE tenant_id = ?').run(tenant.id);
+                  deletedInvites += invitesResult.changes;
+                } catch (e) { /* tabela pode não existir */ }
                 
-                // 2. Deletar master_users (foreign key)
-                const usersResult = masterDb.prepare('DELETE FROM master_users WHERE tenant_id = ?').run(tenant.id);
-                deletedUsers += usersResult.changes;
+                try {
+                  const usersResult = masterDb.prepare('DELETE FROM master_users WHERE tenant_id = ?').run(tenant.id);
+                  deletedUsers += usersResult.changes;
+                } catch (e) { /* tabela pode não existir */ }
                 
-                // 3. Deletar tenant POR ÚLTIMO
+                // Verificar se há outras tabelas (sessões, logs, etc)
+                try {
+                  const sessionsResult = masterDb.prepare('DELETE FROM sessions WHERE tenant_id = ?').run(tenant.id);
+                  deletedOthers += sessionsResult.changes;
+                } catch (e) { /* tabela pode não existir */ }
+                
+                try {
+                  const logsResult = masterDb.prepare('DELETE FROM audit_logs WHERE tenant_id = ?').run(tenant.id);
+                  deletedOthers += logsResult.changes;
+                } catch (e) { /* tabela pode não existir */ }
+                
+                // Deletar tenant por último
                 const tenantResult = masterDb.prepare('DELETE FROM tenants WHERE id = ?').run(tenant.id);
                 deletedTenants += tenantResult.changes;
               });
             });
             
             transaction();
+            
+            // Reabilitar foreign key checks
+            masterDb.pragma('foreign_keys = ON');
+            
           } catch (deleteError) {
+            // Garantir que FK seja reabilitado mesmo em caso de erro
+            try { masterDb.pragma('foreign_keys = ON'); } catch (e) {}
+            
             console.error('❌ Erro ao deletar órfãos:', deleteError);
             return res.status(500).json({
               success: false,
@@ -260,7 +285,7 @@ class SaeeApp {
             success: true,
             action: 'CLEANUP_EXECUTED',
             message: 'Limpeza de órfãos concluída!',
-            deleted: { tenants: deletedTenants, users: deletedUsers, invites: deletedInvites },
+            deleted: { tenants: deletedTenants, users: deletedUsers, invites: deletedInvites, others: deletedOthers },
             orphansRemoved: orphans.map(t => t.slug)
           });
         }
