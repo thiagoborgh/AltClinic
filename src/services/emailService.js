@@ -18,7 +18,7 @@ class EmailService {
         return;
       }
 
-      this.transporter = nodemailer.createTransport({
+      const smtpConfig = {
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
         secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
@@ -26,10 +26,25 @@ class EmailService {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS
         },
+        // Aumentar timeouts para evitar ETIMEDOUT
+        connectionTimeout: 60000, // 60 segundos
+        greetingTimeout: 30000,   // 30 segundos
+        socketTimeout: 60000,     // 60 segundos
         tls: {
-          rejectUnauthorized: false // Para desenvolvimento
-        }
-      });
+          rejectUnauthorized: false,
+          minVersion: 'TLSv1.2'
+        },
+        // Configurações adicionais para melhor compatibilidade
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5
+      };
+
+      console.log(`📧 Configurando SMTP: ${process.env.SMTP_USER} → ${process.env.SMTP_HOST}:${smtpConfig.port}`);
+      
+      this.transporter = nodemailer.createTransport(smtpConfig);
 
       console.log('✅ Serviço de email inicializado com sucesso');
     } catch (error) {

@@ -486,18 +486,28 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Enviar email
-    try {
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+    // Enviar email de forma assíncrona (não bloquear resposta)
+    setImmediate(async () => {
+      try {
+        console.log('📧 Iniciando envio de email de redefinição para:', email);
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          },
+          // Aumentar timeouts
+          connectionTimeout: 60000,
+          greetingTimeout: 30000,
+          socketTimeout: 60000,
+          tls: {
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2'
+          }
+        });
 
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
@@ -535,11 +545,13 @@ router.post('/forgot-password', async (req, res) => {
       await transporter.sendMail(mailOptions);
       console.log('📧 Email de redefinição enviado para:', email);
 
-    } catch (emailError) {
-      console.error('Erro ao enviar email:', emailError);
-      // Não retornar erro para não expor se o email existe
-    }
+      } catch (emailError) {
+        console.error('⚠️ Erro ao enviar email:', emailError);
+        // Não retornar erro para não expor se o email existe
+      }
+    });
 
+    // Retornar resposta imediatamente (não esperar email)
     res.json({
       success: true,
       message: 'Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.'
