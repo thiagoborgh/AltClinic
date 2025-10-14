@@ -231,23 +231,25 @@ router.post('/register', async (req, res) => {
     // Log da criação
     console.log(`✅ Tenant criado: ${clinicaNome} (${slug}) - Owner: ${ownerNome}`);
 
-    // Enviar email de primeiro acesso com credenciais
-    try {
-      const emailService = require('../services/emailService');
-      
-      // Gerar senha temporária para primeiro acesso
-      const tempPassword = require('crypto').randomBytes(8).toString('hex');
-      const tempPasswordHash = await bcryptjs.hash(tempPassword, 12);
-      
-      // Atualizar senha no banco do tenant para a temporária
-      tenantDb.prepare(`
-        UPDATE usuarios 
-        SET senha_hash = ?, email_verified_at = NULL, status = 'pending_first_access'
-        WHERE email = ? AND tenant_id = ?
-      `).run(tempPasswordHash, ownerEmail, tenantId);
-      
-      // Atualizar master_users também
-      masterDb.prepare(`
+    // Enviar email de primeiro acesso com credenciais (não bloquear resposta)
+    setImmediate(async () => {
+      try {
+        console.log(`📧 Iniciando envio de email para: ${ownerEmail}`);
+        const emailService = require('../services/emailService');
+        
+        // Gerar senha temporária para primeiro acesso
+        const tempPassword = require('crypto').randomBytes(8).toString('hex');
+        const tempPasswordHash = await bcryptjs.hash(tempPassword, 12);
+        
+        // Atualizar senha no banco do tenant para a temporária
+        tenantDb.prepare(`
+          UPDATE usuarios 
+          SET senha_hash = ?, email_verified_at = NULL, status = 'pending_first_access'
+          WHERE email = ? AND tenant_id = ?
+        `).run(tempPasswordHash, ownerEmail, tenantId);
+        
+        // Atualizar master_users também
+        masterDb.prepare(`
         UPDATE master_users 
         SET senha_hash = ?
         WHERE email = ? AND tenant_id = ?
@@ -274,11 +276,15 @@ router.post('/register', async (req, res) => {
       console.log(`📧 Email de primeiro acesso enviado para: ${ownerEmail}`);
       console.log(`🔑 Senha temporária: ${tempPassword}`);
 
-    } catch (emailError) {
-      console.error('⚠️ Erro ao enviar email de primeiro acesso:', emailError);
-      // Não falhar o cadastro por causa do email
-    }
+      } catch (emailError) {
+        console.error('⚠️ Erro ao enviar email de primeiro acesso:', emailError);
+        // Não falhar o cadastro por causa do email
+      }
+    });
 
+    // Retornar resposta imediatamente (não esperar email)
+    console.log(`✅ Preparando resposta de sucesso para: ${ownerEmail}`);
+    
     res.status(201).json({
       message: 'Clínica criada com sucesso! Verifique seu email para acessar.',
       tenant: {
