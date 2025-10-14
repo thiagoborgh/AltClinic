@@ -430,7 +430,13 @@ class MultiTenantDatabaseManager {
         throw new Error(`Tenant não encontrado: ${tenantId}`);
       }
 
-      const dbPath = path.join(this.databasesPath, tenant.database_name);
+      // Garantir que database_name tenha extensão .db
+      let databaseFileName = tenant.database_name;
+      if (!databaseFileName.endsWith('.db')) {
+        databaseFileName += '.db';
+      }
+
+      const dbPath = path.join(this.databasesPath, databaseFileName);
       console.log(`🔗 Opening database: ${dbPath}`);
 
       if (!fs.existsSync(dbPath)) {
