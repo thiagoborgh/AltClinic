@@ -211,29 +211,56 @@ class SaeeApp {
         }
         
         const affectedUsers = [];
+        const affectedInvites = [];
         orphans.forEach(tenant => {
           const users = masterDb.prepare('SELECT id, email FROM master_users WHERE tenant_id = ?').all(tenant.id);
           users.forEach(user => {
             affectedUsers.push({ email: user.email, tenantSlug: tenant.slug });
           });
+          
+          const invites = masterDb.prepare('SELECT id, email FROM global_invites WHERE tenant_id = ?').all(tenant.id);
+          affectedInvites.push({ tenantSlug: tenant.slug, count: invites.length });
         });
         
         if (req.query.execute === 'true') {
           let deletedTenants = 0;
           let deletedUsers = 0;
+          let deletedInvites = 0;
           
-          orphans.forEach(tenant => {
-            const usersResult = masterDb.prepare('DELETE FROM master_users WHERE tenant_id = ?').run(tenant.id);
-            deletedUsers += usersResult.changes;
-            const tenantResult = masterDb.prepare('DELETE FROM tenants WHERE id = ?').run(tenant.id);
-            deletedTenants += tenantResult.changes;
-          });
+          try {
+            // Usar transação para garantir atomicidade
+            const transaction = masterDb.transaction(() => {
+              orphans.forEach(tenant => {
+                // 1. Deletar global_invites PRIMEIRO (foreign key)
+                const invitesResult = masterDb.prepare('DELETE FROM global_invites WHERE tenant_id = ?').run(tenant.id);
+                deletedInvites += invitesResult.changes;
+                
+                // 2. Deletar master_users (foreign key)
+                const usersResult = masterDb.prepare('DELETE FROM master_users WHERE tenant_id = ?').run(tenant.id);
+                deletedUsers += usersResult.changes;
+                
+                // 3. Deletar tenant POR ÚLTIMO
+                const tenantResult = masterDb.prepare('DELETE FROM tenants WHERE id = ?').run(tenant.id);
+                deletedTenants += tenantResult.changes;
+              });
+            });
+            
+            transaction();
+          } catch (deleteError) {
+            console.error('❌ Erro ao deletar órfãos:', deleteError);
+            return res.status(500).json({
+              success: false,
+              error: deleteError.message,
+              hint: 'Erro ao executar limpeza. Pode haver dependências no banco.',
+              orphansFound: orphans.map(t => ({ slug: t.slug, id: t.id }))
+            });
+          }
           
           return res.json({
             success: true,
             action: 'CLEANUP_EXECUTED',
             message: 'Limpeza de órfãos concluída!',
-            deleted: { tenants: deletedTenants, users: deletedUsers },
+            deleted: { tenants: deletedTenants, users: deletedUsers, invites: deletedInvites },
             orphansRemoved: orphans.map(t => t.slug)
           });
         }
@@ -245,6 +272,7 @@ class SaeeApp {
           stats: { total: tenants.length, valid: valid.length, orphans: orphans.length },
           orphansFound: orphans.map(t => ({ slug: t.slug, nome: t.nome, database: t.database })),
           affectedUsers: affectedUsers,
+          affectedInvites: affectedInvites,
           nextStep: 'Acesse: /api/cleanup-orphans?execute=true para executar'
         });
         
