@@ -9,17 +9,19 @@
 ## 📋 Análise do Erro
 
 ### Erro Console:
+
 ```javascript
 🌐 API ERROR: 401 POST /auth/login
 {
-  success: false, 
-  message: 'Usuário não encontrado', 
+  success: false,
+  message: 'Usuário não encontrado',
   errorType: 'USER_NOT_FOUND',
   hint: 'Verifique se o email está correto ou se você tem acesso a esta clínica.'
 }
 ```
 
 ### Causa Raiz:
+
 - ✅ API está funcionando (retorna 401 correto)
 - ✅ Tenant "teste" está sendo enviado no header
 - ❌ **Banco de dados está vazio** - usuário não existe no tenant
@@ -33,6 +35,7 @@
 **A forma mais simples de todas!**
 
 1. **Acesse a página de inicialização:**
+
    ```
    https://altclinic.onrender.com/init-system.html
    ```
@@ -52,6 +55,7 @@
 **Não precisa acessar Shell do Render!**
 
 1. **Abra o site em produção:**
+
    ```
    https://altclinic.onrender.com
    ```
@@ -59,20 +63,21 @@
 2. **Abra o Console (F12)**
 
 3. **Cole este código:**
+
    ```javascript
-   fetch('https://altclinic.onrender.com/api/auth/init-system', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' }
+   fetch("https://altclinic.onrender.com/api/auth/init-system", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
    })
-   .then(r => r.json())
-   .then(data => {
-     console.log('✅ SISTEMA INICIALIZADO!');
-     console.log('📧 Email:', data.credentials.email);
-     console.log('🔑 Senha:', data.credentials.password);
-     console.log('🏥 Tenant:', data.credentials.tenant);
-     console.log('\n⚠️ SALVE ESSAS CREDENCIAIS!');
-   })
-   .catch(err => console.error('❌ Erro:', err));
+     .then((r) => r.json())
+     .then((data) => {
+       console.log("✅ SISTEMA INICIALIZADO!");
+       console.log("📧 Email:", data.credentials.email);
+       console.log("🔑 Senha:", data.credentials.password);
+       console.log("🏥 Tenant:", data.credentials.tenant);
+       console.log("\n⚠️ SALVE ESSAS CREDENCIAIS!");
+     })
+     .catch((err) => console.error("❌ Erro:", err));
    ```
 
 4. **Copie as credenciais que aparecerem**
@@ -84,19 +89,23 @@
 ### Solução 1: Criar usuário via Terminal Render
 
 1. **Acesse o Dashboard do Render:**
+
    - https://dashboard.render.com
    - Selecione seu serviço "altclinic"
 
 2. **Abra o Shell:**
+
    - Clique em "Shell" no menu lateral
    - Ou vá em: https://dashboard.render.com/web/[seu-service-id]/shell
 
 3. **Execute o script:**
+
    ```bash
    node create-first-user-production.js
    ```
 
 4. **Verifique a saída:**
+
    ```
    ✅ SUCESSO! Agora você pode fazer login com:
       Email: thiagoborgh@gmail.com
@@ -111,28 +120,32 @@
 ### Solução 2: Usar endpoint init-system via API (MAIS FÁCIL) ⭐
 
 1. **Execute via curl:**
+
    ```bash
    curl -X POST https://altclinic.onrender.com/api/auth/init-system \
      -H "Content-Type: application/json"
    ```
 
 2. **Ou via Postman:**
+
    - Método: `POST`
    - URL: `https://altclinic.onrender.com/api/auth/init-system`
    - Headers: `Content-Type: application/json`
 
 3. **Ou abra no navegador e use console:**
+
    ```javascript
    // Cole no console do navegador (F12)
-   fetch('https://altclinic.onrender.com/api/auth/init-system', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' }
+   fetch("https://altclinic.onrender.com/api/auth/init-system", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
    })
-   .then(r => r.json())
-   .then(console.log)
+     .then((r) => r.json())
+     .then(console.log);
    ```
 
 4. **Resposta esperada:**
+
    ```json
    {
      "success": true,
@@ -153,6 +166,7 @@
 ### Solução 3: Via package.json script
 
 1. **No Shell do Render, execute:**
+
    ```bash
    npm run init:production
    ```
@@ -193,6 +207,7 @@ curl -X POST https://altclinic.onrender.com/api/auth/login \
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "success": true,
@@ -220,27 +235,35 @@ curl -X POST https://altclinic.onrender.com/api/auth/login \
 ## 🐛 Problemas Comuns
 
 ### Erro: "Cannot find module 'better-sqlite3'"
+
 **Solução:**
+
 ```bash
 npm install better-sqlite3
 npm rebuild better-sqlite3
 ```
 
 ### Erro: "ENOENT: no such file or directory 'data/master.db'"
+
 **Solução:**
+
 ```bash
 mkdir -p data
 node src/utils/productionInitializer.js
 ```
 
 ### Erro: "Table 'usuarios' doesn't exist"
+
 **Solução:**
+
 ```bash
 npm run migrate
 ```
 
 ### Erro: "bcrypt compare failed"
+
 **Solução:**
+
 ```bash
 # Recriar usuário com nova senha
 node create-first-user-production.js
@@ -251,6 +274,7 @@ node create-first-user-production.js
 ## 🔐 Credenciais Padrão
 
 **Para desenvolvimento/teste:**
+
 - Email: `thiagoborgh@gmail.com`
 - Senha: `Altclinic123`
 - Tenant: `teste`
@@ -262,6 +286,7 @@ node create-first-user-production.js
 ## 📊 Logs para Debug
 
 ### Backend (Render Logs):
+
 ```
 🔐 LOGIN: tenantSlug from header: teste
 🔐 LOGIN: tenant found: { id: 1, nome: 'Clínica Teste', slug: 'teste' }
@@ -270,6 +295,7 @@ node create-first-user-production.js
 ```
 
 ### Frontend (Console):
+
 ```
 🔐 LOGIN: Iniciando login para: thiagoborgh@gmail.com
 🌐 API REQUEST: POST https://altclinic.onrender.com/api/auth/login
@@ -295,10 +321,12 @@ node create-first-user-production.js
 Se o problema persistir:
 
 1. **Verifique logs do Render:**
+
    - Dashboard → Service → Logs
    - Procure por erros de banco de dados
 
 2. **Verifique variáveis de ambiente:**
+
    - `JWT_SECRET` configurado?
    - `MASTER_DB_PATH` correto?
    - `NODE_ENV=production`?

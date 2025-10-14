@@ -20,11 +20,13 @@
 ### ❌ Problema Identificado
 
 O sistema estava procurando os bancos dos tenants em:
+
 ```
 /opt/render/project/src/databases/tenant_teste.db
 ```
 
 Mas o **Disk Storage** do Render está montado em:
+
 ```
 /opt/render/project/src/data/
 ```
@@ -42,10 +44,10 @@ Mas o **Disk Storage** do Render está montado em:
 
 ```javascript
 // ❌ ANTES:
-this.databasesPath = path.join(__dirname, '../../databases');
+this.databasesPath = path.join(__dirname, "../../databases");
 
 // ✅ DEPOIS:
-this.databasesPath = path.join(__dirname, '../../data');
+this.databasesPath = path.join(__dirname, "../../data");
 ```
 
 ---
@@ -57,10 +59,10 @@ this.databasesPath = path.join(__dirname, '../../data');
 
 ```javascript
 // ❌ ANTES:
-const dbPath = path.join(__dirname, '../../databases/', `${databaseName}.db`);
+const dbPath = path.join(__dirname, "../../databases/", `${databaseName}.db`);
 
 // ✅ DEPOIS:
-const dbPath = path.join(__dirname, '../../data/', `${databaseName}.db`);
+const dbPath = path.join(__dirname, "../../data/", `${databaseName}.db`);
 ```
 
 ---
@@ -173,11 +175,13 @@ O rate limiter ainda está ativo. Aguarde até que o bloqueio expire.
 Acesse: https://altclinic.onrender.com/diagnostic-login.html
 
 **Opção 1 - Auto-detect:**
+
 - Email: `thiagoborgh@gmail.com`
 - Senha: `Altclinic123`
 - Clique em **"Testar Login (auto-detect tenant)"**
 
 **Resultado esperado:**
+
 ```json
 {
   "success": true,
@@ -195,10 +199,10 @@ Acesse: https://altclinic.onrender.com/diagnostic-login.html
 
 ## 📝 Arquivos Modificados
 
-| Arquivo | Linha | Alteração |
-|---------|-------|-----------|
-| `src/models/MultiTenantDatabase.js` | 24 | `databases` → `data` |
-| `src/models/Tenant.js` | 210 | `databases` → `data` |
+| Arquivo                             | Linha | Alteração            |
+| ----------------------------------- | ----- | -------------------- |
+| `src/models/MultiTenantDatabase.js` | 24    | `databases` → `data` |
+| `src/models/Tenant.js`              | 210   | `databases` → `data` |
 
 ---
 
@@ -221,13 +225,13 @@ Acesse: https://altclinic.onrender.com/diagnostic-login.html
 
 ## 📊 Timeline
 
-| Etapa | Status | Tempo |
-|-------|--------|-------|
-| Commit local | ✅ Feito | - |
-| Push para GitHub | ⏳ Em andamento | - |
-| Auto-deploy Render | ⏳ Aguardando | 3-5 min |
-| Rate limiter reset | ⏳ Aguardando | ~15 min |
-| Teste de login | ⏳ Pendente | - |
+| Etapa              | Status          | Tempo   |
+| ------------------ | --------------- | ------- |
+| Commit local       | ✅ Feito        | -       |
+| Push para GitHub   | ⏳ Em andamento | -       |
+| Auto-deploy Render | ⏳ Aguardando   | 3-5 min |
+| Rate limiter reset | ⏳ Aguardando   | ~15 min |
+| Teste de login     | ⏳ Pendente     | -       |
 
 ---
 

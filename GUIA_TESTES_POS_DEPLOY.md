@@ -23,18 +23,21 @@ node admin-server.js
 ### ✅ 2. Testar funcionalidades principais
 
 #### **Login e Autenticação**
+
 - [ ] Login com usuário existente
 - [ ] Trial de 15 dias funcionando
 - [ ] Mensagens de erro apropriadas
 - [ ] Redirect após login
 
 #### **AgendaLite**
+
 - [ ] Visualização semanal carrega
 - [ ] Botão "Configurar Grade" abre modal
 - [ ] Botão "Lista de Espera" (HourglassEmpty) abre modal
 - [ ] Agendamentos aparecem corretamente
 
 #### **ModalListaEspera**
+
 - [ ] Autocomplete de pacientes funciona
 - [ ] Busca de pacientes por nome/CPF
 - [ ] Checkbox "Novo Paciente" funciona
@@ -45,12 +48,14 @@ node admin-server.js
 - [ ] Botão "Adicionar à Lista" salva
 
 #### **ConfiguracaoGrade**
+
 - [ ] Modo embedded em ProfissionaisMedicos
 - [ ] Modo modal em AgendaLite
 - [ ] Salvar horários funciona
 - [ ] Validações de conflito
 
 #### **Professional Schedules**
+
 - [ ] GET /api/professional/schedule retorna dados
 - [ ] POST cria novos horários
 - [ ] PUT atualiza horários
@@ -60,6 +65,7 @@ node admin-server.js
 ### ✅ 3. Testar integrações WhatsApp
 
 #### **Verificar configuração**
+
 ```powershell
 # Testar endpoint de status
 curl http://localhost:3000/api/whatsapp/status
@@ -70,6 +76,7 @@ curl http://localhost:3000/api/whatsapp/status
 - [ ] Limites de mensagens corretos
 
 #### **Testar envios**
+
 - [ ] Confirmação de agendamento
 - [ ] Lembrete de consulta
 - [ ] Cobrança de pagamento
@@ -112,6 +119,7 @@ tail -f logs/app.log
 ## 🐛 Problemas Comuns e Soluções
 
 ### Backend não inicia
+
 ```powershell
 # Verificar porta 3000 livre
 netstat -ano | findstr :3000
@@ -120,6 +128,7 @@ taskkill /PID <pid> /F
 ```
 
 ### Frontend não compila
+
 ```powershell
 cd frontend
 rm -rf node_modules package-lock.json
@@ -128,6 +137,7 @@ npm start
 ```
 
 ### Banco de dados travado
+
 ```powershell
 # Fechar todas as conexões
 taskkill /IM node.exe /F
@@ -136,6 +146,7 @@ rm *.db-wal *.db-shm
 ```
 
 ### Erro de CORS
+
 - Verificar `CORS_ORIGIN` em `.env`
 - Deve ser `http://localhost:3001` em desenvolvimento
 

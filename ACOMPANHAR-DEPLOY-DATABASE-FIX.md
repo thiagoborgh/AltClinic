@@ -309,12 +309,12 @@ ls -la data/
 
 ### Mudanças Implementadas
 
-| Arquivo                              | Linha | Mudança                  |
-| ------------------------------------ | ----- | ------------------------ |
-| `src/models/MultiTenantDatabase.js`  | 24    | `databases/` → `data/`   |
-| `src/models/Tenant.js`               | 210   | `databases/` → `data/`   |
-| `FIX-DATABASE-PATH-PRODUCTION.md`    | -     | Documentação criada      |
-| `ACOMPANHAR-DEPLOY-DATABASE-FIX.md`  | -     | Este guia                |
+| Arquivo                             | Linha | Mudança                |
+| ----------------------------------- | ----- | ---------------------- |
+| `src/models/MultiTenantDatabase.js` | 24    | `databases/` → `data/` |
+| `src/models/Tenant.js`              | 210   | `databases/` → `data/` |
+| `FIX-DATABASE-PATH-PRODUCTION.md`   | -     | Documentação criada    |
+| `ACOMPANHAR-DEPLOY-DATABASE-FIX.md` | -     | Este guia              |
 
 ### Commit Info
 

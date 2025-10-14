@@ -9,6 +9,7 @@
 ## ❌ PROBLEMA
 
 ### Erro Anterior:
+
 ```json
 {
   "success": false,
@@ -38,33 +39,35 @@
 ## 📝 CÓDIGO ATUALIZADO
 
 ### Antes (Apenas /health):
+
 ```javascript
-this.app.get('/health', async (req, res) => {
+this.app.get("/health", async (req, res) => {
   res.json({
     success: true,
-    message: 'API funcionando',
+    message: "API funcionando",
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: "1.0.0",
   });
 });
 ```
 
 ### Depois (Ambos /health e /api/health):
+
 ```javascript
 const healthCheckHandler = async (req, res) => {
   res.json({
     success: true,
-    status: 'ok',
-    message: 'SAEE API está funcionando',
+    status: "ok",
+    message: "SAEE API está funcionando",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: '2.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    version: "2.0.0",
+    environment: process.env.NODE_ENV || "development",
   });
 };
 
-this.app.get('/health', healthCheckHandler);
-this.app.get('/api/health', healthCheckHandler);
+this.app.get("/health", healthCheckHandler);
+this.app.get("/api/health", healthCheckHandler);
 ```
 
 ---
@@ -82,16 +85,19 @@ O Render detectará o push e fará deploy automático (se Auto-Deploy estiver ha
 ### 2. Teste o Endpoint
 
 **Via navegador:**
+
 ```
 https://altclinic.onrender.com/api/health
 ```
 
 **Via PowerShell:**
+
 ```powershell
 Invoke-WebRequest -Uri "https://altclinic.onrender.com/api/health" | Select-Object -ExpandProperty Content
 ```
 
 **Via curl:**
+
 ```bash
 curl https://altclinic.onrender.com/api/health
 ```
@@ -136,11 +142,13 @@ curl https://altclinic.onrender.com/api/health
 ### 1. Aguarde o Deploy
 
 **Vá em:**
+
 ```
 https://dashboard.render.com → altclinic → Logs
 ```
 
 **Procure por:**
+
 ```
 ✅ Deploying commit: dcd35df
 ✅ Build starting...
@@ -168,6 +176,7 @@ curl https://altclinic.onrender.com/api/health
 ### 3. Verifique Health Check no Render
 
 **Dashboard Render:**
+
 1. Vá em: Settings → Health & Alerts
 2. Confirme: Health Check Path = `/api/health`
 3. Status deve estar: ✅ Healthy
@@ -206,6 +215,7 @@ MASTER_DB_PATH: ./data/master.db
 **Status:** ✅ Resolvido e enviado para produção
 
 **Endpoints disponíveis:**
+
 - ✅ `/health` (compatibilidade)
 - ✅ `/api/health` (Render Health Check)
 

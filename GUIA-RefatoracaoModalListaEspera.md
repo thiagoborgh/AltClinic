@@ -1,6 +1,7 @@
 # Guia: Refatoração do ModalListaEspera
 
 ## 🎯 Objetivo
+
 Alinhar o ModalListaEspera com o padrão do ModalAgendamento para manter consistência no código.
 
 ## 📝 Mudanças Necessárias
@@ -10,20 +11,20 @@ Alinhar o ModalListaEspera com o padrão do ModalAgendamento para manter consist
 ```javascript
 const [formData, setFormData] = useState({
   // Dados do paciente - IGUAL ao ModalAgendamento
-  paciente: '',              // Nome ou objeto do paciente
-  pacienteNovo: false,       // Flag se é novo cadastro
-  pacienteExistente: null,   // Objeto do paciente se existir
-  cpf: '',
-  telefone: '',
-  email: '',
-  
+  paciente: "", // Nome ou objeto do paciente
+  pacienteNovo: false, // Flag se é novo cadastro
+  pacienteExistente: null, // Objeto do paciente se existir
+  cpf: "",
+  telefone: "",
+  email: "",
+
   // Específico da Lista de Espera
-  profissionalId: professionalId || '',
-  procedimento: '',
-  convenio: 'particular',
-  periodo: [],              // ['manha', 'tarde', 'noite']
-  diasSemana: [],          // ['segunda', 'terca', etc]
-  observacoes: ''
+  profissionalId: professionalId || "",
+  procedimento: "",
+  convenio: "particular",
+  periodo: [], // ['manha', 'tarde', 'noite']
+  diasSemana: [], // ['segunda', 'terca', etc]
+  observacoes: "",
 });
 
 const [pacienteOptions, setPacienteOptions] = useState([]);
@@ -43,14 +44,15 @@ const handlePacienteSearch = async (inputValue) => {
 
   setPacienteLoading(true);
   try {
-    const { mockPacientes } = await import('../data/mockAgendamento');
-    const filtered = mockPacientes.filter(p => 
-      p.nome.toLowerCase().includes(inputValue.toLowerCase()) ||
-      (p.cpf && p.cpf.includes(inputValue))
+    const { mockPacientes } = await import("../data/mockAgendamento");
+    const filtered = mockPacientes.filter(
+      (p) =>
+        p.nome.toLowerCase().includes(inputValue.toLowerCase()) ||
+        (p.cpf && p.cpf.includes(inputValue))
     );
     setPacienteOptions(filtered);
   } catch (error) {
-    console.error('Erro ao buscar pacientes:', error);
+    console.error("Erro ao buscar pacientes:", error);
   } finally {
     setPacienteLoading(false);
   }
@@ -65,31 +67,31 @@ const handlePacienteSearch = async (inputValue) => {
   options={pacienteOptions}
   loading={pacienteLoading}
   getOptionLabel={(option) => {
-    if (typeof option === 'string') return option;
-    return `${option.nome}${option.cpf ? ` - ${option.cpf}` : ''}`;
+    if (typeof option === "string") return option;
+    return `${option.nome}${option.cpf ? ` - ${option.cpf}` : ""}`;
   }}
   value={formData.paciente}
   onInputChange={(event, newInputValue) => {
     handlePacienteSearch(newInputValue);
   }}
   onChange={(event, newValue) => {
-    if (typeof newValue === 'object' && newValue !== null) {
+    if (typeof newValue === "object" && newValue !== null) {
       // Paciente selecionado
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         paciente: newValue.nome,
         pacienteExistente: newValue,
-        cpf: newValue.cpf || '',
-        telefone: newValue.telefone || '',
-        email: newValue.email || '',
-        pacienteNovo: false
+        cpf: newValue.cpf || "",
+        telefone: newValue.telefone || "",
+        email: newValue.email || "",
+        pacienteNovo: false,
       }));
     } else {
       // Texto digitado
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        paciente: newValue || '',
-        pacienteExistente: null
+        paciente: newValue || "",
+        pacienteExistente: null,
       }));
     }
   }}
@@ -121,10 +123,10 @@ const handlePacienteSearch = async (inputValue) => {
     <Checkbox
       checked={formData.pacienteNovo}
       onChange={(e) => {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           pacienteNovo: e.target.checked,
-          pacienteExistente: null
+          pacienteExistente: null,
         }));
       }}
       disabled={!!formData.pacienteExistente}
@@ -182,16 +184,16 @@ const validateForm = () => {
   // Se for novo paciente, validar campos obrigatórios
   if (formData.pacienteNovo || !formData.pacienteExistente) {
     if (!formData.paciente || !formData.paciente.trim()) {
-      newErrors.paciente = 'Nome é obrigatório';
+      newErrors.paciente = "Nome é obrigatório";
     }
-    
+
     if (!formData.telefone || formData.telefone.length < 14) {
-      newErrors.telefone = 'Telefone é obrigatório';
+      newErrors.telefone = "Telefone é obrigatório";
     }
-    
+
     // CPF obrigatório para novos cadastros
     if (formData.pacienteNovo && (!formData.cpf || formData.cpf.length < 14)) {
-      newErrors.cpf = 'CPF é obrigatório para novo cadastro';
+      newErrors.cpf = "CPF é obrigatório para novo cadastro";
     }
   }
 
@@ -205,7 +207,7 @@ const validateForm = () => {
 ```javascript
 const handleSave = async () => {
   if (!validateForm()) {
-    toast.error('Preencha os campos obrigatórios');
+    toast.error("Preencha os campos obrigatórios");
     return;
   }
 
@@ -215,11 +217,11 @@ const handleSave = async () => {
       // Dados do paciente
       pacienteId: formData.pacienteExistente?.id || null,
       nome: formData.paciente,
-      telefone: formData.telefone.replace(/\D/g, ''),
-      cpf: formData.cpf.replace(/\D/g, ''),
+      telefone: formData.telefone.replace(/\D/g, ""),
+      cpf: formData.cpf.replace(/\D/g, ""),
       email: formData.email,
       criarPaciente: formData.pacienteNovo,
-      
+
       // Preferências
       profissionalId: formData.profissionalId,
       procedimento: formData.procedimento,
@@ -227,24 +229,24 @@ const handleSave = async () => {
       periodo: formData.periodo,
       diasSemana: formData.diasSemana,
       observacoes: formData.observacoes,
-      
+
       // Status
-      status: 'aguardando',
-      dataInclusao: new Date().toISOString()
+      status: "aguardando",
+      dataInclusao: new Date().toISOString(),
     };
 
     // TODO: Implementar chamada real da API
-    console.log('📋 Salvando na lista de espera:', listaEsperaData);
-    
+    console.log("📋 Salvando na lista de espera:", listaEsperaData);
+
     // Simulação de sucesso
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success('Paciente adicionado à lista de espera!');
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    toast.success("Paciente adicionado à lista de espera!");
     onSave && onSave(listaEsperaData);
     handleClose();
   } catch (error) {
-    console.error('Erro ao salvar:', error);
-    toast.error('Erro ao adicionar na lista de espera');
+    console.error("Erro ao salvar:", error);
+    toast.error("Erro ao adicionar na lista de espera");
   } finally {
     setLoading(false);
   }
@@ -257,8 +259,14 @@ const handleSave = async () => {
 return (
   <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
     <DialogTitle>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <HourglassEmpty color="primary" />
           <Typography variant="h6">Lista de Espera</Typography>
         </Box>
@@ -273,7 +281,10 @@ return (
         {/* Seção 1: Buscar/Cadastrar Paciente */}
         <Grid item xs={12}>
           <Typography variant="subtitle2" color="primary" gutterBottom>
-            <PersonIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+            <PersonIcon
+              fontSize="small"
+              sx={{ verticalAlign: "middle", mr: 0.5 }}
+            />
             Paciente *
           </Typography>
         </Grid>
@@ -303,7 +314,12 @@ return (
 
         {/* Seção 3: Preferências (OPCIONAL) */}
         <Grid item xs={12}>
-          <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 2 }}>
+          <Typography
+            variant="subtitle2"
+            color="primary"
+            gutterBottom
+            sx={{ mt: 2 }}
+          >
             Preferências (Opcional)
           </Typography>
         </Grid>
@@ -331,7 +347,8 @@ return (
         {/* Informativo */}
         <Grid item xs={12}>
           <Alert severity="info">
-            O paciente será notificado quando houver disponibilidade conforme suas preferências.
+            O paciente será notificado quando houver disponibilidade conforme
+            suas preferências.
           </Alert>
         </Grid>
       </Grid>
@@ -347,7 +364,7 @@ return (
         disabled={loading}
         startIcon={<HourglassEmpty />}
       >
-        {loading ? 'Salvando...' : 'Adicionar à Lista'}
+        {loading ? "Salvando..." : "Adicionar à Lista"}
       </Button>
     </DialogActions>
   </Dialog>
@@ -357,6 +374,7 @@ return (
 ## 🎨 Diferenças do ModalAgendamento
 
 ### O que mantém IGUAL:
+
 ✅ Estrutura de estados do paciente
 ✅ Autocomplete de busca
 ✅ Máscaras de telefone e CPF
@@ -365,6 +383,7 @@ return (
 ✅ Layout geral do modal
 
 ### O que é DIFERENTE:
+
 ❌ Não tem campos de data/hora (lista de espera não agenda)
 ✅ Tem campos de preferência: período e dias da semana
 ✅ Status sempre "aguardando"
@@ -375,7 +394,7 @@ return (
 ## 📦 Imports Necessários
 
 ```javascript
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -396,16 +415,16 @@ import {
   Alert,
   InputAdornment,
   Checkbox,
-  FormControlLabel
-} from '@mui/material';
+  FormControlLabel,
+} from "@mui/material";
 import {
   Close,
   HourglassEmpty,
   Person as PersonIcon,
-  Search as SearchIcon
-} from '@mui/icons-material';
-import { toast } from 'react-hot-toast';
-import { IMaskInput } from 'react-imask';
+  Search as SearchIcon,
+} from "@mui/icons-material";
+import { toast } from "react-hot-toast";
+import { IMaskInput } from "react-imask";
 ```
 
 ## ✅ Checklist de Implementação
@@ -430,4 +449,4 @@ import { IMaskInput } from 'react-imask';
 
 ---
 
-*Guia criado em 13 de Outubro de 2025*
+_Guia criado em 13 de Outubro de 2025_

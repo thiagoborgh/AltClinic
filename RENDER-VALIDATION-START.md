@@ -9,6 +9,7 @@
 ## 📋 INÍCIO RÁPIDO
 
 ### 1️⃣ Acesse o Dashboard
+
 ```
 https://dashboard.render.com → altclinic
 ```
@@ -16,16 +17,19 @@ https://dashboard.render.com → altclinic
 ### 2️⃣ Verifique as 3 Configurações Principais
 
 #### ⚙️ Build Command
+
 ```bash
 npm run build:linux
 ```
 
 #### ▶️ Start Command
+
 ```bash
 node src/app.js
 ```
 
 #### 🔐 Environment Variables
+
 ```bash
 NODE_ENV=production
 JWT_SECRET=[64 chars aleatórios]
@@ -36,6 +40,7 @@ MASTER_DB_PATH=./data/master.db
 ### 3️⃣ Execute Verificação Automática
 
 **No Shell do Render:**
+
 ```bash
 bash verify-render-env.sh
 ```
@@ -47,12 +52,14 @@ bash verify-render-env.sh
 ### 📖 Guias Disponíveis:
 
 1. **`RENDER-CONFIG-VALIDATION.md`** (Completo)
+
    - 📋 Checklist detalhado
    - ⚙️ Configurações passo a passo
    - 🐛 Troubleshooting completo
    - 📊 Configuração ideal
 
 2. **`RENDER-CHECKLIST-VISUAL.md`** (Interativo)
+
    - ✅ Checklist com checkboxes
    - 📍 8 seções organizadas
    - 🔍 Comandos de verificação
@@ -75,7 +82,10 @@ Se você tem pouco tempo, configure pelo menos:
 Build Command: npm run build:linux
 Start Command: node src/app.js
 NODE_ENV: production
-JWT_SECRET: [gere com: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"]
+JWT_SECRET:
+  [
+    gere com: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))",
+  ]
 
 # RECOMENDADO
 CORS_ORIGIN: https://altclinic.onrender.com
@@ -90,15 +100,19 @@ Health Check: /api/health
 ### Método 1: Via Browser (Mais Fácil)
 
 1. **Teste o Health Check:**
+
    ```
    https://altclinic.onrender.com/api/health
    ```
+
    **Deve retornar:** `{"status":"ok",...}`
 
 2. **Teste a Página de Diagnóstico:**
+
    ```
    https://altclinic.onrender.com/diagnostic-login.html
    ```
+
    **Deve carregar:** Interface de teste de login
 
 3. **Teste o Frontend:**
@@ -151,7 +165,8 @@ env | grep NODE_ENV
 ### ❌ Usuário Não Encontrado
 
 **Sintoma:** Erro 401 no login  
-**Solução:** 
+**Solução:**
+
 1. Acesse: https://altclinic.onrender.com/diagnostic-login.html
 2. Clique em "Testar Login (auto-detect)"
 3. Ou execute no Shell: `node quick-init-production.js`
@@ -205,14 +220,17 @@ env | grep NODE_ENV
 ### Se TUDO estiver ✅:
 
 1. ✅ **Inicializar sistema**
+
    - Acesse: https://altclinic.onrender.com/diagnostic-login.html
    - Ou Shell: `node quick-init-production.js`
 
 2. ✅ **Testar login**
+
    - Use credenciais geradas
    - Ou tente auto-detect
 
 3. ✅ **Validar funcionalidades**
+
    - AgendaLite
    - ModalListaEspera
    - ConfiguracaoGrade
@@ -228,18 +246,22 @@ env | grep NODE_ENV
 ### Se ALGO estiver ❌:
 
 1. ❌ **Identifique o problema**
+
    - Consulte `RENDER-CONFIG-VALIDATION.md`
    - Execute `bash verify-render-env.sh` no Shell
 
 2. ❌ **Corrija a configuração**
+
    - Siga o checklist em `RENDER-CHECKLIST-VISUAL.md`
    - Aplique as soluções sugeridas
 
 3. ❌ **Execute Manual Deploy**
+
    - Settings → Manual Deploy
    - Aguarde conclusão
 
 4. ❌ **Verifique logs**
+
    - Logs → Procure por erros
    - Confirme que não há mais problemas
 
@@ -253,19 +275,20 @@ env | grep NODE_ENV
 
 ### Arquivos de Referência:
 
-| Arquivo | Propósito | Quando Usar |
-|---------|-----------|-------------|
-| `RENDER-CONFIG-VALIDATION.md` | Guia completo | Configuração inicial |
-| `RENDER-CHECKLIST-VISUAL.md` | Checklist interativo | Validação passo a passo |
-| `verify-render-env.sh` | Script automático | Verificação rápida |
-| `FIX-LOGIN-PRODUCAO-2025-10-13.md` | Correção de login | Erro de autenticação |
-| `RENDER-INIT-GUIA-VISUAL.md` | Inicialização | Primeiro deploy |
+| Arquivo                            | Propósito            | Quando Usar             |
+| ---------------------------------- | -------------------- | ----------------------- |
+| `RENDER-CONFIG-VALIDATION.md`      | Guia completo        | Configuração inicial    |
+| `RENDER-CHECKLIST-VISUAL.md`       | Checklist interativo | Validação passo a passo |
+| `verify-render-env.sh`             | Script automático    | Verificação rápida      |
+| `FIX-LOGIN-PRODUCAO-2025-10-13.md` | Correção de login    | Erro de autenticação    |
+| `RENDER-INIT-GUIA-VISUAL.md`       | Inicialização        | Primeiro deploy         |
 
 ---
 
 ## 🎉 RESUMO
 
 **3 Arquivos Criados:**
+
 - ✅ `RENDER-CONFIG-VALIDATION.md` (Completo)
 - ✅ `RENDER-CHECKLIST-VISUAL.md` (Interativo)
 - ✅ `verify-render-env.sh` (Automático)
@@ -274,6 +297,7 @@ env | grep NODE_ENV
 **Push:** ✅ Enviado para GitHub
 
 **Agora você pode:**
+
 1. 📖 Consultar a documentação completa
 2. ✅ Seguir o checklist visual
 3. 🔍 Executar verificação automática
@@ -282,6 +306,7 @@ env | grep NODE_ENV
 ---
 
 **👉 COMECE AQUI:**
+
 1. Abra: https://dashboard.render.com
 2. Siga: `RENDER-CHECKLIST-VISUAL.md`
 3. Execute: `bash verify-render-env.sh` no Shell

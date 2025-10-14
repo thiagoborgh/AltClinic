@@ -7,7 +7,9 @@
 ## ❓ PERGUNTAS
 
 ### 1. Fizemos migrações locais?
+
 **Resposta:** Sim, várias migrações foram executadas:
+
 - `008_create_professional_schedules.js`
 - `009_add_professional_id_to_schedules.js`
 - `010_add_professional_schedules_to_tenants.js`
@@ -15,12 +17,15 @@
 - `add-license-columns.js`
 
 ### 2. Excluímos tenants locais?
+
 **Resposta:** Sim, commit `76ff6ef` removeu:
+
 - `databases/tenant_teste.db`
 - `databases/tenant_altclinic_*.db`
 - Vários outros bancos de tenant de teste
 
 ### 3. Produção contemplou essas mudanças?
+
 **Resposta:** ⚠️ **NÃO AUTOMATICAMENTE!**
 
 ---
@@ -28,6 +33,7 @@
 ## 🏗️ DIFERENÇA: LOCAL vs PRODUÇÃO
 
 ### LOCAL (Desenvolvimento)
+
 ```
 c:\Users\thiag\saee\
 ├── databases/              ❌ LIMPO (commit 76ff6ef)
@@ -38,6 +44,7 @@ c:\Users\thiag\saee\
 ```
 
 ### PRODUÇÃO (Render)
+
 ```
 /opt/render/project/src/
 ├── databases/              ⚠️ Caminho antigo (não usado mais)
@@ -59,15 +66,17 @@ Já sabemos: **36 tenants** (confirmado pelo `/api/auth/init-status`)
 ### 2. Quais são esses tenants?
 
 **Precisamos listar:**
+
 ```sql
-SELECT id, slug, nome, status, created_at 
-FROM tenants 
+SELECT id, slug, nome, status, created_at
+FROM tenants
 ORDER BY created_at DESC;
 ```
 
 ### 3. Os bancos de dados existem fisicamente?
 
 **Verificar em `/data/`:**
+
 ```bash
 ls -la data/*.db
 ```
@@ -75,9 +84,10 @@ ls -la data/*.db
 ### 4. As migrações foram aplicadas em produção?
 
 **Verificar estrutura das tabelas:**
+
 ```sql
 -- Verificar se tabela professional_schedules existe
-SELECT name FROM sqlite_master 
+SELECT name FROM sqlite_master
 WHERE type='table' AND name='professional_schedules';
 
 -- Verificar colunas de licença
@@ -93,6 +103,7 @@ PRAGMA table_info(tenants);
 1. Acesse: https://dashboard.render.com → altclinic → Shell
 
 2. **Listar todos os tenants:**
+
 ```bash
 node -e "
 const Database = require('better-sqlite3');
@@ -105,11 +116,13 @@ db.close();
 ```
 
 3. **Verificar arquivos de banco:**
+
 ```bash
 ls -lh data/*.db | awk '{print $9, $5}'
 ```
 
 4. **Verificar estrutura de um tenant:**
+
 ```bash
 node -e "
 const Database = require('better-sqlite3');
@@ -127,27 +140,28 @@ db.close();
 1. **Criar endpoint de diagnóstico temporário**
 
 Adicionar em `src/app.js`:
+
 ```javascript
 // Diagnóstico de produção (remover após validação)
-app.get('/api/diagnostic/tenants', async (req, res) => {
+app.get("/api/diagnostic/tenants", async (req, res) => {
   try {
     const tenants = multiTenantDb.masterDb
-      .prepare('SELECT id, slug, nome, status, database_name FROM tenants')
+      .prepare("SELECT id, slug, nome, status, database_name FROM tenants")
       .all();
-    
+
     const tenantFiles = [];
     for (const tenant of tenants) {
-      const dbPath = path.join(__dirname, '../data', tenant.database_name);
+      const dbPath = path.join(__dirname, "../data", tenant.database_name);
       const exists = fs.existsSync(dbPath);
       const size = exists ? fs.statSync(dbPath).size : 0;
       tenantFiles.push({
         slug: tenant.slug,
         database: tenant.database_name,
         exists,
-        size
+        size,
       });
     }
-    
+
     res.json({ tenants, tenantFiles });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -156,6 +170,7 @@ app.get('/api/diagnostic/tenants', async (req, res) => {
 ```
 
 2. **Testar endpoint:**
+
 ```powershell
 Invoke-WebRequest -Uri "https://altclinic.onrender.com/api/diagnostic/tenants"
 ```
@@ -167,6 +182,7 @@ Invoke-WebRequest -Uri "https://altclinic.onrender.com/api/diagnostic/tenants"
 ### CENÁRIO 1: Produção está OK ✅
 
 **Resultado esperado:**
+
 - 36 tenants listados
 - Todos os arquivos `.db` existem em `/data/`
 - Estrutura das tabelas completa com migrações
@@ -178,18 +194,22 @@ Invoke-WebRequest -Uri "https://altclinic.onrender.com/api/diagnostic/tenants"
 ### CENÁRIO 2: Produção tem tenants de teste 🧹
 
 **Resultado:**
+
 - Tenants com nomes de teste (testprimeiroacesso*, trialtest*, etc.)
 - Criados durante desenvolvimento
 - Não são necessários em produção
 
 **Ação:** Criar script de limpeza para produção:
+
 ```javascript
 // cleanup-test-tenants-production.js
-const tenants = db.prepare(
-  "SELECT id, slug FROM tenants WHERE slug LIKE 'test%' OR slug LIKE 'trial%'"
-).all();
+const tenants = db
+  .prepare(
+    "SELECT id, slug FROM tenants WHERE slug LIKE 'test%' OR slug LIKE 'trial%'"
+  )
+  .all();
 
-console.log('Tenants de teste encontrados:', tenants.length);
+console.log("Tenants de teste encontrados:", tenants.length);
 // Decidir se remove ou mantém
 ```
 
@@ -198,10 +218,12 @@ console.log('Tenants de teste encontrados:', tenants.length);
 ### CENÁRIO 3: Migrações não aplicadas ⚠️
 
 **Resultado:**
+
 - Tabelas faltando (ex: `professional_schedules`)
 - Colunas faltando (ex: colunas de licença)
 
 **Ação:** Executar migrações em produção:
+
 ```bash
 # No Render Shell
 node migrations/migrate.js
@@ -231,12 +253,12 @@ echo "Arquivos .db: $(ls data/tenant_*.db | wc -l)"
 
 ## 📊 IMPACTO DAS MUDANÇAS LOCAIS
 
-| Mudança Local | Afeta Produção? | Motivo |
-|---------------|-----------------|--------|
-| Deletar `databases/tenant_*.db` | ❌ NÃO | Produção usa `/data/` (Disk Storage) |
-| Executar migrações locais | ❌ NÃO | Migrações só rodam onde executadas |
-| Limpar código de teste | ✅ SIM | Código é deployado via git |
-| Corrigir caminho (databases→data) | ✅ SIM | Código deployado no commit eb47351 |
+| Mudança Local                     | Afeta Produção? | Motivo                               |
+| --------------------------------- | --------------- | ------------------------------------ |
+| Deletar `databases/tenant_*.db`   | ❌ NÃO          | Produção usa `/data/` (Disk Storage) |
+| Executar migrações locais         | ❌ NÃO          | Migrações só rodam onde executadas   |
+| Limpar código de teste            | ✅ SIM          | Código é deployado via git           |
+| Corrigir caminho (databases→data) | ✅ SIM          | Código deployado no commit eb47351   |
 
 ---
 

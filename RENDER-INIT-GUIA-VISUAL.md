@@ -12,7 +12,7 @@
 
 1. Acesse: **https://dashboard.render.com**
 2. Selecione o serviço: **altclinic**
-3. No menu lateral, clique em: **Shell** (ícone >_)
+3. No menu lateral, clique em: **Shell** (ícone >\_)
 
 ### ⚡ PASSO 2: Execute o comando
 
@@ -141,6 +141,7 @@ Se o Shell não funcionar, use a **página HTML**:
 ### Logs do Render
 
 No Dashboard → **Logs** → Procure por:
+
 - ❌ Erros de banco de dados
 - ❌ Erros de migrations
 - ⚠️ "Cannot find module"
@@ -194,11 +195,11 @@ bash render-init.sh
 
 Após executar, você terá:
 
-| Campo | Exemplo |
-|-------|---------|
-| Email | admin@sistema.local |
-| Senha | GeradaAutomaticamente123 |
-| Tenant | demo-clinic |
+| Campo  | Exemplo                  |
+| ------ | ------------------------ |
+| Email  | admin@sistema.local      |
+| Senha  | GeradaAutomaticamente123 |
+| Tenant | demo-clinic              |
 
 **Use essas credenciais para fazer login!**
 
@@ -207,6 +208,7 @@ Após executar, você terá:
 ## 🚀 PRONTO!
 
 Após seguir os passos:
+
 1. ✅ Sistema inicializado
 2. ✅ Usuário criado
 3. ✅ Banco de dados populado

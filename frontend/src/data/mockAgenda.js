@@ -6,19 +6,19 @@ export const mockAgendamentos = [
     telefone: '(11) 99999-1111',
     email: 'maria@email.com',
     procedimento: 'Limpeza de Pele',
-    especialidade: 'Estética',
-    profissional: 'Dr. Ana Costa',
-    equipamento: 'Sala 1',
-    dataHora: new Date(2025, 7, 27, 9, 0), // 27/08/2025 09:00
+    especialidade: 'dermatologia',
+    profissional: 'Dra. Ana Costa',
+    equipamento: 'Laser CO2',
+    dataHora: new Date(2025, 9, 8, 9, 0), // 08/10/2025 09:00
     duracao: 60, // minutos
     status: 'confirmado',
     valor: 150.00,
     observacoes: 'Paciente tem alergia a ácido',
     lembreteEnviado: true,
-    criadoEm: new Date(2025, 7, 25),
+    criadoEm: new Date(2025, 9, 6),
     historico: [
-      { data: new Date(2025, 7, 25), acao: 'Agendamento criado', usuario: 'Recepção' },
-      { data: new Date(2025, 7, 26), acao: 'Lembrete enviado', usuario: 'Sistema' }
+      { data: new Date(2025, 9, 6), acao: 'Agendamento criado', usuario: 'Recepção' },
+      { data: new Date(2025, 9, 7), acao: 'Lembrete enviado', usuario: 'Sistema' }
     ]
   },
   {
@@ -27,18 +27,18 @@ export const mockAgendamentos = [
     telefone: '(11) 99999-2222',
     email: 'joao@email.com',
     procedimento: 'Massagem Relaxante',
-    especialidade: 'Fisioterapia',
-    profissional: 'Dra. Beatriz Lima',
-    equipamento: 'Sala 2',
-    dataHora: new Date(2025, 7, 27, 10, 30),
+    especialidade: 'ortopedia',
+    profissional: 'Dr. Carlos Lima',
+    equipamento: 'Ultrassom',
+    dataHora: new Date(2025, 9, 8, 10, 30),
     duracao: 90,
     status: 'pendente',
     valor: 120.00,
     observacoes: '',
     lembreteEnviado: false,
-    criadoEm: new Date(2025, 7, 26),
+    criadoEm: new Date(2025, 9, 7),
     historico: [
-      { data: new Date(2025, 7, 26), acao: 'Agendamento criado', usuario: 'WhatsApp Bot' }
+      { data: new Date(2025, 9, 7), acao: 'Agendamento criado', usuario: 'WhatsApp Bot' }
     ]
   },
   {
@@ -47,20 +47,20 @@ export const mockAgendamentos = [
     telefone: '(11) 99999-3333',
     email: 'carlos@email.com',
     procedimento: 'Consulta Dermatológica',
-    especialidade: 'Dermatologia',
-    profissional: 'Dr. Pedro Alves',
-    equipamento: 'Consultório A',
-    dataHora: new Date(2025, 7, 27, 14, 0),
+    especialidade: 'dermatologia',
+    profissional: 'Dr. João Silva',
+    equipamento: 'Radiofrequência',
+    dataHora: new Date(2025, 9, 8, 14, 0),
     duracao: 45,
     status: 'confirmado',
     valor: 200.00,
     observacoes: 'Retorno - acompanhamento de tratamento',
     lembreteEnviado: true,
-    criadoEm: new Date(2025, 7, 20),
+    criadoEm: new Date(2025, 9, 1),
     historico: [
-      { data: new Date(2025, 7, 20), acao: 'Agendamento criado', usuario: 'Recepção' },
-      { data: new Date(2025, 7, 25), acao: 'Lembrete enviado', usuario: 'Sistema' },
-      { data: new Date(2025, 7, 26), acao: 'Confirmado pelo paciente', usuario: 'WhatsApp Bot' }
+      { data: new Date(2025, 9, 1), acao: 'Agendamento criado', usuario: 'Recepção' },
+      { data: new Date(2025, 9, 6), acao: 'Lembrete enviado', usuario: 'Sistema' },
+      { data: new Date(2025, 9, 7), acao: 'Confirmado pelo paciente', usuario: 'WhatsApp Bot' }
     ]
   },
   {
@@ -69,20 +69,20 @@ export const mockAgendamentos = [
     telefone: '(11) 99999-4444',
     email: 'ana@email.com',
     procedimento: 'Aplicação de Botox',
-    especialidade: 'Estética',
-    profissional: 'Dr. Ana Costa',
-    equipamento: 'Sala 1',
-    dataHora: new Date(2025, 7, 27, 16, 0),
+    especialidade: 'dermatologia',
+    profissional: 'Dra. Maria Santos',
+    equipamento: 'Criolipólise',
+    dataHora: new Date(2025, 9, 8, 16, 0),
     duracao: 30,
     status: 'em-andamento',
     valor: 800.00,
     observacoes: 'Primeira aplicação',
     lembreteEnviado: true,
-    criadoEm: new Date(2025, 7, 15),
+    criadoEm: new Date(2025, 8, 15),
     historico: [
-      { data: new Date(2025, 7, 15), acao: 'Agendamento criado', usuario: 'Recepção' },
-      { data: new Date(2025, 7, 25), acao: 'Lembrete enviado', usuario: 'Sistema' },
-      { data: new Date(2025, 7, 27), acao: 'Paciente chegou', usuario: 'Recepção' }
+      { data: new Date(2025, 8, 15), acao: 'Agendamento criado', usuario: 'Recepção' },
+      { data: new Date(2025, 9, 6), acao: 'Lembrete enviado', usuario: 'Sistema' },
+      { data: new Date(2025, 9, 8), acao: 'Paciente chegou', usuario: 'Recepção' }
     ]
   },
   {
@@ -91,10 +91,10 @@ export const mockAgendamentos = [
     telefone: '(11) 99999-5555',
     email: 'roberto@email.com',
     procedimento: 'Fisioterapia Respiratória',
-    especialidade: 'Fisioterapia',
-    profissional: 'Dra. Beatriz Lima',
-    equipamento: 'Sala 3',
-    dataHora: new Date(2025, 7, 28, 8, 0),
+    especialidade: 'cardiologia',
+    profissional: 'Dr. João Silva',
+    equipamento: 'Ultrassom',
+    dataHora: new Date(2025, 9, 9, 8, 0),
     duracao: 60,
     status: 'confirmado',
     valor: 100.00,

@@ -45,8 +45,8 @@ MASTER_DB_PATH=./data/master.db       ❌ NÃO CONFIGURADA
 O código em `MultiTenantDatabase.js` pode estar usando caminho hardcoded:
 
 ```javascript
-const masterDbPath = process.env.MASTER_DB_PATH || 
-                     path.join(__dirname, '../../data/master.db');
+const masterDbPath =
+  process.env.MASTER_DB_PATH || path.join(__dirname, "../../data/master.db");
 ```
 
 Se não estiver configurado, usa fallback. Mas é **CRÍTICO** para produção!
@@ -120,6 +120,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
 **Resultado exemplo:**
+
 ```
 a1f3e8b9c7d2456789abcdef0123456789fedcba9876543210abcdef01234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678
 ```
@@ -220,13 +221,13 @@ JWT_SECRET=[novo_hash_gerado_128_caracteres]
 
 ## 📊 RESUMO DAS MUDANÇAS
 
-| Ação | Variável | Valor Atual | Valor Novo |
-|------|----------|-------------|------------|
-| ❌ DELETAR | `DATABASE_PATH` | `./data/saee.db` | (remover) |
-| ❌ DELETAR | `DB_PATH` | `./saee.db` | (remover) |
-| ✅ ADICIONAR | `MASTER_DB_PATH` | (não existe) | `./data/master.db` |
-| ✅ ADICIONAR | `CORS_ORIGIN` | (não existe) | `https://altclinic.onrender.com` |
-| ⚠️ OPCIONAL | `JWT_SECRET` | (31 chars) | (128 chars hash) |
+| Ação         | Variável         | Valor Atual      | Valor Novo                       |
+| ------------ | ---------------- | ---------------- | -------------------------------- |
+| ❌ DELETAR   | `DATABASE_PATH`  | `./data/saee.db` | (remover)                        |
+| ❌ DELETAR   | `DB_PATH`        | `./saee.db`      | (remover)                        |
+| ✅ ADICIONAR | `MASTER_DB_PATH` | (não existe)     | `./data/master.db`               |
+| ✅ ADICIONAR | `CORS_ORIGIN`    | (não existe)     | `https://altclinic.onrender.com` |
+| ⚠️ OPCIONAL  | `JWT_SECRET`     | (31 chars)       | (128 chars hash)                 |
 
 ---
 
@@ -244,9 +245,11 @@ Logs mostraram:
 ### Causa Raiz (MÚLTIPLA):
 
 1. **Código usava caminho errado** (`databases/` em vez de `data/`)
+
    - ✅ **CORRIGIDO** no commit `eb47351`
 
 2. **Variáveis apontam para banco antigo** (`DATABASE_PATH=./data/saee.db`)
+
    - ❌ **AINDA NÃO CORRIGIDO**
    - Pode estar confundindo o sistema
 

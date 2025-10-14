@@ -27,20 +27,20 @@ Logs do Render mostraram:
 
 ```javascript
 // ❌ ANTES:
-this.databasesPath = path.join(__dirname, '../../databases');
+this.databasesPath = path.join(__dirname, "../../databases");
 
 // ✅ DEPOIS:
-this.databasesPath = path.join(__dirname, '../../data');
+this.databasesPath = path.join(__dirname, "../../data");
 ```
 
 #### Arquivo 2: `src/models/Tenant.js` (linha 210)
 
 ```javascript
 // ❌ ANTES:
-const dbPath = path.join(__dirname, '../../databases/', `${databaseName}.db`);
+const dbPath = path.join(__dirname, "../../databases/", `${databaseName}.db`);
 
 // ✅ DEPOIS:
-const dbPath = path.join(__dirname, '../../data/', `${databaseName}.db`);
+const dbPath = path.join(__dirname, "../../data/", `${databaseName}.db`);
 ```
 
 ---
@@ -232,11 +232,13 @@ node test-login.js
 ## 📁 ARQUIVOS CRIADOS
 
 1. **FIX-DATABASE-PATH-PRODUCTION.md**
+
    - Diagnóstico completo
    - Solução implementada
    - Validação esperada
 
 2. **ACOMPANHAR-DEPLOY-DATABASE-FIX.md**
+
    - Timeline detalhado
    - Checklist de validação
    - Troubleshooting
@@ -289,6 +291,7 @@ node test-login.js
 Enquanto aguarda o rate limiter, use o Render Shell (Opção 2) para testar imediatamente.
 
 Você pode:
+
 - ✅ Verificar se o fix foi aplicado
 - ✅ Ver os bancos de dados
 - ✅ Testar login via Node.js

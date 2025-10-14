@@ -10,11 +10,13 @@
 **Vá em:** Settings → Build & Deploy
 
 ### ✅ Build Command
+
 ```bash
 npm run build:linux
 ```
 
 **Status atual:**
+
 - [ ] Verificado
 - [ ] Correto: `npm run build:linux`
 - [ ] Incorreto: `______________________`
@@ -22,11 +24,13 @@ npm run build:linux
 ---
 
 ### ✅ Start Command
+
 ```bash
 node src/app.js
 ```
 
 **Status atual:**
+
 - [ ] Verificado
 - [ ] Correto: `node src/app.js`
 - [ ] Incorreto: `______________________`
@@ -34,6 +38,7 @@ node src/app.js
 ---
 
 ### ✅ Auto-Deploy
+
 - [ ] Habilitado
 - [ ] Branch: `main`
 
@@ -45,13 +50,13 @@ node src/app.js
 
 ### ✅ Variáveis Obrigatórias:
 
-| Variável | Valor | Status |
-|----------|-------|--------|
-| `NODE_ENV` | `production` | [ ] OK |
-| `PORT` | `10000` (auto) | [ ] OK |
-| `JWT_SECRET` | [64 chars] | [ ] OK |
-| `CORS_ORIGIN` | `https://altclinic.onrender.com` | [ ] OK |
-| `MASTER_DB_PATH` | `./data/master.db` | [ ] OK |
+| Variável         | Valor                            | Status |
+| ---------------- | -------------------------------- | ------ |
+| `NODE_ENV`       | `production`                     | [ ] OK |
+| `PORT`           | `10000` (auto)                   | [ ] OK |
+| `JWT_SECRET`     | [64 chars]                       | [ ] OK |
+| `CORS_ORIGIN`    | `https://altclinic.onrender.com` | [ ] OK |
+| `MASTER_DB_PATH` | `./data/master.db`               | [ ] OK |
 
 ### ✅ Verificações:
 
@@ -74,6 +79,7 @@ node src/app.js
 - [ ] **Size:** 1 GB ou mais
 
 ### ⚠️ Se não existir:
+
 1. Clique em "Add Disk"
 2. Name: `altclinic-data`
 3. Mount Path: `/opt/render/project/src/data`
@@ -87,11 +93,13 @@ node src/app.js
 **Vá em:** Settings → Health & Alerts
 
 ### ✅ Health Check Path:
+
 ```
 /api/health
 ```
 
 **Status atual:**
+
 - [ ] Configurado
 - [ ] Path: `/api/health`
 - [ ] Timeout: 30s (padrão)
@@ -105,6 +113,7 @@ node src/app.js
 ### ✅ Verificar últimos logs:
 
 **Build logs (procure por):**
+
 - [ ] ✅ `Installing dependencies...`
 - [ ] ✅ `Running build command: npm run build:linux`
 - [ ] ✅ `> cd frontend && npm install && npm run build`
@@ -114,12 +123,14 @@ node src/app.js
 - [ ] ✅ `Build completed successfully`
 
 **Deploy logs (procure por):**
+
 - [ ] ✅ `Starting service with 'node src/app.js'`
 - [ ] ✅ `Server running on port 10000`
 - [ ] ✅ `Database initialized`
 - [ ] ✅ `Your service is live`
 
 **Erros (NÃO deve aparecer):**
+
 - [ ] ❌ `npm ERR!`
 - [ ] ❌ `Error: Cannot find module`
 - [ ] ❌ `ENOENT: no such file or directory`
@@ -132,11 +143,13 @@ node src/app.js
 **Teste os endpoints principais:**
 
 ### ✅ Health Check
+
 ```bash
 curl https://altclinic.onrender.com/api/health
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "status": "ok",
@@ -152,11 +165,13 @@ curl https://altclinic.onrender.com/api/health
 ---
 
 ### ✅ Init Status
+
 ```bash
 curl https://altclinic.onrender.com/api/auth/init-status
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "success": true,
@@ -172,11 +187,13 @@ curl https://altclinic.onrender.com/api/auth/init-status
 ---
 
 ### ✅ Frontend
+
 ```
 https://altclinic.onrender.com/
 ```
 
 **Deve mostrar:**
+
 - [ ] Página de login
 - [ ] Logo e estilo corretos
 - [ ] Console sem erros críticos
@@ -207,6 +224,7 @@ ls -la public/
 ```
 
 **Resultados esperados:**
+
 - [ ] `/opt/render/project/src` (ou similar)
 - [ ] `package.json` existe
 - [ ] `data/` existe
@@ -232,11 +250,13 @@ ls -la public/
 ### ❌ Build Command errado
 
 **Se está:**
+
 - `npm install && npm run build` ❌
 - `npm start` ❌
 - Outro comando ❌
 
 **Corrija para:**
+
 ```bash
 npm run build:linux
 ```
@@ -246,6 +266,7 @@ npm run build:linux
 ### ❌ JWT_SECRET não configurado
 
 **Gere um novo:**
+
 ```bash
 # No seu terminal local
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
@@ -258,11 +279,13 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### ❌ Disk não configurado
 
 **Sintomas:**
+
 - Banco de dados perdido após deploy
 - Erro "ENOENT: no such file or directory"
 - Dados não persistem
 
 **Solução:**
+
 1. Vá em Disks
 2. Add Disk
 3. Configure conforme Passo 3 acima
@@ -272,11 +295,13 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### ❌ Build falhando
 
 **Logs mostram:**
+
 ```
 npm ERR! missing script: build
 ```
 
 **Solução:**
+
 ```bash
 # Corrija o Build Command para:
 npm run build:linux
@@ -316,15 +341,18 @@ Path: /api/health
 Após configurar tudo:
 
 1. **Manual Deploy**
+
    - [ ] Settings → Manual Deploy → Deploy latest commit
    - [ ] Aguardar conclusão (3-5 min)
 
 2. **Verificar Logs**
+
    - [ ] Build: SUCCESS
    - [ ] Deploy: SUCCESS
    - [ ] No errors
 
 3. **Testar Endpoints**
+
    - [ ] /api/health → OK
    - [ ] /api/auth/init-status → OK
    - [ ] / (root) → Frontend carrega
@@ -339,11 +367,13 @@ Após configurar tudo:
 ## 🎯 PRÓXIMO PASSO
 
 **Se TUDO estiver ✅:**
+
 - Acesse: https://altclinic.onrender.com/diagnostic-login.html
 - Teste o login
 - Se funcionar: Sistema pronto! 🎉
 
 **Se ALGO estiver ❌:**
+
 - Anote o que está errado
 - Corrija seguindo as soluções acima
 - Execute Manual Deploy novamente

@@ -1,6 +1,7 @@
 # 🚀 SOLUÇÃO RÁPIDA: Login em Produção
 
 ## ❌ Problema
+
 Erro ao fazer login: **"Usuário não encontrado"**
 
 ## ✅ Solução (3 opções, escolha a mais fácil)
@@ -21,17 +22,17 @@ Erro ao fazer login: **"Usuário não encontrado"**
 3. Cole este código:
 
 ```javascript
-fetch('https://altclinic.onrender.com/api/auth/init-system', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' }
+fetch("https://altclinic.onrender.com/api/auth/init-system", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
 })
-.then(r => r.json())
-.then(data => {
-  console.log('✅ CREDENCIAIS:');
-  console.log('📧', data.credentials.email);
-  console.log('🔑', data.credentials.password);
-  console.log('🏥', data.credentials.tenant);
-})
+  .then((r) => r.json())
+  .then((data) => {
+    console.log("✅ CREDENCIAIS:");
+    console.log("📧", data.credentials.email);
+    console.log("🔑", data.credentials.password);
+    console.log("🏥", data.credentials.tenant);
+  });
 ```
 
 4. Copie as credenciais
@@ -60,6 +61,7 @@ node quick-init-production.js
 Após o deploy no Render, o banco de dados estava vazio (sem usuários).
 
 **Arquivos criados:**
+
 - ✅ `public/init-system.html` - Página visual de inicialização
 - ✅ `quick-init-production.js` - Script rápido via terminal
 - ✅ `create-first-user-production.js` - Criar usuário específico
@@ -95,5 +97,6 @@ Após inicializar:
 ---
 
 **Qualquer dúvida, consulte:**
+
 - `FIX-LOGIN-PRODUCAO-2025-10-13.md` (detalhado)
 - `GUIA_TESTES_POS_DEPLOY.md` (testes)

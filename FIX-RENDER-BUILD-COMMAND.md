@@ -9,6 +9,7 @@
 ## ❌ PROBLEMA IDENTIFICADO
 
 ### Build Command ATUAL (ERRADO):
+
 ```bash
 cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install
 ```
@@ -33,11 +34,13 @@ cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm
 **CLIQUE EM "Edit"** ao lado de "Build Command"
 
 **SUBSTITUA por este comando:**
+
 ```bash
 npm run build:linux
 ```
 
 **Ou se preferir o comando completo:**
+
 ```bash
 cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install && npm rebuild
 ```
@@ -49,6 +52,7 @@ cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm
 ### 3. Verificar Start Command
 
 **Start Command ATUAL:**
+
 ```bash
 node src/app.js
 ```
@@ -60,13 +64,15 @@ node src/app.js
 ### 4. Habilitar Auto-Deploy
 
 **Auto-Deploy ATUAL:**
+
 ```
 Off
 ```
 
-❌ **Desabilitado!** 
+❌ **Desabilitado!**
 
 **AÇÃO:**
+
 1. Clique em "Edit" ao lado de "Auto-Deploy"
 2. Mude para: **On**
 3. Confirme que Branch é: **main**
@@ -85,11 +91,13 @@ Off
 ## 📋 CONFIGURAÇÕES CORRETAS
 
 ### ✅ Build Command (Opção Recomendada):
+
 ```bash
 npm run build:linux
 ```
 
 **Por que usar `npm run build:linux`?**
+
 - ✅ Mais limpo e organizado
 - ✅ Definido no package.json
 - ✅ Inclui `npm rebuild` automaticamente
@@ -98,6 +106,7 @@ npm run build:linux
 ---
 
 ### ✅ Build Command (Opção Alternativa):
+
 ```bash
 cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install && npm rebuild
 ```
@@ -107,6 +116,7 @@ cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm
 ---
 
 ### ✅ Start Command:
+
 ```bash
 node src/app.js
 ```
@@ -116,6 +126,7 @@ node src/app.js
 ---
 
 ### ✅ Auto-Deploy:
+
 ```yaml
 Auto-Deploy: On
 Branch: main
@@ -202,14 +213,17 @@ Auto-Deploy: On ✅
 ## 🐛 PROBLEMAS QUE ISSO RESOLVE
 
 ### Problema 1: Módulos Nativos
+
 ❌ **Antes:** `better-sqlite3` não era recompilado  
 ✅ **Depois:** `npm rebuild` recompila automaticamente
 
 ### Problema 2: Deploy Manual
+
 ❌ **Antes:** Auto-Deploy desabilitado  
 ✅ **Depois:** Deploy automático no push
 
 ### Problema 3: Build Inconsistente
+
 ❌ **Antes:** Comando longo e propenso a erros  
 ✅ **Depois:** Script organizado no package.json
 
@@ -297,6 +311,7 @@ Path: /api/health
 
 **Solução:**
 Use o comando completo:
+
 ```bash
 cd frontend && npm install && npm run build && cd .. && cd admin/frontend && npm install && npm run build && cd ../.. && mkdir -p public && mkdir -p public/admin && cp -r frontend/build/* public/ && cp -r admin/frontend/build/* public/admin/ && npm install && npm rebuild
 ```
@@ -309,6 +324,7 @@ Verifique se `npm rebuild` está no final do Build Command.
 ### Erro: "ENOENT: no such file or directory"
 
 **Solução:**
+
 1. Vá em **Disks**
 2. Adicione disco em `/opt/render/project/src/data`
 3. Size: 1 GB
@@ -329,6 +345,7 @@ Verifique se `npm rebuild` está no final do Build Command.
 ---
 
 **AÇÃO IMEDIATA:**
+
 1. Acesse agora: https://dashboard.render.com
 2. Altere o Build Command
 3. Habilite Auto-Deploy

@@ -11,17 +11,20 @@ Implementação de modal para adicionar pacientes à lista de espera com funcion
 ### ✅ Funcionalidades Implementadas
 
 1. **Busca de Paciente Existente**
+
    - Autocomplete com lista de pacientes cadastrados
    - Busca automática por CPF
    - Preenchimento automático dos dados quando encontrado
 
 2. **Cadastro de Novo Paciente**
+
    - Campos obrigatórios: Nome e Telefone
    - CPF obrigatório APENAS para novos cadastros (evita duplicação)
    - E-mail opcional
    - Detecção automática se paciente já existe no sistema
 
 3. **Preferências de Agendamento (Opcionais)**
+
    - Procedimento desejado
    - Período(s) preferido(s): Manhã, Tarde, Noite
    - Dias da semana preferidos
@@ -61,14 +64,14 @@ ModalListaEspera({
   telefone: '',               // * Obrigatório
   cpf: '',                    // * Obrigatório apenas para novos
   email: '',                  // Opcional
-  
+
   // Preferências (Todas Opcionais)
   profissionalId: '',
   procedimento: '',
   periodo: [],                // ['manha', 'tarde', 'noite']
   diasSemana: [],            // ['segunda', 'terca', ...]
   observacoes: '',
-  
+
   // Controle Interno
   pacienteExistente: null,   // Objeto do paciente se encontrado
   criarNovoPaciente: false   // Flag para novo cadastro
@@ -82,26 +85,31 @@ ModalListaEspera({
 ### Seções do Modal
 
 #### 1. **Buscar Paciente Existente**
+
 - Autocomplete com lista completa de pacientes
 - Exibe: "Nome - CPF"
 - Ao selecionar, preenche automaticamente todos os campos
 - Desabilita edição dos dados pessoais
 
 #### 2. **Dados do Paciente**
-- **Nome Completo*** - TextField obrigatório
-- **Telefone*** - TextField com máscara `(00) 00000-0000`
+
+- **Nome Completo\*** - TextField obrigatório
+- **Telefone\*** - TextField com máscara `(00) 00000-0000`
 - **CPF** - TextField com máscara `000.000.000-00`
   - Busca automática ao completar 11 dígitos
   - Obrigatório apenas para novos cadastros
 - **E-mail** - TextField opcional
 
 #### 3. **Status do Paciente**
+
 Alertas dinâmicos:
+
 - 🔍 **Buscando...** - Enquanto busca por CPF
 - ⚠️ **Novo paciente** - Quando CPF não encontrado
 - ✅ **Encontrado** - Toast quando paciente localizado
 
 #### 4. **Preferências de Agendamento**
+
 Todos os campos são opcionais:
 
 - **Procedimento** - TextField livre
@@ -114,6 +122,7 @@ Todos os campos são opcionais:
 - **Observações** - TextField multiline (3 linhas)
 
 #### 5. **Informativo**
+
 Alert com explicação sobre funcionamento da lista de espera
 
 ---
@@ -200,10 +209,10 @@ Alert com explicação sobre funcionamento da lista de espera
 
 ```javascript
 errors = {
-  nome: 'Nome é obrigatório',
-  telefone: 'Telefone é obrigatório',
-  cpf: 'CPF é obrigatório para cadastrar novo paciente'
-}
+  nome: "Nome é obrigatório",
+  telefone: "Telefone é obrigatório",
+  cpf: "CPF é obrigatório para cadastrar novo paciente",
+};
 ```
 
 ---
@@ -213,18 +222,21 @@ errors = {
 ### Endpoints Utilizados
 
 #### 1. Buscar Pacientes (Autocomplete)
+
 ```javascript
 GET /api/pacientes
 Response: Array<Paciente>
 ```
 
 #### 2. Buscar por CPF
+
 ```javascript
 GET /api/pacientes/buscar-cpf/:cpf
 Response: Paciente | null
 ```
 
 #### 3. Salvar na Lista de Espera
+
 ```javascript
 POST /api/lista-espera
 Body: {
@@ -252,22 +264,25 @@ Response: ListaEspera
 ### Modificações em AgendaLite.js
 
 #### 1. Imports Adicionados
+
 ```javascript
-import ModalListaEspera from '../components/ModalListaEspera';
+import ModalListaEspera from "../components/ModalListaEspera";
 ```
 
 #### 2. Estado Adicionado
+
 ```javascript
 const [listaEsperaOpen, setListaEsperaOpen] = useState(false);
 ```
 
 #### 3. Botão Atualizado
+
 ```javascript
 <Tooltip title="Lista de Espera">
-  <IconButton 
+  <IconButton
     size="small"
     onClick={() => {
-      console.log('📋 Abrindo lista de espera');
+      console.log("📋 Abrindo lista de espera");
       setListaEsperaOpen(true);
     }}
   >
@@ -277,13 +292,14 @@ const [listaEsperaOpen, setListaEsperaOpen] = useState(false);
 ```
 
 #### 4. Modal Renderizado
+
 ```javascript
 <ModalListaEspera
   open={listaEsperaOpen}
   onClose={() => setListaEsperaOpen(false)}
   professionalId={selectedProfessional}
   onSave={(data) => {
-    console.log('📋 Paciente adicionado:', data);
+    console.log("📋 Paciente adicionado:", data);
   }}
 />
 ```
@@ -295,12 +311,14 @@ const [listaEsperaOpen, setListaEsperaOpen] = useState(false);
 ### Máscaras de Entrada
 
 #### Telefone
+
 ```javascript
 <TextMaskPhone />
 Formato: (00) 00000-0000
 ```
 
 #### CPF
+
 ```javascript
 <TextMaskCPF />
 Formato: 000.000.000-00
@@ -309,6 +327,7 @@ Formato: 000.000.000-00
 ### Chips para Múltipla Seleção
 
 Usados em:
+
 - Período preferido
 - Dias da semana
 
@@ -328,6 +347,7 @@ Usados em:
 ## 🧪 Casos de Teste
 
 ### Teste 1: Buscar Paciente por Autocomplete
+
 ```
 1. Abrir modal
 2. Digitar nome no autocomplete
@@ -339,6 +359,7 @@ Usados em:
 ```
 
 ### Teste 2: Buscar por CPF Existente
+
 ```
 1. Abrir modal
 2. Digitar CPF de paciente existente
@@ -350,6 +371,7 @@ Usados em:
 ```
 
 ### Teste 3: Novo Paciente com CPF
+
 ```
 1. Abrir modal
 2. Digitar CPF não cadastrado
@@ -361,6 +383,7 @@ Usados em:
 ```
 
 ### Teste 4: Novo Paciente sem CPF Inicial
+
 ```
 1. Abrir modal
 2. Preencher nome e telefone
@@ -373,6 +396,7 @@ Usados em:
 ```
 
 ### Teste 5: Preferências Opcionais
+
 ```
 1. Abrir modal
 2. Selecionar paciente
@@ -385,6 +409,7 @@ Usados em:
 ```
 
 ### Teste 6: Apenas Obrigatórios
+
 ```
 1. Abrir modal
 2. Selecionar paciente
@@ -425,19 +450,23 @@ Usados em:
 ### APIs a Implementar
 
 1. **GET /api/lista-espera**
+
    - Listar pacientes na fila
    - Filtros por status, profissional, período
 
 2. **POST /api/lista-espera**
+
    - Salvar novo registro
    - Criar paciente se necessário
    - Validar duplicação
 
 3. **PUT /api/lista-espera/:id**
+
    - Atualizar status (aguardando → agendado → atendido)
    - Editar preferências
 
 4. **DELETE /api/lista-espera/:id**
+
    - Remover da fila
 
 5. **POST /api/lista-espera/:id/notificar**
@@ -449,18 +478,22 @@ Usados em:
 ## 📝 Melhorias Futuras
 
 1. **Priorização**
+
    - Campo de prioridade (baixa, média, alta, urgente)
    - Ordenação automática por prioridade
 
 2. **Tempo de Espera**
+
    - Cálculo automático de dias aguardando
    - Alertas para pacientes há muito tempo
 
 3. **Match Automático**
+
    - Sugestão de horários disponíveis
    - Notificação automática quando vaga abre
 
 4. **Histórico**
+
    - Quantas vezes paciente entrou na lista
    - Taxa de conversão lista → agendamento
 
@@ -494,4 +527,4 @@ frontend/src/pages/AgendaLite.js                [MODIFICADO]
 
 ---
 
-*Feature implementada em 13 de Outubro de 2025*
+_Feature implementada em 13 de Outubro de 2025_

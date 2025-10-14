@@ -13,11 +13,13 @@
 **Acesse:** Dashboard → altclinic → Settings → Build & Deploy
 
 #### **Build Command**
+
 ```bash
 npm install && npm run build
 ```
 
 **O que faz:**
+
 - ✅ Instala dependências do backend
 - ✅ Instala dependências do frontend
 - ✅ Instala dependências do admin
@@ -27,6 +29,7 @@ npm install && npm run build
 - ✅ Rebuild de módulos nativos (better-sqlite3, sharp)
 
 #### **Verificar no package.json:**
+
 ```json
 {
   "scripts": {
@@ -39,6 +42,7 @@ npm install && npm run build
 ⚠️ **IMPORTANTE:** Render usa Linux, então use `build:linux`!
 
 **Comando correto para Render:**
+
 ```bash
 npm run build:linux
 ```
@@ -48,11 +52,13 @@ npm run build:linux
 ### ✅ 2. Start Command
 
 **Comando correto:**
+
 ```bash
 node src/app.js
 ```
 
 **O que faz:**
+
 - ✅ Inicia o servidor Express
 - ✅ Serve arquivos estáticos do `public/`
 - ✅ Inicializa banco de dados SQLite
@@ -109,11 +115,13 @@ META_WEBHOOK_SECRET=seu_webhook_secret
 ### ✅ 4. Root Directory
 
 **Configuração:**
+
 ```
 Root Directory: (deixe vazio ou ".")
 ```
 
 **Estrutura esperada:**
+
 ```
 /opt/render/project/src/
 ├── src/
@@ -143,6 +151,7 @@ Root Directory: (deixe vazio ou ".")
 - ✅ **Start Command:** `node src/app.js`
 
 **Quando habilitar:**
+
 - ✅ Após validar configurações
 - ✅ Quando tiver testes funcionando
 - ✅ Para deploys automáticos no push
@@ -152,19 +161,21 @@ Root Directory: (deixe vazio ou ".")
 ### ✅ 6. Health Check Path
 
 **Configure:**
+
 ```
 Health Check Path: /api/health
 ```
 
 **Verificar se existe no código:**
+
 ```javascript
 // Em src/app.js
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
-    status: 'ok',
+    status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
   });
 });
 ```
@@ -196,16 +207,19 @@ app.get('/api/health', (req, res) => {
 ### Passo 2: Build & Deploy
 
 **Seção: Build Command**
+
 ```bash
 npm run build:linux
 ```
 
 **Seção: Start Command**
+
 ```bash
 node src/app.js
 ```
 
 **Seção: Auto-Deploy**
+
 - ✅ Habilitar
 - ✅ Branch: main
 
@@ -223,6 +237,7 @@ Clique em **Environment** → **Add Environment Variable**
 4. `MASTER_DB_PATH` = `./data/master.db`
 
 **Para gerar JWT_SECRET seguro:**
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
@@ -253,6 +268,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### 1. Verificar Build
 
 **Nos logs, procure por:**
+
 ```
 ✅ Installing dependencies...
 ✅ Running build command...
@@ -265,6 +281,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ### 2. Verificar Start
 
 **Nos logs, procure por:**
+
 ```
 ✅ Server running on port 10000
 ✅ Database initialized
@@ -294,6 +311,7 @@ curl https://altclinic.onrender.com/
 **Erro:** `npm ERR! missing script: build`
 
 **Solução:**
+
 ```bash
 # Use o comando correto
 npm run build:linux
@@ -304,6 +322,7 @@ npm run build:linux
 ### ❌ Module not found: better-sqlite3
 
 **Solução:**
+
 ```json
 // package.json
 {
@@ -319,6 +338,7 @@ npm run build:linux
 
 **Solução:**
 Render define PORT automaticamente. Use:
+
 ```javascript
 const PORT = process.env.PORT || 3000;
 ```
@@ -328,6 +348,7 @@ const PORT = process.env.PORT || 3000;
 ### ❌ Database locked
 
 **Solução:**
+
 - ✅ Adicione Disk Storage
 - ✅ Verifique MASTER_DB_PATH
 - ✅ Use WAL mode no SQLite
@@ -337,6 +358,7 @@ const PORT = process.env.PORT || 3000;
 ### ❌ CORS Error
 
 **Solução:**
+
 ```bash
 # Environment variable
 CORS_ORIGIN=https://altclinic.onrender.com
@@ -344,10 +366,12 @@ CORS_ORIGIN=https://altclinic.onrender.com
 
 ```javascript
 // src/app.js
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+    credentials: true,
+  })
+);
 ```
 
 ---
@@ -388,17 +412,21 @@ Health Check: /api/health
 Após configurar:
 
 1. ✅ **Manual Deploy**
+
    - Settings → Manual Deploy → Deploy latest commit
 
 2. ✅ **Monitorar Logs**
+
    - Logs → Ver logs em tempo real
 
 3. ✅ **Testar Health Check**
+
    ```bash
    curl https://altclinic.onrender.com/api/health
    ```
 
 4. ✅ **Inicializar Sistema**
+
    - Acesse: https://altclinic.onrender.com/diagnostic-login.html
    - Ou execute no Shell: `node quick-init-production.js`
 
@@ -430,6 +458,7 @@ Após configurar:
 ### Logs com Erro?
 
 **Comando útil no Shell:**
+
 ```bash
 # Ver estrutura de diretórios
 ls -la

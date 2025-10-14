@@ -38,11 +38,12 @@ Erro ao criar trial: SyntaxError: Failed to execute 'json' on 'Response': Unexpe
 #### 1. **MultiTenantDatabase não inicializado** 🚨
 
 ```javascript
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const multiTenantDb = require("../models/MultiTenantDatabase");
 const masterDb = multiTenantDb.getMasterDb();
 ```
 
 **Se `multiTenantDb` não foi inicializado corretamente:**
+
 - `getMasterDb()` retorna `null`
 - Operações no banco falham
 - Servidor trava
@@ -55,10 +56,11 @@ const masterDb = multiTenantDb.getMasterDb();
 
 ```javascript
 // Em MultiTenantDatabase.js (CORRIGIDO no commit eb47351)
-this.databasesPath = path.join(__dirname, '../../data');
+this.databasesPath = path.join(__dirname, "../../data");
 ```
 
 **Se o deploy ainda não aplicou o fix:**
+
 - Sistema tenta criar banco em `/databases/` (não existe)
 - Falha ao criar `tenant_*.db`
 - Operação trava
@@ -72,6 +74,7 @@ await seedTenantData(tenantDb, tenantId);
 ```
 
 **Se `seedTenantData` tem muitas operações:**
+
 - Pode ultrapassar timeout do Render (30s)
 - Servidor retorna 502
 
@@ -88,6 +91,7 @@ await emailService.sendEmail({
 ```
 
 **Se SMTP falhar ou demorar:**
+
 - Timeout
 - 502
 
@@ -108,6 +112,7 @@ await emailService.sendEmail({
    ```
 
 **Se NÃO foi deployado ainda:**
+
 - Aguarde o auto-deploy concluir (~5 min)
 - Ou force manual deploy
 
@@ -146,42 +151,42 @@ Adicione logs detalhados em `src/routes/tenants.js`:
 ```javascript
 router.post('/register', async (req, res) => {
   console.log('🚀 [REGISTER] Início da requisição');
-  
+
   try {
     console.log('📝 [REGISTER] Body:', req.body);
-    
+
     // ... validações ...
     console.log('✅ [REGISTER] Validações OK');
-    
+
     const masterDb = multiTenantDb.getMasterDb();
     console.log('✅ [REGISTER] MasterDB obtido:', !!masterDb);
-    
+
     // ... verificações ...
     console.log('✅ [REGISTER] Slug disponível');
-    
+
     // Transação
     console.log('🔄 [REGISTER] Iniciando transação...');
     transaction();
     console.log('✅ [REGISTER] Transação concluída');
-    
+
     // Criar database
     console.log('🔄 [REGISTER] Criando database do tenant...');
     await multiTenantDb.createTenantDatabase(tenantId, databaseName);
     console.log('✅ [REGISTER] Database criado');
-    
+
     // Seed data
     console.log('🔄 [REGISTER] Inserindo dados iniciais...');
     await seedTenantData(tenantDb, tenantId);
     console.log('✅ [REGISTER] Dados iniciais inseridos');
-    
+
     // Email
     console.log('🔄 [REGISTER] Enviando email...');
     await emailService.sendEmail(...);
     console.log('✅ [REGISTER] Email enviado');
-    
+
     console.log('✅ [REGISTER] Sucesso total!');
     res.status(201).json({...});
-    
+
   } catch (error) {
     console.error('❌ [REGISTER] ERRO:', error);
     console.error('❌ [REGISTER] Stack:', error.stack);
@@ -223,7 +228,7 @@ res.status(201).json({...});
 **No `src/app.js`, garantir que MultiTenantDatabase está inicializado:**
 
 ```javascript
-const multiTenantDb = require('./models/MultiTenantDatabase');
+const multiTenantDb = require("./models/MultiTenantDatabase");
 
 // Aguardar inicialização antes de aceitar requisições
 class App {
@@ -234,22 +239,22 @@ class App {
 
   async init() {
     // Configurações...
-    
+
     // Garantir que banco está pronto
     try {
       const masterDb = multiTenantDb.getMasterDb();
       if (!masterDb) {
-        throw new Error('Master DB não inicializado');
+        throw new Error("Master DB não inicializado");
       }
-      console.log('✅ MultiTenantDatabase pronto');
+      console.log("✅ MultiTenantDatabase pronto");
     } catch (error) {
-      console.error('❌ Erro ao inicializar MultiTenantDatabase:', error);
+      console.error("❌ Erro ao inicializar MultiTenantDatabase:", error);
       process.exit(1);
     }
-    
+
     // Rotas...
     this.setupRoutes();
-    
+
     // Iniciar servidor
     this.start();
   }
@@ -279,19 +284,19 @@ async function testCreateTenant() {
     console.log('1. Obtendo masterDb...');
     const masterDb = multiTenantDb.getMasterDb();
     console.log('✅ MasterDb:', !!masterDb);
-    
+
     console.log('2. Testando insert...');
     const tenantId = uuidv4();
     const slug = 'test-trial-' + Date.now();
     const databaseName = 'tenant_' + slug + '_' + Date.now();
-    
+
     const insertTenant = masterDb.prepare(\`
       INSERT INTO tenants (
-        id, slug, nome, email, telefone, plano, status, 
+        id, slug, nome, email, telefone, plano, status,
         trial_expire_at, database_name, config, billing, theme
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     \`);
-    
+
     insertTenant.run(
       tenantId,
       slug,
@@ -306,17 +311,17 @@ async function testCreateTenant() {
       '{}',
       '{}'
     );
-    
+
     console.log('✅ Tenant inserido:', tenantId);
-    
+
     console.log('3. Criando database...');
     await multiTenantDb.createTenantDatabase(tenantId, databaseName);
     console.log('✅ Database criado');
-    
+
     console.log('4. Limpando teste...');
     masterDb.prepare('DELETE FROM tenants WHERE id = ?').run(tenantId);
     console.log('✅ Teste completo com sucesso!');
-    
+
   } catch (error) {
     console.error('❌ Erro:', error.message);
     console.error(error.stack);
