@@ -73,6 +73,20 @@ SMTP_USER=apikey
 SMTP_PASS=SUA_API_KEY_DO_SENDGRID
 ```
 
+## 🌐 Solução Definitiva: API de Email Própria
+
+Se nenhum SMTP externo for viável, use o relay HTTP local:
+
+1. Configure o relay: ver `EMAIL-RELAY-SETUP.md`
+2. Execute `node tools/email-relay/email-relay-server.js`
+3. No Render, defina:
+```
+EMAIL_API_URL=https://seu-endpoint-publico/send-email
+EMAIL_API_KEY=sua-chave-segura
+```
+4. Remova/ignore variáveis SMTP no Render (ficam opcionais)
+5. Teste novamente (o backend chamará o relay via HTTP)
+
 ## 📝 Checklist de Correção
 
 - [ ] Verificar variáveis no Render

@@ -1,16 +1,32 @@
 const nodemailer = require('nodemailer');
+const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 
 class EmailService {
   constructor() {
     this.transporter = null;
+    this.externalEmailApi = null;
+
+    if (process.env.EMAIL_API_URL) {
+      this.externalEmailApi = {
+        url: process.env.EMAIL_API_URL,
+        apiKey: process.env.EMAIL_API_KEY || null
+      };
+    }
+
     this.initializeTransporter();
   }
 
   // Inicializar transporter SMTP
   initializeTransporter() {
     try {
+      if (this.externalEmailApi) {
+        console.log(`📨 EmailService: usando API externa em ${this.externalEmailApi.url}`);
+        this.transporter = null;
+        return;
+      }
+
       // Para desenvolvimento, usar console se SMTP não estiver configurado
       if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || process.env.SMTP_PASS === 'sua_senha_de_app_do_gmail') {
         console.log('⚠️ SMTP não configurado completamente. Emails serão logados no console.');
@@ -56,6 +72,11 @@ class EmailService {
   // Verificar conexão SMTP
   async verifyConnection() {
     try {
+      if (this.externalEmailApi) {
+        console.log(`ℹ️ EmailService: verificação delegada para API externa ${this.externalEmailApi.url}`);
+        return true;
+      }
+
       // Se não há transporter configurado, retornar false
       if (!this.transporter) {
         console.log('⚠️ SMTP não configurado - emails serão simulados no console');
@@ -367,20 +388,45 @@ class EmailService {
     text = null
   }) {
     try {
+      const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_FROM || 'AltClinic <noreply@altclinic.com.br>';
+
+      let emailHtml = html;
+      let emailText = text;
+
+      // Se template especificado, carregar e processar
+      if (template && !emailHtml) {
+        emailHtml = this.loadTemplate(template);
+        emailHtml = this.replaceVariables(emailHtml, data);
+      }
+
+      if (!emailText && emailHtml) {
+        emailText = emailHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      if (this.externalEmailApi) {
+        return await this.sendViaExternalApi({
+          from: fromAddress,
+          to,
+          subject,
+          html: emailHtml,
+          text: emailText,
+          template,
+          data
+        });
+      }
+
       // Se não há transporter configurado, logar no console
       if (!this.transporter) {
         console.log('📧 [EMAIL SIMULADO - SMTP não configurado]');
+        console.log(`📧 De: ${fromAddress}`);
         console.log(`📧 Para: ${to}`);
         console.log(`📧 Assunto: ${subject}`);
         console.log(`📧 Template: ${template}`);
         console.log(`📧 Dados:`, data);
 
-        // Mostrar conteúdo do template processado
-        if (template) {
-          let simulatedHtml = this.loadTemplate(template);
-          simulatedHtml = this.replaceVariables(simulatedHtml, data);
-          console.log('📧 Conteúdo HTML processado (primeiras 500 chars):');
-          console.log(simulatedHtml.substring(0, 500));
+        if (emailHtml) {
+          console.log('📧 Conteúdo HTML (primeiras 500 chars):');
+          console.log(emailHtml.substring(0, 500));
         }
 
         console.log('📧 --- FIM DO EMAIL SIMULADO ---');
@@ -392,20 +438,8 @@ class EmailService {
         };
       }
 
-      let emailHtml = html;
-      let emailText = text;
-
-      // Se template especificado, carregar e processar
-      if (template) {
-        emailHtml = this.loadTemplate(template);
-        emailHtml = this.replaceVariables(emailHtml, data);
-
-        // Gerar versão text do HTML
-        emailText = emailHtml.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-      }
-
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'AltClinic <noreply@altclinic.com.br>',
+        from: fromAddress,
         to: to,
         subject: subject,
         html: emailHtml,
@@ -422,6 +456,52 @@ class EmailService {
 
     } catch (error) {
       console.error(`❌ Erro ao enviar email para ${to}:`, error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async sendViaExternalApi(payload) {
+    try {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (this.externalEmailApi.apiKey) {
+        headers['x-api-key'] = this.externalEmailApi.apiKey;
+      }
+
+      const response = await fetch(this.externalEmailApi.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      const responseText = await response.text();
+      let parsedResponse = null;
+
+      try {
+        parsedResponse = responseText ? JSON.parse(responseText) : null;
+      } catch (parseError) {
+        parsedResponse = null;
+      }
+
+      if (!response.ok) {
+        const errorMessage = parsedResponse?.error || `API respondeu com status ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      console.log(`✅ Email enviado via API externa para ${payload.to}`);
+      return {
+        success: true,
+        external: true,
+        response: parsedResponse || responseText
+      };
+
+    } catch (error) {
+      console.error(`❌ Erro ao enviar email via API externa para ${payload.to}:`, error);
       return {
         success: false,
         error: error.message
