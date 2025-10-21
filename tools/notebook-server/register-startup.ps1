@@ -29,7 +29,7 @@ if ($Remove) {
         Write-Host "Tarefa $TaskName removida." -ForegroundColor Cyan
     }
     catch {
-    Write-Host "Falha ao remover tarefa ${TaskName}: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Falha ao remover tarefa ${TaskName}: $($_.Exception.Message)" -ForegroundColor Red
     }
 
     return

@@ -17,11 +17,13 @@ npm install -g vercel
 ### 2. Configurar variáveis de ambiente
 
 O arquivo `frontend/.env.production` já está configurado com:
+
 ```env
 REACT_APP_API_URL=https://fdef11b73864.ngrok-free.app/api
 ```
 
 ⚠️ **IMPORTANTE:** Sempre que o ngrok reiniciar, a URL muda. Você precisará:
+
 1. Atualizar `frontend/.env.production` com a nova URL
 2. Fazer redeploy no Vercel
 
@@ -76,6 +78,7 @@ vercel --prod
 ```
 
 Quando perguntado:
+
 - **Set up and deploy?** Yes
 - **Which scope?** Selecione sua conta
 - **Link to existing project?** No
@@ -131,6 +134,7 @@ vercel --prod
 ### Erro de CORS
 
 Verifique se o backend está com CORS configurado para aceitar Vercel:
+
 ```javascript
 // src/app.js já está configurado para aceitar *.vercel.app
 ```
@@ -138,12 +142,14 @@ Verifique se o backend está com CORS configurado para aceitar Vercel:
 ### Backend não responde
 
 1. Verifique se o ngrok está rodando:
+
 ```powershell
 cd C:\Users\thiag\saee\tools\notebook-server
 .\status.ps1
 ```
 
 2. Teste a URL do backend:
+
 ```powershell
 Invoke-RestMethod -Uri "https://fdef11b73864.ngrok-free.app/health"
 ```
@@ -151,6 +157,7 @@ Invoke-RestMethod -Uri "https://fdef11b73864.ngrok-free.app/health"
 ### URL do ngrok mudou
 
 1. Pegue nova URL:
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" | Select-Object -ExpandProperty tunnels | Where-Object { $_.name -eq 'api' } | Select-Object -ExpandProperty public_url
 ```
@@ -165,6 +172,7 @@ Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" | Select-Object -Expa
 ### Para URLs estáveis do ngrok:
 
 Considere upgrade do ngrok para ter domínios fixos:
+
 - Plano Personal: $8/mês
 - Domínio reservado que não muda
 

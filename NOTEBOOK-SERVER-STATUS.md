@@ -6,15 +6,18 @@
 ## 🌐 URLs de Acesso
 
 ### Produção (Ngrok)
+
 - **API Backend:** https://fdef11b73864.ngrok-free.app
 - **Email Relay:** https://4f95973cd004.ngrok-free.app
 
 ### Local (Desenvolvimento)
+
 - **API Backend:** http://localhost:3000
 - **Email Relay:** http://localhost:4900
 - **Ngrok Dashboard:** http://localhost:4040
 
-⚠️ **Importante sobre URLs ngrok:** 
+⚠️ **Importante sobre URLs ngrok:**
+
 - URLs mudam a cada reinicialização (plano gratuito)
 - Para URLs fixas, upgrade para plano pago
 - Primeira visita pede confirmação "Visit Site"
@@ -22,6 +25,7 @@
 ## 📊 Status dos Serviços
 
 ### Backend AltClinic
+
 - **Porta Local:** 3000
 - **PID:** 15880
 - **Status:** ✅ Rodando
@@ -29,6 +33,7 @@
 - **Log:** `C:\Users\thiag\saee\logs\notebook-server\backend-20251021-102454.log`
 
 ### Email Relay
+
 - **Porta Local:** 4900
 - **PID:** 5640
 - **Status:** ✅ Rodando
@@ -37,6 +42,7 @@
 - **Log:** `C:\Users\thiag\saee\logs\notebook-server\relay-20251021-102454.log`
 
 ### Ngrok Tunnels
+
 - **PID:** 20812
 - **Status:** ✅ Rodando
 - **Dashboard Local:** http://localhost:4040
@@ -68,12 +74,15 @@ cd C:\Users\thiag\saee\tools\notebook-server
 ## 🔧 Próximas Ações Necessárias
 
 ### ~~1. Atualizar Variáveis de Ambiente no Render~~ (NÃO MAIS NECESSÁRIO)
+
 **Você não está mais usando o Render! Tudo roda 100% do seu notebook.**
 
 ### 1. Configurar Inicialização Automática ✅
+
 **Já configurado!** A tarefa agendada já foi registrada e os serviços iniciarão automaticamente no logon.
 
 Para verificar:
+
 ```powershell
 Get-ScheduledTask -TaskName "AltClinic-Notebook-Server"
 ```
@@ -81,6 +90,7 @@ Get-ScheduledTask -TaskName "AltClinic-Notebook-Server"
 ### 2. Configurações do Windows
 
 #### Energia
+
 1. Painel de Controle → Opções de Energia
 2. Escolher "Alto desempenho" ou "Equilibrado"
 3. Editar configurações do plano:
@@ -89,6 +99,7 @@ Get-ScheduledTask -TaskName "AltClinic-Notebook-Server"
    - Hibernar: Nunca
 
 #### Firewall
+
 Certifique-se de que as portas 3000 e 4900 estejam permitidas caso precise acessar localmente de outros dispositivos.
 
 ### 4. Monitoramento
@@ -96,11 +107,13 @@ Certifique-se de que as portas 3000 e 4900 estejam permitidas caso precise acess
 Verifique regularmente os logs em `C:\Users\thiag\saee\logs\notebook-server\` para garantir que os serviços estão funcionando corretamente.
 
 **Testar API localmente:**
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/health"
 ```
 
 **Ver URLs atuais do ngrok:**
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" | Select-Object -ExpandProperty tunnels | Select-Object name, public_url
 ```
