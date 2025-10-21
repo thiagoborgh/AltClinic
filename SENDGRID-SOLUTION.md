@@ -1,6 +1,7 @@
 # Solução Definitiva: SendGrid Gratuito
 
 ## 🎯 Por que SendGrid?
+
 - Gmail está bloqueando conexões do Render
 - SendGrid é confiável e gratuito (100 emails/dia)
 - Melhor deliverability que Gmail
@@ -46,6 +47,7 @@ SMTP_FROM_NAME=AltClinic - Sistema de Gestão
 ## 📋 Passo 4: Verificar Domínio (Opcional)
 
 Para melhor deliverability:
+
 1. No SendGrid → **Settings** → **Sender Authentication**
 2. Adicione domínio: `altclinic.com` (se tiver)
 3. Ou use Single Sender Verification com `contatoaltclinic@gmail.com`
@@ -55,21 +57,26 @@ Para melhor deliverability:
 Após salvar no Render (~2-3 min para reiniciar):
 
 ### Teste 1: Criar Trial
+
 - URL: https://altclinic.onrender.com
 - Deve enviar email de boas-vindas
 
 ### Teste 2: Forgot Password
+
 - URL: https://altclinic.onrender.com/login
 - Clique "Esqueci minha senha"
 - Deve enviar email de redefinição
 
 ## 📊 Limites SendGrid Gratuito
+
 - **100 emails/dia** (suficiente para testes)
 - **Upgrade:** $0.0015 por email adicional
 - **Melhor deliverability** que Gmail
 
 ## 🔍 Verificar Logs
+
 Após configurar, verifique logs do Render:
+
 ```
 📧 Configurando SMTP: apikey → smtp.sendgrid.net:587
 ✅ Serviço de email inicializado com sucesso
@@ -79,21 +86,26 @@ Após configurar, verifique logs do Render:
 ## 🚨 Troubleshooting
 
 ### API Key Errada
+
 - Verifique se copiou corretamente
 - Deve começar com `SG.`
 
 ### Porta Bloqueada
+
 Se 587 não funcionar:
+
 ```
 SMTP_PORT=2525
 SMTP_SECURE=false
 ```
 
 ### Emails na SPAM
+
 - Configure Sender Authentication
 - Use domínio próprio se possível
 
 ## ✅ Benefícios SendGrid
+
 - ✅ Funciona no Render (não bloqueia)
 - ✅ Melhor deliverability
 - ✅ Logs detalhados
@@ -101,5 +113,6 @@ SMTP_SECURE=false
 - ✅ Escalável
 
 ---
+
 **Status:** Recomendação para migração imediata para SendGrid</content>
 <parameter name="filePath">c:\Users\thiag\saee\SENDGRID-SOLUTION.md

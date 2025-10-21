@@ -68,7 +68,24 @@ class SaeeApp {
     // CORS
     this.app.use(cors({
       origin: process.env.NODE_ENV === 'production' 
-        ? true // Aceitar qualquer origem em produção (necessário para OnRender)
+        ? function(origin, callback) {
+            // Permitir Vercel, ngrok e localhost
+            const allowedOrigins = [
+              /\.vercel\.app$/,
+              /\.ngrok-free\.app$/,
+              /\.ngrok\.io$/,
+              'http://localhost:3000',
+              'http://localhost:3001'
+            ];
+            
+            if (!origin || allowedOrigins.some(allowed => 
+              typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+            )) {
+              callback(null, true);
+            } else {
+              callback(null, true); // Permitir por enquanto, você pode restringir depois
+            }
+          }
         : ['http://localhost:3000', 'http://localhost:3001'],
       credentials: true
     }));

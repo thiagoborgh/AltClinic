@@ -41,3 +41,8 @@ create-*.js
 .env.local
 .env.production
 .env.example
+
+# Notebook server runtime
+tools/notebook-server/config.ps1
+tools/notebook-server/ngrok.yml
+tools/notebook-server/runtime/

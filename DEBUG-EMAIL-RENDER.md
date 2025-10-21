@@ -1,15 +1,18 @@
 # Verificação de Email no Render
 
 ## 🔍 Problema Identificado
+
 - ✅ Localhost: Email funcionando
 - ❌ Render: Email não funcionando
 
 ## 📋 Verificação Necessária
 
 ### 1. Verificar Variáveis no Render
+
 Acesse: https://dashboard.render.com → altclinic → Environment
 
 **Variáveis necessárias:**
+
 ```
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
@@ -21,41 +24,51 @@ SMTP_FROM_NAME=AltClinic - Sistema de Gestão
 ```
 
 ### 2. Verificar se há duplicatas
+
 Procure por variáveis duplicadas como:
+
 - `EMAIL_FROM` (remover se existir)
 - `SMTP_FROM_NAME` (deve ser apenas uma)
 
 ### 3. Teste de Conexão
+
 Após atualizar, o serviço reinicia automaticamente (~2-3 min).
 
 ### 4. Verificar Logs
+
 Acesse: https://dashboard.render.com → altclinic → Logs
 
 Procure por:
+
 ```
 ✅ Serviço de email inicializado com sucesso
 📧 Configurando SMTP: contatoaltclinic@gmail.com → smtp.gmail.com:465
 ```
 
 ### 5. Teste Funcional
+
 - Criar trial: https://altclinic.onrender.com
 - Ou forgot password: https://altclinic.onrender.com/login
 
 ## 🚨 Possíveis Problemas
 
 ### Gmail bloqueou o Render
+
 1. Acesse: https://myaccount.google.com/security
 2. Procure alertas de "Tentativa de login bloqueada"
 3. Clique em "Isso fui eu" se aparecer
 
 ### Porta bloqueada
+
 Se 465 não funcionar, tentar:
+
 ```
 SMTP_PORT=587
 SMTP_SECURE=false
 ```
 
 ### App Password expirado
+
 Se o App Password foi regenerado recentemente, atualizar no Render.
 
 ## 🔧 Solução Alternativa: SendGrid
@@ -65,6 +78,7 @@ Se Gmail continuar bloqueando, usar SendGrid (gratuito):
 1. Criar conta: https://sendgrid.com
 2. Gerar API Key
 3. Configurar no Render:
+
 ```
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
@@ -80,10 +94,12 @@ Se nenhum SMTP externo for viável, use o relay HTTP local:
 1. Configure o relay: ver `EMAIL-RELAY-SETUP.md`
 2. Execute `node tools/email-relay/email-relay-server.js`
 3. No Render, defina:
+
 ```
 EMAIL_API_URL=https://seu-endpoint-publico/send-email
 EMAIL_API_KEY=sua-chave-segura
 ```
+
 4. Remova/ignore variáveis SMTP no Render (ficam opcionais)
 5. Teste novamente (o backend chamará o relay via HTTP)
 
@@ -97,5 +113,6 @@ EMAIL_API_KEY=sua-chave-segura
 - [ ] Verificar alertas Gmail se necessário
 
 ---
+
 **Status:** Aguardando verificação das variáveis no Render</content>
 <parameter name="filePath">c:\Users\thiag\saee\DEBUG-EMAIL-RENDER.md

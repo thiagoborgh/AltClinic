@@ -18,9 +18,9 @@
     email: 'thiagoborgh@gmail.com',
     tenant_id: 'b7a34675-8fcf-4d3b-923f-1b488dc313cd'
   },
-  tenant: { 
-    nome: 'altclinin', 
-    slug: 'altclinin-1' 
+  tenant: {
+    nome: 'altclinin',
+    slug: 'altclinin-1'
   }
 }
 
@@ -63,8 +63,8 @@ const masterDb = new Database('./data/master.db');
 
 // Deletar usuário específico que está órfão
 const result = masterDb.prepare(\`
-  DELETE FROM master_users 
-  WHERE email = 'thiagoborgh@gmail.com' 
+  DELETE FROM master_users
+  WHERE email = 'thiagoborgh@gmail.com'
   AND tenant_id = 'b7a34675-8fcf-4d3b-923f-1b488dc313cd'
 \`).run();
 
@@ -74,6 +74,7 @@ masterDb.close();
 ```
 
 **Resultado esperado:**
+
 ```
 ✅ Usuário deletado: 1 registro(s)
 ```
@@ -89,7 +90,7 @@ const masterDb = new Database('./data/master.db');
 
 // Deletar tenant órfão
 const result = masterDb.prepare(\`
-  DELETE FROM tenants 
+  DELETE FROM tenants
   WHERE id = 'b7a34675-8fcf-4d3b-923f-1b488dc313cd'
 \`).run();
 
@@ -109,6 +110,7 @@ Agora o email `thiagoborgh@gmail.com` está livre!
 3. Use os mesmos dados
 
 **Esperado:**
+
 ```
 ✅ Trial criado com sucesso!
 ✅ Email enviado
@@ -239,7 +241,7 @@ async checkExistingUser(email) {
     const fs = require('fs');
     const path = require('path');
     const dbPath = path.join(__dirname, '../../data', tenant.database_name);
-    
+
     if (!fs.existsSync(dbPath)) {
       // Banco não existe, deletar registro órfão
       console.log('⚠️  Tenant órfão detectado, removendo:', user.tenantSlug);
@@ -295,6 +297,7 @@ node -e "const Database = require('better-sqlite3'); const db = new Database('./
 ---
 
 **Me avise:**
+
 - ✅ Após executar a limpeza
 - ✅ Resultado do teste de criar trial
 - ✅ Se aparecer algum erro novo

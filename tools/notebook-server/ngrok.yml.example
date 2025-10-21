@@ -1,0 +1,19 @@
+authtoken: "REPLACE_WITH_YOUR_TOKEN"
+version: "2"
+region: sa
+update_check: true
+console_ui: false
+log: "stdout"
+tunnels:
+  relay:
+    addr: 4900
+    proto: http
+    schemes:
+      - https
+    domain: "REPLACE_WITH_RELAY_DOMAIN" # optional, requires reserved domain or static URL
+  api:
+    addr: 3000
+    proto: http
+    schemes:
+      - https
+    domain: "REPLACE_WITH_API_DOMAIN" # optional, requires reserved domain or static URL

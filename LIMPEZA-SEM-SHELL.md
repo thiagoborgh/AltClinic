@@ -70,6 +70,7 @@ https://altclinic.onrender.com/api/cleanup-orphans
 ```
 
 **Isso mostra:**
+
 - Quantos tenants órfãos existem
 - Quais são (slug, nome, database)
 - Quais usuários serão afetados
@@ -95,10 +96,7 @@ https://altclinic.onrender.com/api/cleanup-orphans?execute=true
     "tenants": 4,
     "users": 4
   },
-  "orphansRemoved": [
-    "altclinin-1",
-    "teste-123"
-  ]
+  "orphansRemoved": ["altclinin-1", "teste-123"]
 }
 ```
 
@@ -116,6 +114,7 @@ Agora o email `thiagoborgh@gmail.com` está livre!
 4. Clique em "Começar agora"
 
 **Esperado:**
+
 ```
 ✅ Trial criado com sucesso!
 ✅ Email enviado
@@ -133,7 +132,7 @@ Edite `src/app.js` e **delete** todo o bloco:
 ```javascript
 // 🧹 ENDPOINT TEMPORÁRIO - Limpeza de tenants órfãos
 // TODO: REMOVER APÓS USO!
-this.app.get('/api/cleanup-orphans', async (req, res) => {
+this.app.get("/api/cleanup-orphans", async (req, res) => {
   // ... TODO O CÓDIGO ATÉ ...
 });
 ```
@@ -196,13 +195,13 @@ Invoke-WebRequest -Uri "https://altclinic.onrender.com/api/cleanup-orphans?execu
 Adicione autenticação:
 
 ```javascript
-this.app.get('/api/cleanup-orphans', async (req, res) => {
+this.app.get("/api/cleanup-orphans", async (req, res) => {
   // Verificar token de segurança
   const token = req.headers.authorization;
   if (token !== `Bearer ${process.env.CLEANUP_TOKEN}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: "Unauthorized" });
   }
-  
+
   // ... resto do código ...
 });
 ```
@@ -230,7 +229,8 @@ E configure `CLEANUP_TOKEN` no Render Environment.
 
 **Vantagem:** 100% gratuito, sem precisar de Shell pago!
 
-**Tempo total:** 
+**Tempo total:**
+
 - Deploy: 5 min
 - Análise: 30 segundos
 - Execução: 30 segundos
@@ -243,6 +243,7 @@ E configure `CLEANUP_TOKEN` no Render Environment.
 ---
 
 **Qual alternativa prefere?**
+
 1. Usar endpoint temporário (recomendado)
 2. Usar email diferente (mais rápido)
 3. Esperar até termos acesso ao Shell
