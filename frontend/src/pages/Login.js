@@ -36,6 +36,7 @@ import { useAuth } from '../hooks/useAuth';
 import LicenseSelector from '../components/Auth/LicenseSelector';
 import SessionConflictDialog from '../components/Auth/SessionConflictDialog';
 import LoginErrorAlert from '../components/LoginErrorAlert';
+import api from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -216,28 +217,18 @@ const Login = () => {
 
     setRecoveryLoading(true);
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: recoveryEmail,
-          type: recoveryType
-        })
+      const response = await api.post('/auth/forgot-password', {
+        email: recoveryEmail,
+        type: recoveryType
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(data.message || 'Email enviado com sucesso!');
+      if (response.data) {
+        toast.success(response.data.message || 'Email enviado com sucesso!');
         setShowRecoveryDialog(false);
         setRecoveryEmail('');
-      } else {
-        toast.error(data.message || 'Erro ao enviar email');
       }
     } catch (error) {
-      toast.error('Erro ao processar solicitação');
+      toast.error(error.response?.data?.message || 'Erro ao processar solicitação');
     } finally {
       setRecoveryLoading(false);
     }
