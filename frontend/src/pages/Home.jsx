@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import AgendamentoForm from '../components/AgendamentoForm.jsx';
 
 function Home() {
@@ -10,7 +11,7 @@ function Home() {
 
   useEffect(() => {
     // Carregar profissionais
-    axios.get('http://localhost:3000/profissionais')
+    axios.get(`${API_URL}/profissionais`)
       .then(response => setProfissionais(response.data))
       .catch(error => console.error('Erro ao carregar profissionais:', error));
   }, []);
@@ -18,7 +19,7 @@ function Home() {
   const handleProfissionalChange = async (profissionalId) => {
     if (profissionalId) {
       try {
-        const response = await axios.get(`http://localhost:3000/profissional-servicos/${profissionalId}`);
+        const response = await axios.get(`${API_URL}/profissional-servicos/${profissionalId}`);
         setServicos(response.data);
         setHorarios([]);
       } catch (error) {
@@ -34,7 +35,7 @@ function Home() {
     if (data && profissionalId) {
       try {
         const response = await axios.get(
-          `http://localhost:3000/horarios-disponiveis?data=${data}&profissional_id=${profissionalId}`
+          `${API_URL}/horarios-disponiveis?data=${data}&profissional_id=${profissionalId}`
         );
         setHorarios(response.data);
       } catch (error) {
@@ -47,7 +48,7 @@ function Home() {
 
   const handleSubmit = async (formData) => {
     try {
-      const response = await axios.post('http://localhost:3000/agendamentos', formData);
+      const response = await axios.post(`${API_URL}/agendamentos`, formData);
       setMensagem(response.data.mensagem || response.data.erro);
     } catch (error) {
       setMensagem('Erro ao enviar agendamento.');

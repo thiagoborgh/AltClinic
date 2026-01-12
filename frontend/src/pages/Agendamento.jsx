@@ -1,29 +1,34 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { API_URL } from '../config';
 
 function Agendamento() {
   const [profissionais, setProfissionais] = useState([]);
   const [formData, setFormData] = useState({
     cliente: '',
     profissionalId: '',
-    servico: '',
+    procedimento: '',
     data: '',
     horario: '',
   });
   const [mensagem, setMensagem] = useState('');
   const [datasDisponiveis, setDatasDisponiveis] = useState([]);
+  const [horarios, setHorarios] = useState([]);
+  const [procedimentos, setProcedimentos] = useState([]);
   const navigate = useNavigate();
 
   // Carregar profissionais
   useEffect(() => {
     axios
-      .get('http://localhost:3000/profissionais')
+      .get(`${API_URL}/profissionais`)
       .then(response => {
         console.log('Dados recebidos de /profissionais:', response.data);
         const profissionaisFormatados = response.data.map(prof => ({
           ...prof,
-          servicos: typeof prof.servicos === 'string' ? JSON.parse(prof.servicos) : prof.servicos,
+          procedimentos: typeof prof.procedimentos === 'string' ? JSON.parse(prof.procedimentos) : prof.procedimentos,
           grade: typeof prof.grade === 'string' ? JSON.parse(prof.grade) : prof.grade,
         }));
         console.log('Profissionais formatados:', profissionaisFormatados);
@@ -36,24 +41,71 @@ function Agendamento() {
       });
   }, []);
 
-  // Atualizar datas disponíveis quando o profissional mudar
+  // Carregar datas disponíveis quando o profissional mudar
   useEffect(() => {
     if (formData.profissionalId) {
-      const profissional = profissionais.find(p => p.id === parseInt(formData.profissionalId));
-      if (profissional && profissional.grade) {
-        const datas = getDatasDisponiveis(profissional.grade);
-        setDatasDisponiveis(datas);
-        // Resetar data se não estiver mais disponível
-        if (!datas.includes(formData.data)) {
-          setFormData(prev => ({ ...prev, data: '' }));
-        }
-      } else {
-        setDatasDisponiveis([]);
-      }
+      axios
+        .get(`${API_URL}/datas-disponiveis`, {
+          params: {
+            'profissional-id': formData.profissionalId,
+          },
+        })
+        .then(response => {
+          console.log('Datas disponíveis recebidas do backend:', response.data);
+          setDatasDisponiveis(response.data);
+          if (!response.data.includes(formData.data)) {
+            setFormData(prev => ({ ...prev, data: '' }));
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao carregar datas disponíveis:', error);
+          setMensagem('Erro ao carregar datas disponíveis.');
+        });
     } else {
       setDatasDisponiveis([]);
+      console.log('Nenhum profissional selecionado, datasDisponiveis resetado');
     }
-  }, [formData.profissionalId, profissionais]);
+  }, [formData.profissionalId]);
+
+  // Carregar horários disponíveis e procedimentos quando profissional ou data mudar
+  useEffect(() => {
+    if (formData.profissionalId && formData.data) {
+      // Carregar horários
+      axios
+        .get(`${API_URL}/horarios-disponiveis`, {
+          params: {
+            data: formData.data,
+            'profissional-id': formData.profissionalId,
+            intervalo_entre_horarios: '30', // Valor fixo por enquanto; pode ser dinâmico no futuro
+          },
+        })
+        .then(response => {
+          console.log('Horários recebidos:', response.data);
+          setHorarios(response.data);
+          if (!response.data.includes(formData.horario)) {
+            setFormData(prev => ({ ...prev, horario: '' }));
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao carregar horários:', error);
+          setMensagem('Erro ao carregar horários.');
+        });
+
+      // Carregar procedimentos (já estava no useEffect separado)
+      axios
+        .get(`${API_URL}/profissional-procedimentos/${formData.profissionalId}`)
+        .then(response => {
+          setProcedimentos(response.data);
+        })
+        .catch(error => {
+          console.error('Erro ao buscar procedimentos:', error);
+          setMensagem('Erro ao carregar procedimentos.');
+        });
+    } else {
+      setHorarios([]);
+      setProcedimentos([]);
+    }
+  }, [formData.profissionalId, formData.data]);
 
   // Manipular mudanças no formulário
   const handleChange = e => {
@@ -62,76 +114,50 @@ function Agendamento() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Obter horários disponíveis com base na data e grade do profissional
-  const getHorariosDisponiveis = () => {
-    if (!formData.profissionalId || !formData.data) return [];
-
-    const profissional = profissionais.find(p => p.id === parseInt(formData.profissionalId));
-    if (!profissional || !profissional.grade) return [];
-
-    const diaSelecionado = new Date(formData.data).toLocaleString('pt-BR', { weekday: 'long' }).toLowerCase();
-    const gradeDia = profissional.grade.find(g => g.dia_semana === diaSelecionado);
-
-    if (!gradeDia) return [];
-
-    const inicio = parseInt(gradeDia.horario_inicio.split(':')[0]);
-    const fim = parseInt(gradeDia.horario_fim.split(':')[0]);
-    const horarios = [];
-    for (let hora = inicio; hora < fim; hora++) {
-      horarios.push(`${hora.toString().padStart(2, '0')}:00`);
-    }
-    return horarios;
+  // Manipular mudança na data com o DatePicker
+  const handleDataChange = (date) => {
+    const dataFormatada = date ? date.toISOString().split('T')[0] : '';
+    console.log('Data selecionada:', dataFormatada);
+    setFormData(prev => ({ ...prev, data: dataFormatada }));
   };
 
-  // Obter datas disponíveis com base na grade do profissional
-  const getDatasDisponiveis = (grade) => {
-    const datas = [];
-    const hoje = new Date(); // Hoje é 11:18 AM -03 de quinta-feira, 29 de maio de 2025
-    hoje.setHours(0, 0, 0, 0); // Resetar horas para comparação
-
-    // Gerar as próximas 30 dias
-    for (let i = 0; i < 30; i++) {
-      const data = new Date(hoje);
-      data.setDate(hoje.getDate() + i);
-
-      const diaSemana = data.toLocaleString('pt-BR', { weekday: 'long' }).toLowerCase();
-      if (grade.some(g => g.dia_semana === diaSemana)) {
-        // Formatar a data como YYYY-MM-DD para o <select>
-        const dataFormatada = data.toISOString().split('T')[0];
-        datas.push(dataFormatada);
-      }
-    }
-    return datas;
-  };
+  // Converter datas disponíveis para objetos Date
+  const datasPermitidas = datasDisponiveis.map(data => new Date(data));
 
   // Manipular envio do formulário
   const handleSubmit = async e => {
     e.preventDefault();
-    const { cliente, profissionalId, servico, data, horario } = formData;
+    const { cliente, profissionalId, procedimento, data, horario } = formData;
 
-    // Validação básica
-    if (!cliente || !profissionalId || !servico || !data || !horario) {
-      setMensagem('Preencha todos os campos.');
+    // Validação mais robusta
+    if (!cliente || !profissionalId || !procedimento || !data || !horario) {
+      setMensagem('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (!datasDisponiveis.includes(data)) {
+      setMensagem('A data selecionada não está disponível.');
+      return;
+    }
+    if (!horarios.includes(horario)) {
+      setMensagem('O horário selecionado não está disponível.');
       return;
     }
 
     try {
       // Salvar o agendamento no backend
-      const response = await axios.post('http://localhost:3000/agendamentos', {
+      const response = await axios.post(`${API_URL}/agendamentos`, {
         cliente,
         profissionalId,
-        servico,
+        procedimento,
         data,
         horario,
       });
 
       setMensagem('Agendamento realizado com sucesso!');
-      setFormData({ cliente: '', profissionalId: '', servico: '', data: '', horario: '' });
-
-      // Redirecionar para a lista de agendamentos
+      setFormData({ cliente: '', profissionalId: '', procedimento: '', data: '', horario: '' });
       setTimeout(() => navigate('/lista-agendamentos'), 2000);
     } catch (error) {
-      setMensagem(error.response?.data?.erro || 'Erro ao realizar agendamento.');
+      setMensagem(error.response?.data?.erro || 'Erro ao realizar agendamento. Tente novamente.');
       console.error('Erro:', error);
     }
   };
@@ -152,6 +178,7 @@ function Agendamento() {
             onChange={handleChange}
             required
             className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Digite o nome do cliente"
           />
         </div>
         <div>
@@ -175,47 +202,41 @@ function Agendamento() {
           </select>
         </div>
         <div>
-          <label htmlFor="servico" className="block font-bold text-gray-700">
-            Serviço:
+          <label htmlFor="procedimento" className="block font-bold text-gray-700">
+            Procedimento:
           </label>
           <select
-            id="servico"
-            name="servico"
-            value={formData.servico}
+            id="procedimento"
+            name="procedimento"
+            value={formData.procedimento}
             onChange={handleChange}
             required
             className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Selecione um serviço</option>
-            {formData.profissionalId &&
-              profissionais
-                .find(p => p.id === parseInt(formData.profissionalId))
-                ?.servicos?.map(servico => (
-                  <option key={servico} value={servico}>
-                    {servico}
-                  </option>
-                ))}
+            <option value="">Selecione um procedimento</option>
+            {procedimentos.map((procedimento, index) => (
+              <option key={index} value={procedimento}>
+                {procedimento}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label htmlFor="data" className="block font-bold text-gray-700">
             Data:
           </label>
-          <select
-            id="data"
-            name="data"
-            value={formData.data}
-            onChange={handleChange}
-            required
+          <DatePicker
+            selected={formData.data ? new Date(formData.data) : null}
+            onChange={handleDataChange}
+            includeDates={datasPermitidas} // Apenas essas datas serão clicáveis
+            dateFormat="dd/MM/yyyy"
+            placeholderText="Selecione uma data disponível"
             className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Selecione uma data</option>
-            {datasDisponiveis.map(data => (
-              <option key={data} value={data}>
-                {new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-              </option>
-            ))}
-          </select>
+            required
+          />
+          {datasDisponiveis.length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">Selecione um profissional para ver as datas disponíveis.</p>
+          )}
         </div>
         <div>
           <label htmlFor="horario" className="block font-bold text-gray-700">
@@ -230,12 +251,15 @@ function Agendamento() {
             className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione um horário</option>
-            {getHorariosDisponiveis().map(horario => (
+            {horarios.map(horario => (
               <option key={horario} value={horario}>
                 {horario}
               </option>
             ))}
           </select>
+          {horarios.length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">Selecione uma data para ver os horários disponíveis.</p>
+          )}
         </div>
         <button
           type="submit"

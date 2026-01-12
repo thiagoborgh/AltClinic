@@ -1,0 +1,75 @@
+# Dependências
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Banco de dados
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+Backend/.env
+evolution-api-lite/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build
+dist/
+build/
+.vite/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporários
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Backups
+*-backup.db
+*.bak
+backup/
+
+# Uploads (se houver)
+uploads/
+public/uploads/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Sistema
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Evolution API (se rodando localmente)
+evolution-api-lite/evolution_instances/
+evolution-api-lite/evolution_store/
+evolution-api-lite/evolution.db
+
+# Outros
+.turbo
+.next/
+out/

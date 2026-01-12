@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 function ListaAgendamentos() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -10,7 +11,7 @@ function ListaAgendamentos() {
   useEffect(() => {
     // Carregar profissionais
     axios
-      .get('http://localhost:3000/profissionais')
+      .get(`${API_URL}/profissionais`)
       .then(response => {
         const profissionaisFormatados = response.data.map(prof => ({
           ...prof,
@@ -26,7 +27,7 @@ function ListaAgendamentos() {
 
     // Carregar agendamentos
     axios
-      .get('http://localhost:3000/agendamentos')
+      .get(`${API_URL}/agendamentos`)
       .then(response => {
         setAgendamentos(response.data);
       })
@@ -40,9 +41,9 @@ function ListaAgendamentos() {
   const handleDelete = async (id) => {
     if (window.confirm('Deseja excluir este agendamento?')) {
       try {
-        const response = await axios.delete(`http://localhost:3000/agendamentos/${id}`);
+        const response = await axios.delete(`${API_URL}/agendamentos/${id}`);
         setMensagem(response.data.mensagem || 'Agendamento excluído com sucesso!');
-        const updated = await axios.get('http://localhost:3000/agendamentos');
+        const updated = await axios.get(`${API_URL}/agendamentos`);
         setAgendamentos(updated.data);
       } catch (error) {
         setMensagem(error.response?.data?.erro || 'Erro ao excluir agendamento.');

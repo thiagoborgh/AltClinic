@@ -1,21 +1,24 @@
 {
   "name": "backend",
-  "version": "1.0.0",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Backend SaaS para gestão de clínicas de estética",
+  "main": "server-saas.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server-saas.js",
+    "dev": "node server-saas.js",
+    "legacy": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["saas", "clinica", "estetica", "agendamento"],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "lodash": "^4.17.21",
-    "react-input-mask": "^2.0.4",
+    "jsonwebtoken": "^9.0.2",
+    "sequelize": "^6.37.5",
     "sqlite3": "^5.1.7"
   }
 }

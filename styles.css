@@ -131,3 +131,9 @@ a {
 a:hover {
     text-decoration: underline;
 }
+
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: #2563eb !important;
+  color: white !important;
+}
