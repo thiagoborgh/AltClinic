@@ -26,9 +26,12 @@ const Login = ({ setToken }) => {
         {/* Formulário de Login (Esquerda) */}
         <div className="w-full md:w-1/2 p-6">
           <div className="flex justify-center mb-6">
-            <img src="/logo.png" alt="Logo Panda Clinic" className="w-16 h-16 object-cover rounded" />
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              AC
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-700 text-center mb-6">Acesse sua Conta</h2>
+          <h2 className="text-2xl font-bold text-gray-700 text-center mb-6">AltClinic SaaS</h2>
+          <p className="text-center text-sm text-gray-600 mb-4">Gestão de Clínicas Estéticas</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Usuário</label>
@@ -67,23 +70,47 @@ const Login = ({ setToken }) => {
               Acessar →
             </button>
             <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">© 2025 Panda Clinic. Todos os direitos reservados.</p>
+              <p className="text-sm text-gray-600">© 2026 AltClinic SaaS. Todos os direitos reservados.</p>
             </div>
             <div className="text-center mt-2">
-              <a href="/cadastro" className="text-blue-600 hover:underline">Criar Nova Conta</a>
+              <a href="/cadastro" className="text-blue-600 hover:underline font-semibold">Criar Nova Conta • R$ 19,90/mês</a>
             </div>
           </form>
         </div>
 
-        {/* Espaço para Propaganda (Direita em desktop, abaixo em mobile) */}
-        <div className="w-full md:w-1/2 p-6 flex flex-col items-center justify-center relative bg-gray-200">
-          <img src="/propaganda.jpg" alt="Promoção Panda Clinic" className="w-full h-64 object-cover rounded-lg" />
-          <div className="text-center mt-4">
-            <a href="#" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Saiba Mais</a>
-          </div>
-          <button className="absolute top-4 right-4 text-gray-700 hover:text-gray-900 md:hidden" onClick={() => {}}>
-            ✕
-          </button>
+        {/* Benefícios do Sistema (Direita) */}
+        <div className="w-full md:w-1/2 p-8 bg-gradient-to-br from-blue-600 to-blue-800 text-white flex flex-col justify-center">
+          <h3 className="text-2xl font-bold mb-6">Sistema Completo para sua Clínica</h3>
+          <ul className="space-y-4">
+            <li className="flex items-start">
+              <span className="text-2xl mr-3">📅</span>
+              <div>
+                <strong>Agenda Inteligente</strong>
+                <p className="text-sm text-blue-100">Controle total de horários e profissionais</p>
+              </div>
+            </li>
+            <li className="flex items-start">
+              <span className="text-2xl mr-3">💬</span>
+              <div>
+                <strong>WhatsApp Integrado</strong>
+                <p className="text-sm text-blue-100">Links diretos para confirmação</p>
+              </div>
+            </li>
+            <li className="flex items-start">
+              <span className="text-2xl mr-3">👥</span>
+              <div>
+                <strong>Multi-usuário</strong>
+                <p className="text-sm text-blue-100">Até 3 usuários inclusos</p>
+              </div>
+            </li>
+            <li className="flex items-start">
+              <span className="text-2xl mr-3">💰</span>
+              <div>
+                <strong>R$ 19,90/mês</strong>
+                <p className="text-sm text-blue-100">Sem taxa de adesão • Cancele quando quiser</p>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
     </div>

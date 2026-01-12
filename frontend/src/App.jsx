@@ -1,14 +1,14 @@
 import { Route, Routes, Navigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import Agenda from './components/Agenda';
-import Configuracoes from './components/Configuracoes';
+import ConfiguracoesSaaS from './components/ConfiguracoesSaaS';
 import Login from './components/Login';
 import Home from './components/Home';
 import Agendamento from './components/Agendamento';
 import PerfilProfissional from './components/PerfilProfissional';
 import Navbar from './components/Navbar';
-import Cadastro from './components/Cadastro'; // Crie este componente
-import EsqueciSenha from './components/EsqueciSenha'; // Crie este componente
+import Cadastro from './components/Cadastro';
+import EsqueciSenha from './components/EsqueciSenha';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -24,15 +24,13 @@ function App() {
       <main className="flex-1 pt-16">
         <Routes>
           <Route path="/login" element={token ? <Navigate to="/configuracoes" /> : <Login setToken={setToken} />} />
-          <Route path="/configuracoes" element={token ? <Configuracoes /> : <Navigate to="/login" />} />
+          <Route path="/cadastro" element={token ? <Navigate to="/configuracoes" /> : <Cadastro />} />
+          <Route path="/configuracoes" element={token ? <ConfiguracoesSaaS /> : <Navigate to="/login" />} />
           <Route path="/agenda" element={token ? <Agenda /> : <Navigate to="/login" />} />
-          <Route path="/" element={token ? <Navigate to="/agenda" /> : <Navigate to="/login" />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/agendamento" element={<Agendamento />} />
-          <Route path="/perfil-profissional/:id?" element={<PerfilProfissional />} />
-          <Route path="/cadastros-gerais" element={<div>Cadastros Gerais (a implementar)</div>} />
-          <Route path="/cadastro" element={<Cadastro />} /> {/* Nova rota */}
-          <Route path="/esqueci-senha" element={<EsqueciSenha />} /> {/* Nova rota */}
+          <Route path="/agendamento" element={token ? <Agendamento /> : <Navigate to="/login" />} />
+          <Route path="/perfil-profissional/:id?" element={token ? <PerfilProfissional /> : <Navigate to="/login" />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+          <Route path="/" element={token ? <Navigate to="/configuracoes" /> : <Navigate to="/login" />} />
         </Routes>
       </main>
     </div>
