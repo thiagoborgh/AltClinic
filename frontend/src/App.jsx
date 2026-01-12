@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import Agenda from './components/Agenda';
 import ConfiguracoesSaaS from './components/ConfiguracoesSaaS';
 import Login from './components/Login';
-import Home from './components/Home';
 import Agendamento from './components/Agendamento';
 import PerfilProfissional from './components/PerfilProfissional';
 import Navbar from './components/Navbar';
