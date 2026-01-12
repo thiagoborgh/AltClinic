@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.JWT_SECRET || 'seu-secret-key-aqui';
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 10000;
 
 // Middlewares
 app.use(express.json());
@@ -620,12 +620,17 @@ app.post('/procedimentos', authenticateToken, checkTenantLimits, async (req, res
 // SERVIDOR
 // ============================================
 
+// Rota de health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'AltClinic SaaS API is running' });
+});
+
 app.listen(port, () => {
   console.log(`
   ✅ Servidor SaaS rodando em http://localhost:${port}
   
   📦 Plano Starter: R$ 19,90/mês
   👥 Limite: 3 usuários por tenant
-  🎁 Trial: 30 dias grátis
+  🎁 Contas ADMIN gratuitas disponíveis
   `);
 });
