@@ -174,18 +174,28 @@ app.post('/cadastro', async (req, res) => {
       return res.status(400).json({ erro: 'Email já cadastrado' });
     }
 
-    // Criar tenant - pagamento necessário para ativar
-    const dataExpiracao = new Date();
+    // Criar tenant - verificar se é conta ADMIN especial
+    let status = 'pending_payment';
+    let plano = 'starter';
+    let dataExpiracao = new Date();
     dataExpiracao.setMonth(dataExpiracao.getMonth() + 1); // Primeira cobrança em 30 dias
+    
+    // CONTA ADMIN GRATUITA
+    const emailsAdmin = ['admin@altclinic.com.br', 'teste@altclinic.com.br', 'demo@altclinic.com.br'];
+    if (emailsAdmin.includes(email.toLowerCase())) {
+      status = 'active';
+      plano = 'enterprise'; // Plano especial com tudo liberado
+      dataExpiracao = new Date('2099-12-31'); // Nunca expira
+    }
 
     const tenant = await Tenant.create({
       nome: nomeClinica,
       email,
       telefone,
-      plano: 'starter',
-      status: 'pending_payment',
+      plano,
+      status,
       dataExpiracao,
-      maxUsuarios: 3
+      maxUsuarios: emailsAdmin.includes(email.toLowerCase()) ? 999 : 3
     });
 
     // Criar usuário admin
@@ -209,8 +219,12 @@ app.post('/cadastro', async (req, res) => {
       papel: usuario.papel
     }, SECRET_KEY, { expiresIn: '7d' });
 
+    const mensagemCadastro = emailsAdmin.includes(email.toLowerCase()) 
+      ? '🎉 Conta ADMIN criada com sucesso! Acesso GRATUITO e ILIMITADO.'
+      : 'Cadastro realizado! Configure o pagamento para ativar sua conta.';
+
     res.status(201).json({ 
-      mensagem: 'Cadastro realizado! Configure o pagamento para ativar sua conta.',
+      mensagem: mensagemCadastro,
       token,
       usuario: {
         id: usuario.id,
