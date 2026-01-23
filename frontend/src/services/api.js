@@ -274,10 +274,6 @@ export const crmService = {
   getSegmentos: () => api.get('/crm/segmentos'),
   createSegmento: (dados) => api.post('/crm/segmento', dados),
   
-  // Templates
-  getTemplates: () => api.get('/crm/templates'),
-  createTemplate: (dados) => api.post('/crm/template', dados),
-  
   // Mensagens
   getMensagens: (params) => api.get('/crm/mensagens', { params }),
   enviarMensagem: (dados) => api.post('/crm/mensagem', dados),
@@ -316,6 +312,13 @@ export const crmService = {
 
   // Lembretes (para onboarding)
   activateLembretes: () => api.post('/automacao/activate-lembretes'),
+
+  // Templates de Mensagens
+  getTemplates: (params) => api.get('/templates', { params }),
+  createTemplate: (dados) => api.post('/templates', dados),
+  updateTemplate: (id, dados) => api.put(`/templates/${id}`, dados),
+  deleteTemplate: (id) => api.delete(`/templates/${id}`),
+  seedTemplates: () => api.post('/templates/seed'),
 };
 
 // Professional Service

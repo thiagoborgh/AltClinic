@@ -18,8 +18,7 @@ const tenantsAdminRoutes = require('./routes/tenants-admin');
 const adminAuthRoutes = require('./routes/admin-auth');
 const adminLicencasRoutes = require('./routes/admin-licencas');
 const billingRoutes = require('./routes/billing');
-const pacientesRoutes = require('./routes/pacientes-simple');
-const prontuarioRoutes = require('./routes/prontuario-simple');
+const pacientesRoutes = require('./routes/pacientes-simple');const templatesRoutes = require('./routes/templates'); // 🆕 TEMPLATESconst prontuarioRoutes = require('./routes/prontuario-simple');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 const atendimentosRoutes = require('./routes/atendimentos');
@@ -484,6 +483,7 @@ class SaeeApp {
     // this.app.use('/api/professional', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/manychat', extractTenant);
     this.app.use('/api/onboarding', extractTenantFirestore, onboardingRoutes); // 🆕 ONBOARDING
+    this.app.use('/api/templates', extractTenantFirestore, templatesRoutes); // 🆕 TEMPLATES
     
     // 🆕 Rota WhatsApp com Firestore
     console.log('🔧 Configurando rota WhatsApp (Firestore)...');

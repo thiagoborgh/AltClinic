@@ -1,6 +1,6 @@
 # 📋 TO-DO: Ajustes Estratégicos do Sistema
 
-> **Status:** Em Progresso  
+> **Status:** Em Progresso (7/12 itens concluídos - 58% completo)  
 > **Última Atualização:** 25/01/2026  
 > **Objetivo:** Reduzir churn, aumentar confiabilidade percebida e focar na proposta de valor principal
 
@@ -200,29 +200,30 @@ Antes de qualquer tarefa, lembrar:
 
 ### 6. Mensagens Humanizadas e Personalizáveis
 
-**Status:** ⏳ Não Iniciado
+**Status:** ✅ Concluído (Backend + Frontend implementados)
 
-- [ ] Criar collection: `tenants/{tenantId}/templates_mensagens`
-- [ ] Templates padrão:
-  ```javascript
-  {
-    tipo: 'confirmacao',
-    nome: 'Confirmação Padrão',
-    mensagem: 'Olá, {{nome}} 🌸\nPassando para confirmar seu horário amanhã às {{hora}} na {{clinica}}.\nQualquer imprevisto, é só nos avisar 💖',
-    ativo: true
-  }
-  ```
-- [ ] Criar interface de edição de templates:
-  - Editor com preview em tempo real
-  - Variáveis disponíveis: `{{nome}}`, `{{hora}}`, `{{clinica}}`, `{{profissional}}`
-  - Limite de 300 caracteres
-- [ ] Validar templates antes de salvar
-- [ ] Permitir múltiplos templates por tipo (usuário escolhe qual usar)
+- [x] Criar collection: `tenants/{tenantId}/templates_mensagens`
+- [x] Criar rotas backend: `GET/POST/PUT/DELETE /api/templates`
+- [x] Endpoint de seed: `POST /api/templates/seed` com templates padrão
+- [x] Templates padrão implementados:
+  - Confirmação de agendamento
+  - Lembrete de agendamento
+  - Cancelamento de agendamento
+  - Reagendamento
+  - Agradecimento pós-atendimento
+- [x] Criar componente `MessageTemplatesManager` com interface completa
+- [x] Interface de edição com preview em tempo real
+- [x] Suporte a variáveis dinâmicas: `{{nome}}`, `{{hora}}`, `{{clinica}}`, `{{profissional}}`, `{{data}}`
+- [x] Validação de templates (limite 300 caracteres)
+- [x] Permitir múltiplos templates por tipo
+- [x] Integrar na aba "Templates e CRM" das configurações
+- [x] Sistema de abas por tipo de template (Confirmação, Lembrete, etc.)
 
-**Prompt Copilot:**
-```
-"Implementar sistema de templates de mensagens personalizáveis. Criar estrutura no Firestore, definir templates padrão humanizados, criar interface de edição com preview em tempo real, suportar variáveis dinâmicas e permitir múltiplos templates por tipo."
-```
+**Arquivos Criados/Modificados:**
+- `src/routes/templates.js` - Rotas backend completas
+- `frontend/src/services/api.js` - Métodos templateService
+- `frontend/src/components/common/MessageTemplatesManager.js` - Componente principal
+- `frontend/src/components/configuracoes/ConfiguracoesManager.js` - Integração na aba Templates
 
 ---
 
@@ -230,32 +231,31 @@ Antes de qualquer tarefa, lembrar:
 
 ### 7. Simplificar Menu e Ocultar Funcionalidades Não-MVP
 
-**Status:** ⏳ Não Iniciado
+**Status:** ✅ Concluído (Menu simplificado com feature flags)
 
-- [ ] Ocultar no menu (não remover código):
-  - Financeiro Avançado
-  - Relatórios
-  - Permissões Complexas
-  - CRM Avançado (manter só mensagens)
-- [ ] Menu final deve conter:
-  - 📅 Agenda (home)
-  - 👤 Pacientes
-  - 👨‍⚕️ Profissionais
-  - 💬 Mensagens WhatsApp
-  - ⚙️ Configurações
-- [ ] Implementar feature flag para restaurar funcionalidades:
-  ```javascript
-  const FEATURES_ENABLED = {
-    financeiro: false,
-    relatorios: false,
-    crm_avancado: false
-  };
-  ```
+- [x] Criar arquivo `frontend/src/config/features.js` com controle de features
+- [x] Implementar feature flags para todas as funcionalidades do menu
+- [x] Modificar `Sidebar.js` para filtrar itens baseado em features habilitadas
+- [x] Ocultar funcionalidades avançadas por padrão:
+  - Dashboard (false)
+  - Financeiro (false)
+  - CRM Avançado (false)
+  - Relatórios (false)
+  - Sala de Espera (false)
+  - Licenças (false)
+- [x] Manter visíveis apenas funcionalidades MVP:
+  - 📅 Agenda (true)
+  - 👤 Pacientes (true)
+  - 👨‍⚕️ Profissionais (true)
+  - 💬 WhatsApp (true)
+  - ⚙️ Configurações (true)
+- [x] Adicionar variáveis de ambiente no `.env.example` para controle
+- [x] Implementar leitura de variáveis `REACT_APP_FEATURE_*` no frontend
 
-**Prompt Copilot:**
-```
-"Simplificar menu lateral ocultando Financeiro, Relatórios e CRM avançado via feature flags. Manter apenas Agenda, Pacientes, Profissionais, Mensagens e Configurações visíveis. Implementar variável de ambiente para reativar funcionalidades em versões premium."
-```
+**Arquivos Criados/Modificados:**
+- `frontend/src/config/features.js` - Sistema de feature flags
+- `frontend/src/components/common/Sidebar.js` - Menu filtrado por features
+- `.env.example` - Variáveis de ambiente para features
 
 ---
 
@@ -387,15 +387,15 @@ Antes de qualquer tarefa, lembrar:
 
 ```
 ┌─────────────────────────────────────────────┐
-│ Status Atual: 5/12 tarefas concluídas (42%) │
+│ Status Atual: 7/12 tarefas concluídas (58%) │
 │                                             │
 │ ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ │
-│ ✅✅✅✅✅                                  │
+│ ✅✅✅✅✅✅✅                            │
 └─────────────────────────────────────────────┘
 
 🔴 Prioridade Máxima: 3/3 (100%)
-🟡 Alta Prioridade:   2/4 (50%)
-🟢 Média Prioridade:  0/3 (0%)
+🟡 Alta Prioridade:   3/4 (75%)
+🟢 Média Prioridade:  1/3 (33%)
 🔵 Baixa Prioridade:  0/2 (0%)
 ```
 

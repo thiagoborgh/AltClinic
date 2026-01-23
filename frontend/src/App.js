@@ -31,6 +31,7 @@ const CadastroProfissionalNovo = lazy(() => import('./pages/CadastroProfissional
 const SalaEspera = lazy(() => import('./pages/SalaEspera'));
 const FinanceiroDashboard = lazy(() => import('./pages/financeiro/FinanceiroDashboard'));
 const CRMDashboard = lazy(() => import('./pages/crm/CRMDashboard'));
+const TemplatesPage = lazy(() => import('./pages/crm/TemplatesPage'));
 const Relatorios = lazy(() => import('./pages/Relatorios'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes.js'));
 const WhatsApp = lazy(() => import('./pages/WhatsApp'));
@@ -140,6 +141,7 @@ const AppContent = () => {
             <Route path="espera" element={<SalaEspera />} />
             <Route path="financeiro" element={<FinanceiroDashboard />} />
             <Route path="crm" element={<CRMDashboard />} />
+            <Route path="templates" element={<TemplatesPage />} />
             <Route path="whatsapp" element={<WhatsApp />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />

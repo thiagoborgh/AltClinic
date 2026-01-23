@@ -48,6 +48,7 @@ import {
   Refresh as RefreshIcon,
   Schedule as ScheduleIcon
 } from '@mui/icons-material';
+import MessageTemplatesManager from '../common/MessageTemplatesManager';
 import api from '../../services/api';
 
 // Hook para gerenciar configurações
@@ -773,11 +774,7 @@ const ConfiguracoesManager = () => {
           </Alert>
         );
       case 3: // Templates e CRM
-        return (
-          <Alert severity="info">
-            Templates e configurações de CRM em desenvolvimento.
-          </Alert>
-        );
+        return <MessageTemplatesManager />;
       case 4: // Segurança e Privacidade
         return (
           <Alert severity="info">

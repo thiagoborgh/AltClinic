@@ -27,6 +27,7 @@ import {
   CreditCard as LicencasIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { isFeatureEnabled } from '../../config/features';
 
 const DRAWER_WIDTH = 240;
 
@@ -35,57 +36,68 @@ const menuItems = [
   {
     text: 'Agenda',
     icon: CalendarIcon,
-    path: '/agenda-lite'
+    path: '/agenda-lite',
+    feature: 'agenda'
   },
   {
     text: 'Dashboard',
     icon: DashboardIcon,
-    path: '/dashboard'
+    path: '/dashboard',
+    feature: 'dashboard'
   },
   {
     text: 'Pacientes',
     icon: PeopleIcon,
-    path: '/pacientes'
+    path: '/pacientes',
+    feature: 'pacientes'
   },
   {
     text: 'Profissionais',
     icon: MedicosIcon,
-    path: '/profissionais'
+    path: '/profissionais',
+    feature: 'profissionais'
   },
   {
     text: 'Sala de Espera',
     icon: EsperaIcon,
-    path: '/espera'
+    path: '/espera',
+    feature: 'sala_espera'
   },
   {
     text: 'Financeiro',
     icon: FinanceiroIcon,
-    path: '/financeiro'
+    path: '/financeiro',
+    feature: 'financeiro'
   },
   {
     text: 'CRM',
     icon: CrmIcon,
-    path: '/crm'
+    path: '/crm',
+    feature: 'crm_avancado'
   },
   {
     text: 'WhatsApp',
     icon: WhatsAppIcon,
-    path: '/whatsapp'
+    path: '/whatsapp',
+    feature: 'whatsapp'
   },
   {
     text: 'Relatórios',
     icon: RelatoriosIcon,
-    path: '/relatorios'
+    path: '/relatorios',
+    feature: 'relatorios'
   },
   {
     text: 'Licenças',
     icon: LicencasIcon,
-    path: '/billing'
+    path: '/billing',
+    feature: 'licencas'
   },
   {
     text: 'Configurações',
     icon: ConfiguracoesIcon,
-    path: '/configuracoes'
+    path: '/configuracoes',
+    feature: 'configuracoes'
   }
 ];
 
@@ -114,7 +126,9 @@ const Sidebar = ({ mobileOpen, onMobileClose }) => {
       
       <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
         <List>
-          {menuItems.map((item) => {
+          {menuItems
+            .filter(item => isFeatureEnabled(item.feature))
+            .map((item) => {
             const isActive = location.pathname === item.path;
             
             return (
