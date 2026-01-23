@@ -113,15 +113,16 @@ const CadastroPacienteSimples = ({ open, onClose, pacienteParaEdicao = null }) =
         resultado = await criarPaciente(formData);
       }
       
-      if (resultado.success) {
+      if (resultado) {
         setSuccessMessage(pacienteParaEdicao ? 'Paciente atualizado com sucesso!' : 'Paciente cadastrado com sucesso!');
         
         // Fechar modal após 1.5 segundos
         setTimeout(() => {
           onClose();
+          window.location.reload(); // Recarregar lista de pacientes
         }, 1500);
       } else {
-        setSubmitError(resultado.message || 'Erro ao processar solicitação');
+        setSubmitError('Erro ao processar solicitação');
       }
     } catch (err) {
       setSubmitError('Erro inesperado. Tente novamente.');

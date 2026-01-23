@@ -1,118 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { crmService } from '../../services/api';
 
-// Hook para gerenciar automações e workflows
+// Hook para gerenciar automações e workflows via API
 const useAutomacoes = () => {
-  const [workflows, setWorkflows] = useState([
-    // Workflow de exemplo
-    {
-      id: 1,
-      nome: 'Lembrete de Consulta',
-      descricao: 'Envia lembrete 24h antes da consulta agendada',
-      gatilho: {
-        tipo: 'temporal',
-        evento: 'consulta_agendada',
-        condicoes: { horas_antes: 24 }
-      },
-      filtros: {
-        segmentos: [],
-        idade_min: null,
-        idade_max: null
-      },
-      acoes: [
-        {
-          tipo: 'mensagem',
-          conteudo: {
-            canal: 'whatsapp',
-            template: 'Olá {nome}! Lembramos que você tem consulta marcada para amanhã às {hora}. Confirme sua presença!'
-          },
-          intervalo_anterior: 0
-        }
-      ],
-      status: 'ativo',
-      criado_em: new Date().toISOString(),
-      metricas: {
-        execucoes: 45,
-        sucesso: 42,
-        falhas: 3
-      }
-    },
-    {
-      id: 2,
-      nome: 'Boas-vindas Novo Paciente',
-      descricao: 'Sequência de boas-vindas para novos pacientes',
-      gatilho: {
-        tipo: 'acao',
-        evento: 'novo_paciente',
-        condicoes: {}
-      },
-      filtros: {},
-      acoes: [
-        {
-          tipo: 'mensagem',
-          conteudo: {
-            canal: 'whatsapp',
-            template: 'Bem-vindo(a) {nome}! É um prazer tê-lo(a) como nosso paciente.'
-          },
-          intervalo_anterior: 0
-        },
-        {
-          tipo: 'mensagem',
-          conteudo: {
-            canal: 'email',
-            template: 'Aqui estão algumas informações importantes sobre nossa clínica...'
-          },
-          intervalo_anterior: 24 // 24 horas depois
-        }
-      ],
-      status: 'pausado',
-      criado_em: new Date().toISOString(),
-      metricas: {
-        execucoes: 12,
-        sucesso: 11,
-        falhas: 1
-      }
+  const [workflows, setWorkflows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
+
+  const fetchWorkflows = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const resp = await crmService.getAutomacoes();
+      setWorkflows(Array.isArray(resp.data) ? resp.data : []);
+      setBackendConnected(true);
+    } catch (err) {
+      console.error('Erro ao carregar automações:', err);
+      setError('Erro ao carregar automações');
+      setBackendConnected(false);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  }, []);
 
-  const adicionarWorkflow = (novoWorkflow) => {
-    const workflow = {
-      id: Date.now(),
-      ...novoWorkflow,
-      criado_em: new Date().toISOString(),
-      metricas: {
-        execucoes: 0,
-        sucesso: 0,
-        falhas: 0
+  useEffect(() => { fetchWorkflows(); }, [fetchWorkflows]);
+
+  const adicionarWorkflow = async (novoWorkflow) => {
+    try {
+      setLoading(true);
+      const resp = await crmService.createAutomacao(novoWorkflow);
+      const created = resp.data || { id: Date.now(), ...novoWorkflow };
+      setWorkflows(prev => [...prev, created]);
+      return created;
+    } catch (err) {
+      console.error('Erro ao criar workflow:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const atualizarWorkflow = async (id, dadosAtualizados) => {
+    try {
+      setLoading(true);
+      if (crmService.updateAutomacao) {
+        await crmService.updateAutomacao(id, dadosAtualizados);
       }
-    };
-    setWorkflows(prev => [...prev, workflow]);
-    return workflow;
+      setWorkflows(prev => prev.map(w => w.id === id ? { ...w, ...dadosAtualizados } : w));
+    } catch (err) {
+      console.error('Erro ao atualizar workflow:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleWorkflow = (id) => {
-    setWorkflows(prev => prev.map(w => 
-      w.id === id 
-        ? { ...w, status: w.status === 'ativo' ? 'pausado' : 'ativo' }
-        : w
-    ));
+  const toggleWorkflow = async (id) => {
+    try {
+      setLoading(true);
+      const target = workflows.find(w => w.id === id);
+      if (!target) return;
+      const novoStatus = target.status === 'ativo' ? 'pausado' : 'ativo';
+      if (crmService.updateAutomacao) {
+        await crmService.updateAutomacao(id, { status: novoStatus });
+      }
+      setWorkflows(prev => prev.map(w => w.id === id ? { ...w, status: novoStatus } : w));
+    } catch (err) {
+      console.error('Erro ao alternar workflow:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const excluirWorkflow = (id) => {
-    setWorkflows(prev => prev.filter(w => w.id !== id));
-  };
-
-  const atualizarWorkflow = (id, dadosAtualizados) => {
-    setWorkflows(prev => prev.map(w => 
-      w.id === id ? { ...w, ...dadosAtualizados } : w
-    ));
+  const excluirWorkflow = async (id) => {
+    try {
+      setLoading(true);
+      if (crmService.deleteAutomacao) {
+        await crmService.deleteAutomacao(id);
+      }
+      setWorkflows(prev => prev.filter(w => w.id !== id));
+    } catch (err) {
+      console.error('Erro ao excluir workflow:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
     workflows,
+    loading,
+    error,
+    backendConnected,
+    fetchWorkflows,
     adicionarWorkflow,
+    atualizarWorkflow,
     toggleWorkflow,
-    excluirWorkflow,
-    atualizarWorkflow
+    excluirWorkflow
   };
 };
 

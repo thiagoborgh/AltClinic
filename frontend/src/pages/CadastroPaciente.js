@@ -138,7 +138,7 @@ const CadastroPaciente = () => {
   // Verificar duplicatas por CPF/telefone
   const checkDuplicates = async (cpf, telefone) => {
     try {
-      const response = await api.get(`/pacientes/check-duplicates?cpf=${cpf}&telefone=${telefone}`);
+      const response = await api.get(`/pacientes-v2/verificar-duplicatas?cpf=${cpf}&telefone=${telefone}`);
       if (response.data.duplicateFound) {
         setDuplicateWarning({
           type: 'warning',

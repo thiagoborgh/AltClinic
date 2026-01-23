@@ -48,81 +48,16 @@ import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
 import ProntuarioClinicoViewer from '../components/prontuario/ProntuarioClinicoViewer';
+import agendamentoService from '../services/agendamentoService';
+import medicoService from '../services/medicoService';
 
 dayjs.extend(duration);
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
 
-// Dados mock para desenvolvimento
-const pacientesEsperaMock = [
-  {
-    id: 1,
-    paciente: {
-      id: 101,
-      nome: 'Maria Silva',
-      telefone: '(11) 99999-9999',
-      email: 'maria@email.com'
-    },
-    profissional: {
-      id: 201,
-      nome: 'Dr. João Santos',
-      especialidade: 'Cardiologia',
-      crm: 'CRM/SP 123456'
-    },
-    horarioAgendado: '2025-09-17T09:00:00',
-    horarioChegada: '2025-09-17T08:45:00',
-    procedimento: 'Consulta de Rotina',
-    status: 'aguardando',
-    prioridade: 'normal',
-    observacoes: 'Paciente com histórico de hipertensão'
-  },
-  {
-    id: 2,
-    paciente: {
-      id: 102,
-      nome: 'Carlos Oliveira',
-      telefone: '(11) 88888-8888',
-      email: 'carlos@email.com'
-    },
-    profissional: {
-      id: 202,
-      nome: 'Dra. Ana Costa',
-      especialidade: 'Dermatologia',
-      crm: 'CRM/SP 789012'
-    },
-    horarioAgendado: '2025-09-17T10:30:00',
-    horarioChegada: '2025-09-17T10:15:00',
-    procedimento: 'Avaliação Dermatológica',
-    status: 'aguardando',
-    prioridade: 'alta',
-    observacoes: 'Paciente com alergia conhecida'
-  },
-  {
-    id: 3,
-    paciente: {
-      id: 103,
-      nome: 'Fernanda Lima',
-      telefone: '(11) 77777-7777',
-      email: 'fernanda@email.com'
-    },
-    profissional: {
-      id: 201,
-      nome: 'Dr. João Santos',
-      especialidade: 'Cardiologia',
-      crm: 'CRM/SP 123456'
-    },
-    horarioAgendado: '2025-09-17T11:00:00',
-    horarioChegada: '2025-09-17T10:50:00',
-    procedimento: 'Retorno de Exames',
-    status: 'aguardando',
-    prioridade: 'normal',
-    observacoes: ''
-  }
-];
-
 const SalaEspera = () => {
   // Estados principais
-  const [pacientesEspera, setPacientesEspera] = useState(pacientesEsperaMock);
+  const [pacientesEspera, setPacientesEspera] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
@@ -134,11 +69,7 @@ const SalaEspera = () => {
 
   // Estados para filtros e alertas
   const [alertasAtivos, setAlertasAtivos] = useState([]);
-  const [profissionaisDisponiveis] = useState([
-    { id: 201, nome: 'Dr. João Santos', especialidade: 'Cardiologia' },
-    { id: 202, nome: 'Dra. Ana Costa', especialidade: 'Dermatologia' },
-    { id: 203, nome: 'Dr. Carlos Lima', especialidade: 'Ortopedia' }
-  ]);
+  const [profissionaisDisponiveis, setProfissionaisDisponiveis] = useState([]);
 
   // Estados para modal do prontuário
   const [modalProntuarioAberto, setModalProntuarioAberto] = useState(false);
@@ -150,6 +81,12 @@ const SalaEspera = () => {
   // Hook de atendimento
   // const { iniciarAtendimento } = useAtendimento();
 
+  // Carregar dados iniciais
+  useEffect(() => {
+    loadPacientesEspera();
+    loadProfissionais();
+  }, []);
+
   // Atualizar tempo atual a cada segundo
   useEffect(() => {
     const interval = setInterval(() => {
@@ -158,6 +95,70 @@ const SalaEspera = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Carregar pacientes em espera
+  const loadPacientesEspera = async () => {
+    setLoading(true);
+    try {
+      const hoje = dayjs().format('YYYY-MM-DD');
+      const response = await agendamentoService.buscarAgendamentos({
+        data_inicio: hoje,
+        data_fim: hoje
+      });
+      
+      // Filtrar apenas agendamentos com status que indica espera
+      const agendamentosEspera = response.data.filter(agendamento => 
+        agendamento.status === 'confirmado' || 
+        agendamento.status === 'aguardando' ||
+        agendamento.status === 'chegou'
+      );
+      
+      // Transformar agendamentos para formato da sala de espera
+      const pacientesFormatados = agendamentosEspera.map(ag => ({
+        id: ag.id,
+        paciente: {
+          id: ag.pacienteId || ag.paciente_id,
+          nome: ag.paciente || ag.pacienteNome || 'Paciente não informado',
+          telefone: ag.pacienteTelefone || ag.telefone || '',
+          email: ag.pacienteEmail || ag.email || ''
+        },
+        profissional: {
+          id: ag.profissionalId || ag.medico_id,
+          nome: ag.profissional || ag.medicoNome || 'Profissional não informado',
+          especialidade: ag.especialidade || '',
+          crm: ag.crm || ''
+        },
+        horarioAgendado: ag.data ? `${ag.data}T${ag.horario}` : ag.dataHora,
+        horarioChegada: ag.horarioChegada || ag.chegada || `${ag.data}T${ag.horario}`,
+        procedimento: ag.procedimento || ag.servico || 'Consulta',
+        status: 'aguardando',
+        prioridade: ag.prioridade || 'normal',
+        observacoes: ag.observacoes || ''
+      }));
+      
+      setPacientesEspera(pacientesFormatados);
+    } catch (error) {
+      console.error('Erro ao carregar pacientes em espera:', error);
+      toast.error('Erro ao carregar pacientes em espera');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar lista de profissionais
+  const loadProfissionais = async () => {
+    try {
+      const response = await medicoService.buscarMedicos();
+      const medicosAtivos = response.data.filter(m => m.ativo !== false);
+      setProfissionaisDisponiveis(medicosAtivos.map(m => ({
+        id: m.id,
+        nome: m.nome,
+        especialidade: m.especialidade
+      })));
+    } catch (error) {
+      console.error('Erro ao carregar profissionais:', error);
+    }
+  };
 
   // Calcular tempo de espera
   const calcularTempoEspera = useCallback((horarioChegada) => {
@@ -254,8 +255,8 @@ const SalaEspera = () => {
     setModalProntuarioAberto(true);
   };
 
-  const handleRefresh = () => {
-    // Simular refresh dos dados
+  const handleRefresh = async () => {
+    await loadPacientesEspera();
     toast.success('Lista atualizada!');
   };
 

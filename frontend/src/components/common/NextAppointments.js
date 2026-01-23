@@ -36,42 +36,8 @@ const StatusChip = ({ status }) => {
 };
 
 const NextAppointments = ({ appointments = [] }) => {
-  const defaultAppointments = [
-    {
-      id: 1,
-      paciente: 'Maria Silva',
-      procedimento: 'Limpeza de Pele',
-      horario: '09:00',
-      status: 'confirmado',
-      avatar: 'MS'
-    },
-    {
-      id: 2,
-      paciente: 'João Santos',
-      procedimento: 'Botox',
-      horario: '10:30',
-      status: 'pendente',
-      avatar: 'JS'
-    },
-    {
-      id: 3,
-      paciente: 'Ana Costa',
-      procedimento: 'Preenchimento',
-      horario: '14:00',
-      status: 'confirmado',
-      avatar: 'AC'
-    },
-    {
-      id: 4,
-      paciente: 'Carlos Lima',
-      procedimento: 'Peeling',
-      horario: '15:30',
-      status: 'reagendado',
-      avatar: 'CL'
-    }
-  ];
-
-  const displayAppointments = appointments.length > 0 ? appointments : defaultAppointments;
+  // Sistema profissional: mostrar apenas dados reais, sem mock
+  const displayAppointments = Array.isArray(appointments) ? appointments : [];
 
   return (
     <Card>

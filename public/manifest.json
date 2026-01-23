@@ -1,6 +1,6 @@
 {
-  "short_name": "Alt Clinic",
-  "name": "Alt Clinic - Sistema de Agendamento Automatizado",
+  "short_name": "SAEE",
+  "name": "Sistema de Agendamento Automatizado",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,6 +10,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#1976d2",
+  "theme_color": "#000000",
   "background_color": "#ffffff"
 }

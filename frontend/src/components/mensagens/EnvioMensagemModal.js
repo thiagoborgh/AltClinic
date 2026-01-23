@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Select, InputLabel, FormControl, Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { mockPacientes } from '../../data/crm/mockCRMData';
+import { crmService } from '../../services/api';
 
 const canais = [
   { value: 'whatsapp', label: 'WhatsApp' },
@@ -15,6 +15,22 @@ const EnvioMensagemModal = ({ open, onClose, onEnviar, apiAtiva, statusConexao }
   const [mensagem, setMensagem] = useState('');
   const [copiado, setCopiado] = useState(false);
   const [enviandoAPI, setEnviandoAPI] = useState(false);
+  const [pacientes, setPacientes] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadPacientes = async () => {
+      try {
+        const response = await crmService.getPacientes({ limit: 1000 });
+        if (!mounted) return;
+        setPacientes(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        console.error('Erro ao carregar pacientes para envio de mensagem:', err);
+      }
+    };
+    loadPacientes();
+    return () => { mounted = false; };
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(mensagem);
@@ -69,7 +85,7 @@ const EnvioMensagemModal = ({ open, onClose, onEnviar, apiAtiva, statusConexao }
             label="Paciente"
             onChange={e => setPacienteId(e.target.value)}
           >
-            {mockPacientes.map(p => (
+            {pacientes.map(p => (
               <MenuItem key={p.id} value={p.id}>{p.nome}</MenuItem>
             ))}
           </Select>

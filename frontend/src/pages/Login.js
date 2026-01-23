@@ -75,6 +75,15 @@ const Login = () => {
     },
   });
 
+  // Limpar tenantSlug antigo do localStorage (não é mais usado)
+  useEffect(() => {
+    const oldTenantSlug = localStorage.getItem('tenantSlug');
+    if (oldTenantSlug) {
+      console.log('🧹 Limpando tenantSlug antigo do localStorage');
+      localStorage.removeItem('tenantSlug');
+    }
+  }, []);
+
   // Redirecionar automaticamente quando o usuário for autenticado
   useEffect(() => {
     console.log('🔐 LOGIN useEffect: isAuthenticated:', isAuthenticated, 'user:', !!user);

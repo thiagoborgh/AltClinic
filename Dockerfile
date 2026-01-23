@@ -1,42 +1,33 @@
-# Usar Node.js LTS
+# Dockerfile para Backend - Cloud Run
 FROM node:18-alpine
 
 # Criar diretório da aplicação
 WORKDIR /app
 
-# Instalar dependências do sistema necessárias
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite
+# Instalar dependências do sistema para better-sqlite3 e sharp
+RUN apk add --no-cache python3 make g++ sqlite
 
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci --only=production
+# Instalar TODAS as dependências (não usar --only=production para evitar problemas)
+RUN npm install --production
 
 # Copiar código da aplicação
-COPY . .
+COPY src ./src
+COPY admin ./admin
+COPY data ./data
 
-# Criar pastas necessárias
-RUN mkdir -p uploads logs whatsapp-session
+# Criar diretórios necessários
+RUN mkdir -p /app/data && chmod 777 /app/data && mkdir -p /app/uploads
 
-# Definir variáveis de ambiente padrão
+# Expor porta (Cloud Run usa porta 8080)
+EXPOSE 8080
+
+# Variável de ambiente para produção
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
-# Expor porta
-EXPOSE 3000
+# Iniciar aplicação
+CMD ["node", "src/app.js"]
 
-# Criar usuário não-root para segurança
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Definir permissões
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-
-# Comando para iniciar a aplicação
-CMD ["npm", "start"]

@@ -19,6 +19,7 @@ import {
   CalendarMonth as CalendarIcon,
   AttachMoney as FinanceiroIcon,
   Chat as CrmIcon,
+  WhatsApp as WhatsAppIcon,
   Assessment as RelatoriosIcon,
   Settings as ConfiguracoesIcon,
   LocalHospital as MedicosIcon,
@@ -39,7 +40,7 @@ const menuItems = [
   {
     text: 'Agenda',
     icon: CalendarIcon,
-    path: '/agendamentos'
+    path: '/agenda-lite'
   },
   {
     text: 'Pacientes',
@@ -65,6 +66,11 @@ const menuItems = [
     text: 'CRM',
     icon: CrmIcon,
     path: '/crm'
+  },
+  {
+    text: 'WhatsApp',
+    icon: WhatsAppIcon,
+    path: '/whatsapp'
   },
   {
     text: 'Relatórios',

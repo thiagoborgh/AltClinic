@@ -18,7 +18,8 @@ import WorkflowEditor from '../../components/automacoes/WorkflowEditor';
 
 const AutomacoesPage = () => {
   const [modalNovoWorkflow, setModalNovoWorkflow] = useState(false);
-  const { workflows, toggleWorkflow, excluirWorkflow, adicionarWorkflow } = useAutomacoes();
+  const { workflows, toggleWorkflow, excluirWorkflow, adicionarWorkflow, atualizarWorkflow } = useAutomacoes();
+  const [editingWorkflow, setEditingWorkflow] = useState(null);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -30,7 +31,12 @@ const AutomacoesPage = () => {
   };
 
   const handleSalvarWorkflow = (dadosWorkflow) => {
-    adicionarWorkflow(dadosWorkflow);
+    if (editingWorkflow) {
+      atualizarWorkflow(editingWorkflow.id, dadosWorkflow);
+      setEditingWorkflow(null);
+    } else {
+      adicionarWorkflow(dadosWorkflow);
+    }
     setModalNovoWorkflow(false);
   };
 
@@ -71,7 +77,7 @@ const AutomacoesPage = () => {
                       onChange={() => toggleWorkflow(workflow.id)}
                       size="small"
                     />
-                    <IconButton size="small">
+                    <IconButton size="small" onClick={() => { setEditingWorkflow(workflow); setModalNovoWorkflow(true); }}>
                       <Edit />
                     </IconButton>
                     <IconButton 
@@ -129,8 +135,9 @@ const AutomacoesPage = () => {
       {/* TODO: Modal do editor de workflow */}
       <WorkflowEditor
         open={modalNovoWorkflow}
-        onClose={() => setModalNovoWorkflow(false)}
+        onClose={() => { setModalNovoWorkflow(false); setEditingWorkflow(null); }}
         onSalvar={handleSalvarWorkflow}
+        workflowEdicao={editingWorkflow}
       />
     </Box>
   );

@@ -53,11 +53,14 @@ const PropostasOrcamentos = ({ searchTerm }) => {
     formaPagamento: 'pix'
   });
 
+  // Garantir que propostas é sempre um array
+  const propostasArray = Array.isArray(propostas) ? propostas : [];
+
   // Filtrar propostas por termo de busca
-  const propostasFiltradas = propostas?.filter(proposta =>
-    proposta.paciente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    proposta.numero.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const propostasFiltradas = propostasArray.filter(proposta =>
+    proposta.paciente?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    proposta.numero?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleAdicionarItem = () => {
     setNovaProposta(prev => ({
@@ -96,7 +99,7 @@ const PropostasOrcamentos = ({ searchTerm }) => {
     try {
       const propostaCompleta = {
         ...novaProposta,
-        numero: `PROP-${new Date().getFullYear()}-${String(propostas.length + 1).padStart(3, '0')}`,
+        numero: `PROP-${new Date().getFullYear()}-${String(propostasArray.length + 1).padStart(3, '0')}`,
         valorTotal: novaProposta.itens.reduce((acc, item) => acc + item.valorTotal, 0),
         valorFinal: calcularTotal(),
         dataValidade: moment().add(15, 'days').toDate()

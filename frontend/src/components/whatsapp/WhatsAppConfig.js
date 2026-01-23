@@ -1,186 +1,251 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Paper,
+  Box,
+  Card,
+  CardContent,
   Typography,
   TextField,
   Button,
-  Box,
+  Switch,
+  FormControlLabel,
   Alert,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  InputAdornment,
-  IconButton,
-  Stepper,
-  Step,
-  StepLabel,
-  Link
+  Grid,
+  Divider,
+  CircularProgress
 } from '@mui/material';
-import { Visibility, VisibilityOff, CheckCircle } from '@mui/icons-material';
-import useWhatsAppAPI from '../../hooks/whatsapp/useWhatsAppAPI';
+import {
+  Save as SaveIcon
+} from '@mui/icons-material';
+import whatsappService from '../../services/whatsappService';
 
-const WhatsAppConfig = () => {
-  const { config, salvarConfiguracao, verificarConexao, loading, isConnected } = useWhatsAppAPI();
-  const [formData, setFormData] = useState({
-    phoneNumberId: config.phoneNumberId || '',
-    accessToken: config.accessToken || '',
-    webhookToken: config.webhookToken || ''
+
+export default function WhatsAppConfig() {
+  const [config, setConfig] = useState({
+    autoReply: false,
+    autoReplyMessage: '',
+    businessHours: {
+      enabled: false,
+      startTime: '09:00',
+      endTime: '18:00'
+    },
+    webhookUrl: ''
   });
-  const [showToken, setShowToken] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [etapaAtiva, setEtapaAtiva] = useState(0);
+  
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-  const etapas = ['Configuração', 'Teste', 'Confirmação'];
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await whatsappService.getConfig();
+      if (data.config) {
+        setConfig({
+          autoReply: data.config.autoReply || false,
+          autoReplyMessage: data.config.autoReplyMessage || '',
+          businessHours: data.config.businessHours || {
+            enabled: false,
+            startTime: '09:00',
+            endTime: '18:00'
+          },
+          webhookUrl: data.config.webhookUrl || ''
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao carregar configurações:', err);
+      setError(err.response?.data?.error || 'Erro ao carregar configurações');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
-      const sucesso = await salvarConfiguracao(formData);
-      if (sucesso) {
-        setTestResult('success');
-        setEtapaAtiva(2);
-      } else {
-        setTestResult('error');
-      }
-    } catch (error) {
-      setTestResult('error');
-      console.error('Erro ao salvar configuração:', error);
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
+      
+      await whatsappService.saveConfig(config);
+      setSuccess(true);
+      
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Erro ao salvar configurações:', err);
+      setError(err.response?.data?.error || 'Erro ao salvar configurações');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleTest = async () => {
-    setEtapaAtiva(1);
-    try {
-      const resultado = await verificarConexao();
-      setTestResult(resultado ? 'success' : 'error');
-      if (resultado) {
-        setEtapaAtiva(2);
-      }
-    } catch (error) {
-      setTestResult('error');
-    }
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Configuração WhatsApp Business API
-      </Typography>
+    <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-      <Stepper activeStep={etapaAtiva} sx={{ mb: 4 }}>
-        {etapas.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(false)}>
+          ✅ Configurações salvas com sucesso!
+        </Alert>
+      )}
 
-      {/* Informações de Setup */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Como obter suas credenciais:
-        </Typography>
-        <Typography variant="body2">
-          1. Acesse o <Link href="https://developers.facebook.com" target="_blank">Facebook for Developers</Link>
-          <br />
-          2. Crie um app Business e configure WhatsApp Business API
-          <br />
-          3. Copie o Phone Number ID e Access Token
-          <br />
-          4. Configure o Webhook Token para receber mensagens
-        </Typography>
-      </Alert>
+      {/* Resposta Automática */}
+      <Card variant="outlined" sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Resposta Automática
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure mensagens automáticas para novos contatos
+          </Typography>
 
-      <Box component="form" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-        <TextField
-          label="Phone Number ID"
-          fullWidth
-          margin="normal"
-          value={formData.phoneNumberId}
-          onChange={(e) => setFormData({ ...formData, phoneNumberId: e.target.value })}
-          placeholder="Ex: 102040516078129"
-          helperText="ID do número de telefone registrado no WhatsApp Business"
-        />
-
-        <FormControl fullWidth margin="normal" variant="outlined">
-          <InputLabel>Access Token</InputLabel>
-          <OutlinedInput
-            type={showToken ? 'text' : 'password'}
-            value={formData.accessToken}
-            onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-            endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowToken(!showToken)}
-                  edge="end"
-                >
-                  {showToken ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.autoReply}
+                onChange={(e) => setConfig({ ...config, autoReply: e.target.checked })}
+              />
             }
-            label="Access Token"
+            label="Ativar resposta automática"
           />
-        </FormControl>
 
-        <TextField
-          label="Webhook Token (Opcional)"
-          fullWidth
-          margin="normal"
-          value={formData.webhookToken}
-          onChange={(e) => setFormData({ ...formData, webhookToken: e.target.value })}
-          placeholder="Token para verificação de webhook"
-          helperText="Token usado para verificar webhooks de mensagens recebidas"
-        />
-
-        <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSave}
-            disabled={loading || !formData.phoneNumberId || !formData.accessToken}
-          >
-            {loading ? 'Salvando...' : 'Salvar e Testar'}
-          </Button>
-
-          {(formData.phoneNumberId && formData.accessToken) && (
-            <Button
-              variant="outlined"
-              onClick={handleTest}
-              disabled={loading}
-            >
-              Testar Conexão
-            </Button>
+          {config.autoReply && (
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Mensagem de resposta automática"
+              value={config.autoReplyMessage}
+              onChange={(e) => setConfig({ ...config, autoReplyMessage: e.target.value })}
+              placeholder="Olá! Recebemos sua mensagem e em breve retornaremos o contato."
+              sx={{ mt: 2 }}
+            />
           )}
-        </Box>
+        </CardContent>
+      </Card>
 
-        {testResult === 'success' && (
-          <Alert severity="success" sx={{ mt: 2 }} icon={<CheckCircle />}>
-            <Typography variant="subtitle2">Conexão estabelecida com sucesso!</Typography>
-            <Typography variant="body2">
-              WhatsApp Business API está configurado e funcionando.
-            </Typography>
-          </Alert>
-        )}
+      {/* Horário Comercial */}
+      <Card variant="outlined" sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Horário Comercial
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Defina horários para envio de mensagens
+          </Typography>
 
-        {testResult === 'error' && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            <Typography variant="subtitle2">Erro na conexão</Typography>
-            <Typography variant="body2">
-              Verifique suas credenciais e tente novamente.
-            </Typography>
-          </Alert>
-        )}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.businessHours.enabled}
+                onChange={(e) => setConfig({
+                  ...config,
+                  businessHours: {
+                    ...config.businessHours,
+                    enabled: e.target.checked
+                  }
+                })}
+              />
+            }
+            label="Respeitar horário comercial"
+          />
 
-        {isConnected && (
+          {config.businessHours.enabled && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="Hora de início"
+                  value={config.businessHours.startTime}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    businessHours: {
+                      ...config.businessHours,
+                      startTime: e.target.value
+                    }
+                  })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  type="time"
+                  label="Hora de término"
+                  value={config.businessHours.endTime}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    businessHours: {
+                      ...config.businessHours,
+                      endTime: e.target.value
+                    }
+                  })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Webhook */}
+      <Card variant="outlined" sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Webhook (Avançado)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            URL para receber notificações de eventos do WhatsApp
+          </Typography>
+
+          <TextField
+            fullWidth
+            label="URL do Webhook"
+            value={config.webhookUrl}
+            onChange={(e) => setConfig({ ...config, webhookUrl: e.target.value })}
+            placeholder="https://seu-servidor.com/webhook/whatsapp"
+            helperText="Será chamado quando houver novos eventos (mensagens, conexão, etc)"
+          />
+
           <Alert severity="info" sx={{ mt: 2 }}>
-            <Typography variant="subtitle2">Status Atual: Conectado</Typography>
-            <Typography variant="body2">
-              Número: {config.phoneNumberId}
+            <Typography variant="caption">
+              O webhook receberá requisições POST com dados dos eventos do WhatsApp.
+              Útil para integrações com outros sistemas.
             </Typography>
           </Alert>
-        )}
-      </Box>
-    </Paper>
-  );
-};
+        </CardContent>
+      </Card>
 
-export default WhatsAppConfig;
+      {/* Botão Salvar */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+          onClick={handleSave}
+          disabled={saving}
+        >
+          Salvar Configurações
+        </Button>
+      </Box>
+    </Box>
+  );
+}
+

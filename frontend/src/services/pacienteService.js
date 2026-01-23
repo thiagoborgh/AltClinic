@@ -14,7 +14,7 @@ class PacienteService {
       if (filters.limit) queryParams.append('limit', filters.limit);
       if (filters.offset) queryParams.append('offset', filters.offset);
 
-      const response = await api.get(`/pacientes?${queryParams}`);
+      const response = await api.get(`/pacientes-v2?${queryParams}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
@@ -25,7 +25,7 @@ class PacienteService {
   // Buscar paciente por ID
   async getPacienteById(id) {
     try {
-      const response = await api.get(`/pacientes/${id}`);
+      const response = await api.get(`/pacientes-v2/${id}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar paciente:', error);
@@ -36,7 +36,7 @@ class PacienteService {
   // Buscar pacientes para autocomplete
   async searchPacientes(query) {
     try {
-      const response = await api.get(`/pacientes/search?q=${encodeURIComponent(query)}`);
+      const response = await api.get(`/pacientes-v2/buscar?termo=${encodeURIComponent(query)}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
@@ -51,7 +51,7 @@ class PacienteService {
       if (cpf) params.append('cpf', cpf);
       if (telefone) params.append('telefone', telefone);
       
-      const response = await api.get(`/pacientes/check-duplicates?${params}`);
+      const response = await api.get(`/pacientes-v2/verificar-duplicatas?${params}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao verificar duplicatas:', error);
@@ -69,7 +69,7 @@ class PacienteService {
         created_at: new Date().toISOString()
       };
 
-      const response = await api.post('/pacientes', payload);
+      const response = await api.post('/pacientes-v2', payload);
       return response.data;
     } catch (error) {
       console.error('Erro ao criar paciente:', error);
@@ -87,7 +87,7 @@ class PacienteService {
         updated_at: new Date().toISOString()
       };
 
-      const response = await api.put(`/pacientes/${id}`, payload);
+      const response = await api.put(`/pacientes-v2/${id}`, payload);
       return response.data;
     } catch (error) {
       console.error('Erro ao atualizar paciente:', error);
@@ -98,7 +98,7 @@ class PacienteService {
   // Deletar paciente
   async deletePaciente(id) {
     try {
-      const response = await api.delete(`/pacientes/${id}`);
+      const response = await api.delete(`/pacientes-v2/${id}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao deletar paciente:', error);

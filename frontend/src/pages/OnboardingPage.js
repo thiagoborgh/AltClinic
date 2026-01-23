@@ -10,10 +10,6 @@ import {
   Step,
   StepLabel,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   LinearProgress,
   InputAdornment,
@@ -25,10 +21,11 @@ import {
   Business, 
   Person, 
   Email, 
-  Phone,
-  CheckCircle 
+  Phone
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import api from '../services/api';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -46,10 +43,7 @@ const OnboardingPage = () => {
     ownerNome: '',
     ownerEmail: '',
     ownerSenha: '',
-    confirmarSenha: '',
-    
-    // Etapa 3: Plano
-    plano: 'trial'
+    confirmarSenha: ''
   });
 
   const steps = [
@@ -58,29 +52,19 @@ const OnboardingPage = () => {
     'Confirmação'
   ];
 
-  const planos = [
-    {
-      id: 'trial',
-      nome: 'Trial (15 dias)',
-      preco: 'Grátis',
-      descricao: 'Teste todas as funcionalidades',
-      recursos: ['3 usuários', '500 pacientes', 'WhatsApp incluído']
-    },
-    {
-      id: 'starter',
-      nome: 'Starter',
-      preco: 'R$ 199/mês',
-      descricao: 'Ideal para clínicas pequenas',
-      recursos: ['3 usuários', '500 pacientes', 'WhatsApp incluído']
-    },
-    {
-      id: 'professional',
-      nome: 'Professional',
-      preco: 'R$ 399/mês',
-      descricao: 'Completo para clínicas médias',
-      recursos: ['10 usuários', '2.000 pacientes', 'WhatsApp + Telemedicina']
-    }
-  ];
+  const planoUnico = {
+    nome: 'Plano Mensal',
+    preco: 'R$ 19,90',
+    descricao: 'Tudo que você precisa para gerenciar sua clínica',
+    recursos: [
+      'Agenda completa de agendamentos',
+      'Gestão de pacientes ilimitados',
+      'WhatsApp integrado',
+      'Relatórios financeiros',
+      'CRM para acompanhamento',
+      'Suporte por email'
+    ]
+  };
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -160,39 +144,55 @@ const OnboardingPage = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/tenants/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clinicaNome: formData.clinicaNome,
-          slug: formData.slug,
-          ownerNome: formData.ownerNome,
-          ownerEmail: formData.ownerEmail,
-          ownerSenha: formData.ownerSenha,
-          telefone: formData.telefone,
-          plano: formData.plano
-        }),
+      const response = await api.post('/tenants/register', {
+        clinicaNome: formData.clinicaNome,
+        slug: formData.slug,
+        ownerNome: formData.ownerNome,
+        ownerEmail: formData.ownerEmail,
+        ownerSenha: formData.ownerSenha,
+        telefone: formData.telefone,
+        plano: 'mensal' // Plano único de R$ 19,90
       });
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Erro ao criar clínica');
+      if (data.success) {
+        // Mostrar mensagem de sucesso
+        toast.success(
+          '🎉 Clínica criada com sucesso! Verifique seu email para acessar.',
+          {
+            duration: 5000,
+            style: {
+              background: '#4caf50',
+              color: '#fff',
+              fontSize: '16px',
+              padding: '16px'
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#4caf50'
+            }
+          }
+        );
+
+        // Aguardar 2 segundos e redirecionar para login
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { 
+              email: formData.ownerEmail,
+              message: 'Clínica criada! Verifique seu email para obter a senha temporária.'
+            } 
+          });
+        }, 2000);
+      } else {
+        throw new Error(data.message || 'Erro ao criar clínica');
       }
-
-      // Salvar token no localStorage
-      localStorage.setItem('authToken', data.auth.token);
-      localStorage.setItem('tenantSlug', data.tenant.slug);
-      localStorage.setItem('user', JSON.stringify(data.owner));
-
-      // Redirecionar para dashboard
-      window.location.href = `https://${data.tenant.slug}.altclinic.com.br/dashboard`;
       
     } catch (error) {
       console.error('Erro no registro:', error);
-      setError(error.message || 'Erro ao criar clínica. Tente novamente.');
+      const errorMessage = error.response?.data?.message || error.message || 'Erro ao criar clínica. Tente novamente.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -348,41 +348,41 @@ const OnboardingPage = () => {
             
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
-                Escolha seu Plano
+                Seu Plano
               </Typography>
             </Grid>
             
-            {planos.map((plano) => (
-              <Grid item xs={12} md={4} key={plano.id}>
-                <Paper 
-                  sx={{ 
-                    p: 2, 
-                    cursor: 'pointer',
-                    border: formData.plano === plano.id ? 2 : 1,
-                    borderColor: formData.plano === plano.id ? 'primary.main' : 'grey.300'
-                  }}
-                  onClick={() => setFormData(prev => ({ ...prev, plano: plano.id }))}
-                >
-                  <Typography variant="h6" gutterBottom>
-                    {plano.nome}
-                  </Typography>
-                  <Typography variant="h5" color="primary" gutterBottom>
-                    {plano.preco}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {plano.descricao}
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    {plano.recursos.map((recurso, index) => (
-                      <Typography key={index} variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        <CheckCircle sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
-                        {recurso}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Paper>
-              </Grid>
-            ))}
+            <Grid item xs={12}>
+              <Paper 
+                sx={{ 
+                  p: 3, 
+                  border: 2,
+                  borderColor: 'primary.main',
+                  backgroundColor: 'primary.light',
+                  color: 'primary.contrastText'
+                }}
+              >
+                <Typography variant="h5" gutterBottom fontWeight="bold">
+                  {planoUnico.nome}
+                </Typography>
+                <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
+                  {planoUnico.preco}/mês
+                </Typography>
+                <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
+                  {planoUnico.descricao}
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  {planoUnico.recursos.map((recurso, index) => (
+                    <Typography key={index} variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      ✓ {recurso}
+                    </Typography>
+                  ))}
+                </Box>
+                <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
+                  💳 Aceita PIX e Cartão de Crédito
+                </Typography>
+              </Paper>
+            </Grid>
           </Grid>
         );
 

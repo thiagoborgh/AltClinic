@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const authUtil = require('../utils/auth');
+const firestoreService = require('../services/firestoreService');
 
 /**
- * Endpoint simplificado para integração com AgendaLite
+ * ✅ Endpoint simplificado para integração com AgendaLite - FIRESTORE
  * Usa estrutura compatível com o frontend existente
  */
 
@@ -23,43 +24,24 @@ function getDateWithOffset(days) {
 router.get('/', async (req, res) => {
   try {
     const { data_inicio, data_fim } = req.query;
+    const tenantId = req.tenantId; // Vem do middleware extractTenantFirestore
     
-    // Usar o database do tenant (vem do middleware)
-    const db = req.db;
-
-    let query = `
-      SELECT 
-        id,
-        horario,
-        data,
-        paciente,
-        procedimento,
-        status,
-        valor,
-        observacoes,
-        created_at,
-        updated_at
-      FROM agenda_agendamentos 
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    
-    if (data_inicio) {
-      query += ` AND data >= ?`;
-      params.push(data_inicio);
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'TenantId não encontrado'
+      });
     }
-    
-    if (data_fim) {
-      query += ` AND data <= ?`;
-      params.push(data_fim);
-    }
-    
-    query += ` ORDER BY data, horario`;
 
-    const agendamentos = db.prepare(query).all(...params);
+    console.log(`📅 Firestore: Buscando agendamentos do tenant ${tenantId}`);
 
-    console.log(`📅 API: Retornando ${agendamentos.length} agendamentos`);
+    // Buscar agendamentos do Firestore
+    const agendamentos = await firestoreService.getAgendamentos(tenantId, {
+      data_inicio,
+      data_fim
+    });
+
+    console.log(`📅 Firestore: Retornando ${agendamentos.length} agendamentos`);
 
     res.json({
       success: true,
@@ -78,11 +60,16 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const agendamentoData = req.body;
+    const tenantId = req.tenantId; // Vem do middleware extractTenantFirestore
     
-    console.log('📝 API: Criando agendamento:', agendamentoData);
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'TenantId não encontrado'
+      });
+    }
     
-    // Usar o database do tenant (vem do middleware)
-    const db = req.db;
+    console.log('📝 Firestore: Criando agendamento:', agendamentoData);
     
     // Preparar dados para inserção
     const dados = {
@@ -93,32 +80,19 @@ router.post('/', async (req, res) => {
       status: agendamentoData.status || 'não confirmado',
       valor: parseFloat(agendamentoData.valor) || 0,
       observacoes: agendamentoData.observacoes || '',
+      tenantId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
-    const result = db.prepare(`
-      INSERT INTO agenda_agendamentos 
-      (horario, data, paciente, procedimento, status, valor, observacoes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      dados.horario,
-      dados.data,
-      dados.paciente,
-      dados.procedimento,
-      dados.status,
-      dados.valor,
-      dados.observacoes,
-      dados.created_at,
-      dados.updated_at
-    );
+    const agendamentoId = await firestoreService.createAgendamento(tenantId, dados);
     
     const agendamentoCriado = {
-      id: result.lastInsertRowid,
+      id: agendamentoId,
       ...dados
     };
     
-    console.log('✅ API: Agendamento criado:', agendamentoCriado);
+    console.log('✅ Firestore: Agendamento criado:', agendamentoCriado);
     
     res.status(201).json({
       success: true,
@@ -141,11 +115,16 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const agendamentoData = req.body;
+    const tenantId = req.tenantId; // Vem do middleware extractTenantFirestore
     
-    console.log(`📝 API: Atualizando agendamento ${id}:`, agendamentoData);
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'TenantId não encontrado'
+      });
+    }
     
-    // Usar o database do tenant (vem do middleware)
-    const db = req.db;
+    console.log(`📝 Firestore: Atualizando agendamento ${id}:`, agendamentoData);
     
     // Preparar dados para atualização
     const dados = {
@@ -159,36 +138,15 @@ router.put('/:id', async (req, res) => {
       updated_at: new Date().toISOString()
     };
     
-    const result = db.prepare(`
-      UPDATE agenda_agendamentos 
-      SET horario = ?, data = ?, paciente = ?, procedimento = ?, 
-          status = ?, valor = ?, observacoes = ?, updated_at = ?
-      WHERE id = ?
-    `).run(
-      dados.horario,
-      dados.data,
-      dados.paciente,
-      dados.procedimento,
-      dados.status,
-      dados.valor,
-      dados.observacoes,
-      dados.updated_at,
-      id
-    );
-    
-    if (result.changes === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Agendamento não encontrado'
-      });
-    }
+    await firestoreService.updateAgendamento(tenantId, id, dados);
     
     const agendamentoAtualizado = {
-      id: parseInt(id),
-      ...dados
+      id,
+      ...dados,
+      tenantId
     };
     
-    console.log('✅ API: Agendamento atualizado:', agendamentoAtualizado);
+    console.log('✅ Firestore: Agendamento atualizado:', agendamentoAtualizado);
     
     res.json({
       success: true,
@@ -210,22 +168,20 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = req.tenantId; // Vem do middleware extractTenantFirestore
     
-    console.log(`🗑️ API: Deletando agendamento ${id}`);
-    
-    // Usar o database do tenant (vem do middleware)
-    const db = req.db;
-    
-    const result = db.prepare('DELETE FROM agenda_agendamentos WHERE id = ?').run(id);
-    
-    if (result.changes === 0) {
-      return res.status(404).json({
+    if (!tenantId) {
+      return res.status(400).json({
         success: false,
-        message: 'Agendamento não encontrado'
+        message: 'TenantId não encontrado'
       });
     }
     
-    console.log(`✅ API: Agendamento ${id} deletado`);
+    console.log(`🗑️ Firestore: Deletando agendamento ${id} do tenant ${tenantId}`);
+    
+    await firestoreService.deleteAgendamento(tenantId, id);
+    
+    console.log(`✅ Firestore: Agendamento ${id} deletado`);
     
     res.json({
       success: true,

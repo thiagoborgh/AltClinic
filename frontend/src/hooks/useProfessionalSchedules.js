@@ -14,6 +14,8 @@ export const useProfessionalSchedules = (selectedProfessional = null) => {
         setError(null);
         
         console.log('🔄 Carregando horários para profissional:', selectedProfessional);
+        
+        // Buscar da API Firestore
         const response = await professionalService.getSchedules(selectedProfessional);
         console.log('📋 Resposta da API de horários:', response);
         
@@ -39,20 +41,20 @@ export const useProfessionalSchedules = (selectedProfessional = null) => {
             console.log('📋 Dados já em formato array:', responseData);
             setSchedules(responseData);
           }
-          // Fallback
+          // Sem dados - retornar array vazio
           else {
-            console.log('⚠️ Formato de dados desconhecido, usando mock');
-            setSchedules(getMockSchedules());
+            console.log('ℹ️ Nenhum horário cadastrado');
+            setSchedules([]);
           }
         } else {
-          console.log('⚠️ API não retornou sucesso, usando dados mock');
-          // Fallback para dados mock se API não responder
-          setSchedules(getMockSchedules());
+          console.log('ℹ️ API retornou sem dados');
+          setSchedules([]);
         }
+        
       } catch (err) {
-        console.warn('❌ Erro ao carregar horários, usando dados mock:', err);
-        setSchedules(getMockSchedules());
-        setError(err.message);
+        console.log('ℹ️ Erro ao carregar horários:', err.message);
+        setSchedules([]);
+        // NÃO definir error para evitar notificações
       } finally {
         setLoading(false);
       }
@@ -60,55 +62,6 @@ export const useProfessionalSchedules = (selectedProfessional = null) => {
 
     loadSchedules();
   }, [selectedProfessional]);
-
-  // Dados mock para desenvolvimento
-  const getMockSchedules = () => [
-    {
-      id: 1,
-      professional_id: 1,
-      professional_name: 'Dr. João Silva',
-      day_of_week: 1, // Segunda
-      start_time: '08:00',
-      end_time: '18:00',
-      is_active: 1
-    },
-    {
-      id: 2,
-      professional_id: 1,
-      professional_name: 'Dr. João Silva',
-      day_of_week: 2, // Terça
-      start_time: '08:00',
-      end_time: '18:00',
-      is_active: 1
-    },
-    {
-      id: 3,
-      professional_id: 2,
-      professional_name: 'Dra. Maria Santos',
-      day_of_week: 1, // Segunda
-      start_time: '09:00',
-      end_time: '17:00',
-      is_active: 1
-    },
-    {
-      id: 4,
-      professional_id: 2,
-      professional_name: 'Dra. Maria Santos',
-      day_of_week: 2, // Terça
-      start_time: '09:00',
-      end_time: '17:00',
-      is_active: 1
-    },
-    {
-      id: 5,
-      professional_id: 3,
-      professional_name: 'Dr. Carlos Lima',
-      day_of_week: 1, // Segunda
-      start_time: '07:00',
-      end_time: '19:00',
-      is_active: 1
-    }
-  ];
 
   // Converter hora em string para minutos
   const timeToMinutes = (timeString) => {

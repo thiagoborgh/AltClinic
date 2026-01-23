@@ -39,22 +39,26 @@ const FluxoCaixa = () => {
   const [dataFim, setDataFim] = useState(moment().endOf('month').format('YYYY-MM-DD'));
   const { contasReceber, contasPagar } = useFinanceiro();
 
+  // Garantir que são arrays
+  const contasReceberArray = Array.isArray(contasReceber) ? contasReceber : [];
+  const contasPagarArray = Array.isArray(contasPagar) ? contasPagar : [];
+
   // Calcular dados do fluxo de caixa
   const calcularFluxo = () => {
     const inicio = moment(dataInicio);
     const fim = moment(dataFim);
     
     // Entradas (Contas a Receber pagas no período)
-    const entradas = contasReceber?.filter(conta => 
+    const entradas = contasReceberArray.filter(conta => 
       conta.status === 'paga' && 
       moment(conta.dataPagamento).isBetween(inicio, fim, 'day', '[]')
-    ) || [];
+    );
     
     // Saídas (Contas a Pagar pagas no período)
-    const saidas = contasPagar?.filter(conta => 
+    const saidas = contasPagarArray.filter(conta => 
       conta.status === 'paga' && 
       moment(conta.dataPagamento).isBetween(inicio, fim, 'day', '[]')
-    ) || [];
+    );
     
     const totalEntradas = entradas.reduce((acc, conta) => acc + conta.valor, 0);
     const totalSaidas = saidas.reduce((acc, conta) => acc + conta.valor, 0);

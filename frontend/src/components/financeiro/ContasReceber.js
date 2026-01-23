@@ -53,11 +53,14 @@ const ContasReceber = ({ searchTerm }) => {
     observacoes: ''
   });
 
+  // Garantir que contasReceber é sempre um array
+  const contasReceberArray = Array.isArray(contasReceber) ? contasReceber : [];
+
   // Filtrar contas por termo de busca
-  const contasFiltradas = contasReceber?.filter(conta =>
-    conta.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conta.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const contasFiltradas = contasReceberArray.filter(conta =>
+    conta.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conta.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Separar contas por status
   const contasVencidas = contasFiltradas.filter(conta => 

@@ -46,38 +46,8 @@ const ActivityIcon = ({ type }) => {
 };
 
 const RecentActivities = ({ activities = [] }) => {
-  const defaultActivities = [
-    {
-      id: 1,
-      type: 'agendamento',
-      title: 'Nova consulta agendada',
-      description: 'Maria Silva',
-      time: '2 min atrás'
-    },
-    {
-      id: 2,
-      type: 'whatsapp',
-      title: 'Mensagem WhatsApp',
-      description: 'João Santos',
-      time: '5 min atrás'
-    },
-    {
-      id: 3,
-      type: 'proposta',
-      title: 'Proposta aprovada',
-      description: 'R$ 1.200',
-      time: '10 min atrás'
-    },
-    {
-      id: 4,
-      type: 'paciente',
-      title: 'Novo paciente cadastrado',
-      description: 'Ana Costa',
-      time: '15 min atrás'
-    }
-  ];
-
-  const displayActivities = activities.length > 0 ? activities : defaultActivities;
+  // Sistema profissional: mostrar apenas dados reais, sem mock
+  const displayActivities = Array.isArray(activities) ? activities : [];
 
   return (
     <Card>

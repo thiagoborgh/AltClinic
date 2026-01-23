@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { dashboardService } from '../services/api';
-import { mockDashboardData } from '../data/mockData';
 
+/**
+ * ✅ Hook Dashboard - SEM DADOS MOCK
+ * Retorna apenas dados reais do Firestore
+ */
 export const useDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
@@ -12,7 +15,10 @@ export const useDashboard = () => {
   });
   const [activities, setActivities] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [chartData, setChartData] = useState(null);
+  const [chartData, setChartData] = useState({
+    appointmentsRevenue: null,
+    procedures: null
+  });
 
   const fetchDashboardData = async () => {
     try {
@@ -27,36 +33,35 @@ export const useDashboard = () => {
       ]);
 
       // Processar métricas
-      if (metricsRes.status === 'fulfilled') {
-        setMetrics(metricsRes.value.data);
+      if (metricsRes.status === 'fulfilled' && metricsRes.value?.data) {
+        const apiMetrics = metricsRes.value.data;
+        setMetrics({
+          todayAppointments: apiMetrics.todayAppointments || { value: 0, variation: 0 },
+          activePatients: apiMetrics.activePatients || { value: 0, variation: 0 },
+          monthlyRevenue: apiMetrics.monthlyRevenue || { value: 'R$ 0', variation: 0 },
+          occupationRate: apiMetrics.occupationRate || { value: '0%', variation: 0 }
+        });
       }
 
       // Processar atividades
-      if (activitiesRes.status === 'fulfilled') {
+      if (activitiesRes.status === 'fulfilled' && activitiesRes.value?.data) {
         setActivities(activitiesRes.value.data);
       }
 
       // Processar agendamentos
-      if (appointmentsRes.status === 'fulfilled') {
+      if (appointmentsRes.status === 'fulfilled' && appointmentsRes.value?.data) {
         setAppointments(appointmentsRes.value.data);
       }
 
       // Processar dados dos gráficos
-      if (chartRes.status === 'fulfilled') {
+      if (chartRes.status === 'fulfilled' && chartRes.value?.data) {
         setChartData(chartRes.value.data);
       }
 
     } catch (error) {
-      console.warn('API não disponível, usando dados mockados para demonstração');
-      
-      // Usar dados mockados quando API não estiver disponível
-      setMetrics(mockDashboardData.metrics);
-      setActivities(mockDashboardData.activities);
-      setAppointments(mockDashboardData.appointments);
-      setChartData(mockDashboardData.chartData);
-      
-      // Não mostrar toast de erro para demo
-      // toast.error('Erro ao carregar dados do dashboard');
+      console.log('ℹ️ Erro ao carregar dashboard:', error.message);
+      // Sistema profissional: não mostra dados fake em caso de erro
+      // Mantém os valores iniciais (zerados)
     } finally {
       setLoading(false);
     }

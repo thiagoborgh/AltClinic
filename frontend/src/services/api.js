@@ -5,16 +5,19 @@ import toast from 'react-hot-toast';
 const getApiBaseURL = () => {
   // Se estiver definido explicitamente nas variáveis de ambiente
   if (process.env.REACT_APP_API_URL) {
+    console.log('✅ Usando REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
   
   // Se estiver em produção (OnRender ou outro provedor)
   if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️ REACT_APP_API_URL não definido, usando window.location.origin');
     // Usar a mesma URL do frontend, mas com /api
     return `${window.location.origin}/api`;
   }
   
   // Fallback para desenvolvimento
+  console.log('🔧 Ambiente de desenvolvimento, usando localhost');
   return 'http://localhost:3000/api';
 };
 
@@ -57,21 +60,8 @@ api.interceptors.request.use(
       }
     }
 
-    // Adicionar header X-Tenant-Slug se existir no localStorage
-    let tenantSlug = localStorage.getItem('tenantSlug');
-    console.log('🌐 API: tenantSlug from localStorage:', tenantSlug);
-    
-    // Fallback para desenvolvimento - definir tenantSlug se não existir
-    if (!tenantSlug) {
-      console.warn('🌐 API: No tenantSlug found, setting fallback to "teste"');
-      tenantSlug = 'teste';
-      localStorage.setItem('tenantSlug', tenantSlug);
-    }
-    
-    if (!config.headers['X-Tenant-Slug']) {
-      config.headers['X-Tenant-Slug'] = tenantSlug;
-      console.log('🌐 API: Added X-Tenant-Slug header:', tenantSlug);
-    }
+    // Nota: X-Tenant-Slug removido - o backend detecta automaticamente pelo email do usuário
+    // Isso simplifica o sistema e permite que um usuário acesse múltiplos tenants
 
     return config;
   },
@@ -223,15 +213,6 @@ export const proposalService = {
   generatePDF: (id) => api.get(`/proposals/${id}/pdf`, { responseType: 'blob' }),
 };
 
-// Serviços de CRM
-export const crmService = {
-  getMessages: (params) => api.get('/crm/messages', { params }),
-  sendMessage: (data) => api.post('/crm/messages', data),
-  getInactivePatients: (params) => api.get('/crm/inactive-patients', { params }),
-  getConfigurations: () => api.get('/crm/configurations'),
-  updateConfigurations: (data) => api.put('/crm/configurations', data),
-};
-
 // Serviços de Autenticação
 export const authService = {
   login: (credentials) => api.post('/auth/login', credentials),
@@ -279,6 +260,39 @@ export const financeiroService = {
   
   // Todos os dados
   getTodosDados: () => api.get('/financeiro/todos'),
+};
+
+// CRM Service
+export const crmService = {
+  // Métricas
+  getMetrics: () => api.get('/crm/metrics'),
+  
+  // Pacientes
+  getPacientes: (params) => api.get('/crm/pacientes', { params }),
+  
+  // Segmentos
+  getSegmentos: () => api.get('/crm/segmentos'),
+  createSegmento: (dados) => api.post('/crm/segmento', dados),
+  
+  // Templates
+  getTemplates: () => api.get('/crm/templates'),
+  createTemplate: (dados) => api.post('/crm/template', dados),
+  
+  // Mensagens
+  getMensagens: (params) => api.get('/crm/mensagens', { params }),
+  enviarMensagem: (dados) => api.post('/crm/mensagem', dados),
+  
+  // Log de Mensagens WhatsApp
+  getMensagensLog: (filters) => api.get('/whatsapp/logs', { params: filters }),
+  
+  // Automações
+  getAutomacoes: () => api.get('/crm/automacoes'),
+  createAutomacao: (dados) => api.post('/crm/automacao', dados),
+  updateAutomacao: (id, dados) => api.put(`/crm/automacao/${id}`, dados),
+  deleteAutomacao: (id) => api.delete(`/crm/automacao/${id}`),
+  
+  // Relatórios
+  getRelatorioInativos: (dias) => api.get('/crm/relatorios/inativos', { params: { dias } }),
 };
 
 // Professional Service

@@ -74,33 +74,9 @@ const ListaPacientes = () => {
       console.error('Erro ao carregar pacientes:', error);
       toast.error('Erro ao carregar pacientes');
       
-      // Mock data para desenvolvimento
-      const mockPacientes = [
-        {
-          id: 1,
-          nome: 'João Silva',
-          cpf: '12345678901',
-          telefone: '11999999999',
-          email: 'joao@email.com',
-          dataNascimento: '1990-01-15',
-          medicoResponsavel: 'Dr. Carlos Lima',
-          ultimaConsulta: '2024-01-10',
-          status: 'ativo'
-        },
-        {
-          id: 2,
-          nome: 'Maria Santos',
-          cpf: '98765432100',
-          telefone: '11888888888',
-          email: 'maria@email.com',
-          dataNascimento: '1985-05-20',
-          medicoResponsável: 'Dra. Ana Costa',
-          ultimaConsulta: '2024-01-08',
-          status: 'ativo'
-        }
-      ];
-      setPacientes(mockPacientes);
-      setTotalCount(mockPacientes.length);
+      // Sistema profissional: sem dados mockados
+      setPacientes([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }

@@ -1,32 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  mockCRMMetrics, 
-  mockPacientes, 
-  mockMensagens, 
-  mockTemplates,
-  mockSegmentos,
-  mockRelatorioAtivacao,
-  mockAutomacoes 
-} from '../../data/crm/mockCRMData';
+import { crmService } from '../../services/api';
 
 // Hook principal para o CRM
 export const useCRM = () => {
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchMetrics = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log('🔄 Carregando métricas CRM...');
       
-      setMetrics(mockCRMMetrics);
+      const response = await crmService.getMetrics();
+      setMetrics(response.data || {});
+      setBackendConnected(true);
+      console.log('✅ Métricas CRM carregadas do backend');
     } catch (err) {
       setError('Erro ao carregar métricas do CRM');
       console.error('Erro ao carregar métricas:', err);
+      setBackendConnected(false);
     } finally {
       setLoading(false);
     }
@@ -40,7 +36,8 @@ export const useCRM = () => {
     metrics, 
     loading, 
     error, 
-    refetch: fetchMetrics 
+    refetch: fetchMetrics,
+    backendConnected
   };
 };
 
@@ -55,120 +52,57 @@ export const usePacientes = (filters = {}) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchPacientes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 600));
+      console.log('🔄 Carregando pacientes CRM...');
       
-      let filteredPacientes = [...mockPacientes];
+      const params = {
+        status: filters.status,
+        segmento: filters.segmento,
+        search: filters.search,
+        orderBy: filters.orderBy,
+        page: pagination.page,
+        limit: pagination.limit
+      };
       
-      // Aplicar filtros
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        filteredPacientes = filteredPacientes.filter(p => 
-          p.nome.toLowerCase().includes(searchTerm) ||
-          p.email.toLowerCase().includes(searchTerm) ||
-          p.telefone.includes(searchTerm)
-        );
+      const response = await crmService.getPacientes(params);
+      setPacientes(Array.isArray(response.data) ? response.data : []);
+      
+      if (response.pagination) {
+        setPagination(response.pagination);
       }
       
-      if (filters.status && filters.status !== 'todos') {
-        filteredPacientes = filteredPacientes.filter(p => p.status === filters.status);
-      }
-      
-      if (filters.segmento) {
-        filteredPacientes = filteredPacientes.filter(p => 
-          p.segmento?.id === parseInt(filters.segmento)
-        );
-      }
-      
-      // Ordenação
-      if (filters.orderBy) {
-        filteredPacientes.sort((a, b) => {
-          let aValue = a[filters.orderBy];
-          let bValue = b[filters.orderBy];
-          
-          if (filters.orderBy === 'nome') {
-            return aValue.localeCompare(bValue);
-          }
-          
-          if (filters.orderBy === 'ultima_consulta') {
-            return new Date(bValue) - new Date(aValue);
-          }
-          
-          if (filters.orderBy === 'valor_total_gasto') {
-            return bValue - aValue;
-          }
-          
-          return 0;
-        });
-      }
-      
-      // Paginação
-      const limit = filters.limit || 10;
-      const page = filters.page || 1;
-      const total = filteredPacientes.length;
-      const pages = Math.ceil(total / limit);
-      const start = (page - 1) * limit;
-      const end = start + limit;
-      
-      setPacientes(filteredPacientes.slice(start, end));
-      setPagination({ page, limit, total, pages });
-      
+      setBackendConnected(true);
+      console.log('✅ Pacientes CRM carregados do backend');
     } catch (err) {
       setError('Erro ao carregar pacientes');
       console.error('Erro ao carregar pacientes:', err);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, pagination.page, pagination.limit]);
 
   useEffect(() => {
     fetchPacientes();
-    
-    // Configurar refresh automático a cada 20 segundos
-    const refreshInterval = setInterval(() => {
-      fetchPacientes();
-    }, 20000); // 20 segundos
-    
-    // Cleanup do interval quando o componente for desmontado
-    return () => {
-      clearInterval(refreshInterval);
-    };
   }, [fetchPacientes]);
 
-  const sendMessage = async (pacienteId, mensagem) => {
-    try {
-      setLoading(true);
-      
-      // Simular envio de mensagem
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Mensagem enviada:', { pacienteId, mensagem });
-      
-      // Aqui seria a chamada real para a API
-      // await crmAPI.sendMessage(pacienteId, mensagem);
-      
-      return { success: true, mensagem_id: Date.now() };
-    } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
-      throw new Error('Erro ao enviar mensagem');
-    } finally {
-      setLoading(false);
-    }
+  const changePage = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
   };
 
   return { 
-    pacientes, 
+    pacientes: Array.isArray(pacientes) ? pacientes : [],
     pagination, 
     loading, 
-    error,
+    error, 
     refetch: fetchPacientes,
-    sendMessage 
+    changePage,
+    backendConnected
   };
 };
 
@@ -177,33 +111,25 @@ export const useMensagens = (filters = {}) => {
   const [mensagens, setMensagens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchMensagens = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('🔄 Carregando mensagens CRM...');
       
-      let filteredMensagens = [...mockMensagens];
+      const params = {
+        pacienteId: filters.paciente_id,
+        tipo: filters.tipo,
+        limit: filters.limit || 50
+      };
       
-      // Aplicar filtros
-      if (filters.paciente_id) {
-        filteredMensagens = filteredMensagens.filter(m => m.paciente_id === filters.paciente_id);
-      }
-      
-      if (filters.status) {
-        filteredMensagens = filteredMensagens.filter(m => m.status === filters.status);
-      }
-      
-      if (filters.tipo) {
-        filteredMensagens = filteredMensagens.filter(m => m.tipo === filters.tipo);
-      }
-      
-      // Ordenar por data de envio (mais recente primeiro)
-      filteredMensagens.sort((a, b) => new Date(b.enviado_em) - new Date(a.enviado_em));
-      
-      setMensagens(filteredMensagens);
+      const response = await crmService.getMensagens(params);
+      setMensagens(Array.isArray(response.data) ? response.data : []);
+      setBackendConnected(true);
+      console.log('✅ Mensagens CRM carregadas do backend');
       
     } catch (err) {
       setError('Erro ao carregar mensagens');
@@ -217,11 +143,27 @@ export const useMensagens = (filters = {}) => {
     fetchMensagens();
   }, [fetchMensagens]);
 
+  const enviarMensagem = async (dados) => {
+    try {
+      setLoading(true);
+      const response = await crmService.enviarMensagem(dados);
+      await fetchMensagens(); // Recarregar lista
+      return response.data;
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return { 
-    mensagens, 
+    mensagens: Array.isArray(mensagens) ? mensagens : [],
     loading, 
     error, 
-    refetch: fetchMensagens 
+    refetch: fetchMensagens,
+    enviarMensagem,
+    backendConnected
   };
 };
 
@@ -230,24 +172,25 @@ export const useTemplates = (tipo = '') => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔄 Carregando templates CRM...');
       
-      let filteredTemplates = [...mockTemplates];
+      const response = await crmService.getTemplates();
+      let templatesList = Array.isArray(response.data) ? response.data : [];
       
       if (tipo) {
-        filteredTemplates = filteredTemplates.filter(t => t.tipo === tipo);
+        templatesList = templatesList.filter(t => t.tipo === tipo);
       }
       
-      // Apenas templates ativos
-      filteredTemplates = filteredTemplates.filter(t => t.ativo);
-      
-      setTemplates(filteredTemplates);
+      setTemplates(templatesList);
+      setBackendConnected(true);
+      console.log('✅ Templates CRM carregados do backend');
       
     } catch (err) {
       setError('Erro ao carregar templates');
@@ -265,17 +208,9 @@ export const useTemplates = (tipo = '') => {
     try {
       setLoading(true);
       
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const newTemplate = {
-        id: Date.now(),
-        ...templateData,
-        ativo: true
-      };
-      
-      setTemplates(prev => [...prev, newTemplate]);
-      
-      return newTemplate;
+      const response = await crmService.createTemplate(templateData);
+      await fetchTemplates(); // Recarregar lista
+      return response.data;
     } catch (err) {
       console.error('Erro ao criar template:', err);
       throw new Error('Erro ao criar template');
@@ -284,31 +219,13 @@ export const useTemplates = (tipo = '') => {
     }
   };
 
-  const updateTemplate = async (templateId, updates) => {
-    try {
-      setLoading(true);
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setTemplates(prev => 
-        prev.map(t => t.id === templateId ? { ...t, ...updates } : t)
-      );
-      
-    } catch (err) {
-      console.error('Erro ao atualizar template:', err);
-      throw new Error('Erro ao atualizar template');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return { 
-    templates, 
+    templates: Array.isArray(templates) ? templates : [],
     loading, 
     error, 
     refetch: fetchTemplates,
     createTemplate,
-    updateTemplate
+    backendConnected
   };
 };
 
@@ -317,16 +234,19 @@ export const useSegmentos = () => {
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchSegmentos = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      console.log('🔄 Carregando segmentos CRM...');
       
-      setSegmentos(mockSegmentos);
-      
+      const response = await crmService.getSegmentos();
+      setSegmentos(Array.isArray(response.data) ? response.data : []);
+      setBackendConnected(true);
+      console.log('✅ Segmentos CRM carregados do backend');
     } catch (err) {
       setError('Erro ao carregar segmentos');
       console.error('Erro ao carregar segmentos:', err);
@@ -340,60 +260,11 @@ export const useSegmentos = () => {
   }, [fetchSegmentos]);
 
   return { 
-    segmentos, 
+    segmentos: Array.isArray(segmentos) ? segmentos : [],
     loading, 
     error, 
-    refetch: fetchSegmentos 
-  };
-};
-
-// Hook para relatórios
-export const useRelatorios = () => {
-  const [relatorioAtivacao, setRelatorioAtivacao] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchRelatorioAtivacao = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setRelatorioAtivacao(mockRelatorioAtivacao);
-      
-    } catch (err) {
-      setError('Erro ao gerar relatório de ativação');
-      console.error('Erro ao gerar relatório:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const exportarRelatorio = async (tipo, formato = 'csv') => {
-    try {
-      setLoading(true);
-      
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simular download do arquivo
-      console.log(`Exportando relatório ${tipo} em formato ${formato}`);
-      
-      return { success: true, arquivo: `relatorio_${tipo}_${Date.now()}.${formato}` };
-    } catch (err) {
-      console.error('Erro ao exportar relatório:', err);
-      throw new Error('Erro ao exportar relatório');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { 
-    relatorioAtivacao,
-    loading, 
-    error, 
-    fetchRelatorioAtivacao,
-    exportarRelatorio
+    refetch: fetchSegmentos,
+    backendConnected
   };
 };
 
@@ -402,16 +273,19 @@ export const useAutomacoes = () => {
   const [automacoes, setAutomacoes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchAutomacoes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 600));
+      console.log('🔄 Carregando automações CRM...');
       
-      setAutomacoes(mockAutomacoes);
-      
+      const response = await crmService.getAutomacoes();
+      setAutomacoes(Array.isArray(response.data) ? response.data : []);
+      setBackendConnected(true);
+      console.log('✅ Automações CRM carregadas do backend');
     } catch (err) {
       setError('Erro ao carregar automações');
       console.error('Erro ao carregar automações:', err);
@@ -443,10 +317,84 @@ export const useAutomacoes = () => {
   };
 
   return { 
-    automacoes, 
+    automacoes: Array.isArray(automacoes) ? automacoes : [],
     loading, 
     error, 
     refetch: fetchAutomacoes,
-    toggleAutomacao
+    toggleAutomacao,
+    backendConnected
+  };
+};
+
+// Hook para relatórios
+export const useRelatorios = () => {
+  const [relatorioInativos, setRelatorioInativos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
+
+  const fetchRelatorioInativos = useCallback(async (dias = 90) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Carregando relatório de inativos...');
+      
+      const response = await crmService.getRelatorioInativos(dias);
+      setRelatorioInativos(Array.isArray(response.data) ? response.data : []);
+      setBackendConnected(true);
+      console.log('✅ Relatório de inativos carregado do backend');
+    } catch (err) {
+      setError('Erro ao gerar relatório de inativos');
+      console.error('Erro ao gerar relatório:', err);
+      setBackendConnected(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const exportarRelatorio = async (dados, tipo, formato = 'csv') => {
+    try {
+      setLoading(true);
+      
+      // Criar conteúdo do arquivo
+      let content = '';
+      
+      if (formato === 'csv') {
+        // Cabeçalho CSV
+        const headers = Object.keys(dados[0] || {}).join(',');
+        const rows = dados.map(row => Object.values(row).join(','));
+        content = [headers, ...rows].join('\n');
+      } else if (formato === 'json') {
+        content = JSON.stringify(dados, null, 2);
+      }
+      
+      // Criar e baixar arquivo
+      const blob = new Blob([content], { type: formato === 'csv' ? 'text/csv' : 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio_${tipo}_${Date.now()}.${formato}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return { success: true, arquivo: link.download };
+    } catch (err) {
+      console.error('Erro ao exportar relatório:', err);
+      throw new Error('Erro ao exportar relatório');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { 
+    relatorioInativos,
+    loading, 
+    error, 
+    fetchRelatorioInativos,
+    exportarRelatorio,
+    backendConnected
   };
 };

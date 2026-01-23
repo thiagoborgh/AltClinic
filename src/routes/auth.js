@@ -1,10 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const UsuarioModel = require('../models/UsuarioMultiTenant');
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const firestoreService = require('../services/firestoreService');
 const router = express.Router();
 
 // Middleware para autenticar token JWT
@@ -12,12 +9,7 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  console.log('🔐 MIDDLEWARE: authenticateToken called');
-  console.log('🔐 MIDDLEWARE: authHeader:', authHeader);
-  console.log('🔐 MIDDLEWARE: token:', token ? 'Token present' : 'No token');
-
   if (!token) {
-    console.log('🔐 MIDDLEWARE: No token provided');
     return res.status(401).json({
       success: false,
       message: 'Token de acesso requerido'
@@ -26,24 +18,23 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_change_in_production', (err, user) => {
     if (err) {
-      console.log('🔐 MIDDLEWARE: Token verification failed:', err.message);
       return res.status(403).json({
         success: false,
         message: 'Token inválido'
       });
     }
     
-    console.log('🔐 MIDDLEWARE: Token verified successfully');
-    console.log('🔐 MIDDLEWARE: user data:', user);
     req.user = user;
     next();
   });
 }
 
-// 📧 LOGIN COM DETECÇÃO AUTOMÁTICA DE TENANT
+// 📧 LOGIN COM FIREBASE FIRESTORE
 router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
+
+    console.log('🔐 LOGIN FIRESTORE: Tentativa de login:', email);
 
     if (!email || !senha) {
       return res.status(400).json({
@@ -52,752 +43,188 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Se tenant específico fornecido via header, usar apenas esse
+    // Buscar tenant pelo slug (se fornecido no header)
     const tenantSlug = req.headers['x-tenant-slug'];
-    console.log('🔐 LOGIN: tenantSlug from header:', tenantSlug);
+    
     if (tenantSlug) {
-      try {
-        const masterDb = multiTenantDb.getMasterDb();
-        const tenant = masterDb.prepare('SELECT id, nome, slug FROM tenants WHERE slug = ? AND status IN (\'active\', \'trial\')').get(tenantSlug);
-        console.log('🔐 LOGIN: tenant found:', tenant);
-        
-        if (tenant) {
-          console.log('🔐 LOGIN: calling authenticate for tenant:', tenant.id);
-          const authResult = await UsuarioModel.authenticate(email, senha, tenant.id);
-          console.log('🔐 LOGIN: authenticate result:', authResult);
-          
-          if (authResult.success) {
-            const user = authResult.user;
-            // Gerar token JWT
-            const token = jwt.sign(
-              { 
-                userId: user.id, 
-                tenantId: tenant.id,
-                email: user.email,
-                role: user.role 
-              },
-              process.env.JWT_SECRET || 'fallback_secret_change_in_production',
-              { expiresIn: '24h' }
-            );
-
-            return res.json({
-              success: true,
-              message: 'Login realizado com sucesso',
-              user: {
-                id: user.id,
-                nome: user.nome,
-                email: user.email,
-                role: user.role
-              },
-              token,
-              tenant: {
-                id: tenant.id,
-                nome: tenant.nome,
-                slug: tenant.slug
-              },
-              sessionId: `session_${Date.now()}`
-            });
-          } else {
-            // Retornar erro específico
-            return res.status(401).json({
-              success: false,
-              message: authResult.message,
-              errorType: authResult.error,
-              hint: authResult.error === 'INVALID_PASSWORD' 
-                ? 'Verifique se a senha está correta. Lembre-se que a senha é case-sensitive.' 
-                : 'Verifique se o email está correto ou se você tem acesso a esta clínica.'
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Erro no login com tenant específico:', error);
-      }
+      console.log('🔐 LOGIN: Buscando tenant específico:', tenantSlug);
+      const tenant = await firestoreService.getTenantBySlug(tenantSlug);
       
-      return res.status(401).json({
-        success: false,
-        message: 'Tenant não encontrado ou inativo',
-        errorType: 'TENANT_NOT_FOUND',
-        hint: 'A clínica especificada não foi encontrada ou está inativa.',
-        suggestedAction: 'contact_support'
-      });
-    }
-
-    // Buscar tenant do usuário baseado no email (login automático)
-    let tenantInfo = null;
-    let usuario = null;
-    let foundTenantId = null;
-
-    try {
-      const masterDb = multiTenantDb.getMasterDb();
-      const tenants = masterDb.prepare('SELECT id, nome, slug FROM tenants WHERE status IN (\'active\', \'trial\')').all();
-
-      // Tentar autenticar em cada tenant
-      for (const tenant of tenants) {
-        try {
-          const authResult = await UsuarioModel.authenticate(email, senha, tenant.id);
-          if (authResult.success) {
-            usuario = authResult.user;
-            tenantInfo = tenant;
-            foundTenantId = tenant.id;
-            break;
-          } else if (authResult.error === 'USER_NOT_FOUND') {
-            // Usuário não encontrado neste tenant, continuar
-            console.log('User not found in tenant:', tenant.id);
-            continue;
-          } else if (authResult.error === 'INVALID_PASSWORD') {
-            // Usuário encontrado mas senha incorreta - registrar mas continuar tentando outros tenants
-            console.log('Invalid password for user in tenant:', tenant.id);
-            // Se encontrarmos o usuário em qualquer tenant com senha errada, 
-            // guardar essa informação para dar feedback específico
-            if (!usuario) {
-              usuario = { error: 'INVALID_PASSWORD', tenant: tenant };
-            }
-            continue;
-          }
-        } catch (authError) {
-          // Erro inesperado, continuar
-          console.log('Unexpected error in tenant:', tenant.id, authError.message);
-          continue;
-        }
+      if (!tenant) {
+        return res.status(401).json({
+          success: false,
+          message: 'Tenant não encontrado ou inativo'
+        });
       }
 
-      // Se não encontrou usuário autenticado mas encontrou com senha errada
-      if (!tenantInfo && usuario && usuario.error === 'INVALID_PASSWORD') {
+      // Buscar usuário no tenant
+      const user = await firestoreService.getUserByEmail(tenant.id, email);
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não encontrado',
+          errorType: 'USER_NOT_FOUND'
+        });
+      }
+
+      // Verificar senha
+      const senhaValida = await bcrypt.compare(senha, user.senha_hash);
+      
+      if (!senhaValida) {
         return res.status(401).json({
           success: false,
           message: 'Senha incorreta',
-          errorType: 'INVALID_PASSWORD',
-          hint: 'Verifique se a senha está correta. Lembre-se que a senha é case-sensitive.',
-          suggestedAction: 'reset_password'
+          errorType: 'INVALID_PASSWORD'
         });
       }
 
-      if (!usuario || !tenantInfo) {
-        return res.status(401).json({
-          success: false,
-          message: 'Email não encontrado em nenhuma clínica',
-          errorType: 'USER_NOT_FOUND',
-          hint: 'Verifique se o email está correto ou se você tem acesso ao sistema.',
-          suggestedAction: 'contact_support'
-        });
-      }
-    } catch (dbError) {
-      console.error('❌ Erro ao buscar tenant do usuário:', dbError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro interno do servidor'
+      // Gerar token JWT
+      const token = jwt.sign(
+        { 
+          userId: user.id,
+          tenantId: tenant.id,
+          email: user.email,
+          role: user.papel || user.role
+        },
+        process.env.JWT_SECRET || 'fallback_secret_change_in_production',
+        { expiresIn: '24h' }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Login realizado com sucesso',
+        user: {
+          id: user.id,
+          nome: user.nome,
+          email: user.email,
+          role: user.papel || user.role
+        },
+        token,
+        tenant: {
+          id: tenant.id,
+          nome: tenant.nome,
+          slug: tenant.slug
+        },
+        sessionId: `session_${Date.now()}`
       });
     }
 
-    // Verificar se é primeiro acesso
-    const isFirstAccess = usuario.status === 'pending_first_access' || 
-                         usuario.email_verified_at === null;
-
-    // Gerar JWT token
-    const token = jwt.sign({
-      id: usuario.id,
-      email: usuario.email,
-      role: usuario.role,
-      tenantId: foundTenantId,
-      firstAccess: isFirstAccess
-    }, process.env.JWT_SECRET || 'saee-development-secret', { 
-      expiresIn: '24h' 
-    });
-
-    // Se é primeiro acesso, marcar como verificado
-    if (isFirstAccess) {
-      try {
-        const tenantDb = multiTenantDb.getTenantDb(foundTenantId);
-        tenantDb.prepare(`
-          UPDATE usuarios 
-          SET email_verified_at = datetime('now'), status = 'active', last_login = datetime('now')
-          WHERE id = ?
-        `).run(usuario.id);
-
-        // Atualizar master_users também
-        const masterDb = multiTenantDb.getMasterDb();
-        // Note: master_users não tem colunas firstAccessCompleted ou updated_at
-        // Essas informações são controladas na tabela do tenant
-        console.log('✅ Primeiro acesso registrado no tenant para:', usuario.email);
-
-        console.log('✅ Primeiro acesso registrado para:', usuario.email);
-      } catch (updateError) {
-        console.error('⚠️ Erro ao marcar primeiro acesso:', updateError);
-      }
+    // Buscar usuário em todos os tenants ativos
+    console.log('🔐 LOGIN: Buscando em todos os tenants ativos...');
+    const results = await firestoreService.findUserAcrossTenants(email);
+    
+    if (!results || results.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email não encontrado em nenhuma clínica',
+        errorType: 'USER_NOT_FOUND'
+      });
     }
 
-    res.json({
+    // Usar o primeiro resultado (se houver múltiplos tenants, pode expandir depois)
+    const result = results[0];
+
+    // Verificar senha
+    const senhaValida = await bcrypt.compare(senha, result.user.senha_hash);
+    
+    if (!senhaValida) {
+      return res.status(401).json({
+        success: false,
+        message: 'Senha incorreta',
+        errorType: 'INVALID_PASSWORD'
+      });
+    }
+
+    // Gerar token JWT
+    const token = jwt.sign(
+      {
+        userId: result.user.id,
+        tenantId: result.tenant.id,
+        email: result.user.email,
+        role: result.user.papel || result.user.role
+      },
+      process.env.JWT_SECRET || 'fallback_secret_change_in_production',
+      { expiresIn: '24h' }
+    );
+
+    console.log('✅ LOGIN: Sucesso para', email, 'no tenant', result.tenant.slug);
+
+    return res.json({
       success: true,
-      message: isFirstAccess ? 'Primeiro acesso realizado com sucesso!' : 'Login realizado com sucesso',
-      token: token,
+      message: 'Login realizado com sucesso',
       user: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        role: usuario.role,
-        firstAccess: isFirstAccess
+        id: result.user.id,
+        nome: result.user.nome,
+        email: result.user.email,
+        role: result.user.papel || result.user.role
       },
+      token,
       tenant: {
-        id: tenantInfo.id,
-        nome: tenantInfo.nome,
-        slug: tenantInfo.slug
+        id: result.tenant.id,
+        nome: result.tenant.nome,
+        slug: result.tenant.slug
       },
-      license: {
-        id: 'default-license',
-        type: 'owner',
-        permissions: ['all']
-      },
-      ...(isFirstAccess && {
-        passwordChangeRequired: true,
-        instructions: 'Por segurança, altere sua senha temporária na próxima tela.'
-      })
+      sessionId: `session_${Date.now()}`
     });
 
   } catch (error) {
-    console.error('Erro no login:', error.message);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
+    console.error('❌ Erro no login:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
 
-// 🔍 ROTA PARA VERIFICAR STATUS DE INICIALIZAÇÃO
-router.get('/init-status', (req, res) => {
-  try {
-    const multiTenantDb = require('../models/MultiTenantDatabase');
-    const masterDb = multiTenantDb.getMasterDb();
-    
-    const tenantCount = masterDb.prepare('SELECT COUNT(*) as count FROM tenants').get();
-    const userCount = masterDb.prepare('SELECT COUNT(*) as count FROM master_users').get();
-    
-    res.json({
-      success: true,
-      initialized: tenantCount.count > 0,
-      tenants: tenantCount.count,
-      users: userCount.count,
-      environment: process.env.NODE_ENV || 'development'
-    });
-  } catch (error) {
-    console.error('Erro ao verificar status de inicialização:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao verificar status'
-    });
-  }
-});
-
-// 🚀 ROTA PARA INICIALIZAÇÃO MANUAL (EMERGÊNCIA)
-router.post('/init-system', async (req, res) => {
-  try {
-    // Verificar se já está inicializado
-    const multiTenantDb = require('../models/MultiTenantDatabase');
-    const masterDb = multiTenantDb.getMasterDb();
-    
-    const tenantCount = masterDb.prepare('SELECT COUNT(*) as count FROM tenants').get();
-    
-    if (tenantCount.count > 0) {
-      return res.json({
-        success: true,
-        message: 'Sistema já está inicializado',
-        initialized: true
-      });
-    }
-
-    // Inicializar sistema
-    const ProductionInitializer = require('../utils/productionInitializer');
-    const result = await ProductionInitializer.createFirstAccess();
-
-    res.json({
-      success: true,
-      message: 'Sistema inicializado com sucesso',
-      initialized: true,
-      credentials: {
-        email: result.adminEmail,
-        password: result.adminPassword,
-        tenant: result.tenantSlug
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro na inicialização manual:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao inicializar sistema: ' + error.message
-    });
-  }
-});
-
-// Rota para trocar senha no primeiro acesso
-router.put('/change-first-password', authenticateToken, async (req, res) => {
-  console.log('🔄 CHANGE PASSWORD: Rota chamada');
-  console.log('👤 User do token:', req.user);
-  
-  try {
-    const { newPassword, confirmPassword } = req.body;
-    const userId = req.user.id;
-    const tenantId = req.user.tenantId;
-
-    console.log('📝 Dados recebidos:', { userId, tenantId, hasNewPassword: !!newPassword, hasConfirmPassword: !!confirmPassword });
-
-    if (!newPassword || !confirmPassword) {
-      console.log('❌ Senha não fornecida');
-      return res.status(400).json({
-        success: false,
-        message: 'Nova senha e confirmação são obrigatórias'
-      });
-    }
-
-    if (newPassword !== confirmPassword) {
-      console.log('❌ Senhas não coincidem');
-      return res.status(400).json({
-        success: false,
-        message: 'Nova senha e confirmação não coincidem'
-      });
-    }
-
-    if (newPassword.length < 6) {
-      console.log('❌ Senha muito curta');
-      return res.status(400).json({
-        success: false,
-        message: 'Nova senha deve ter pelo menos 6 caracteres'
-      });
-    }
-
-    console.log('✅ Validações passaram, gerando hash...');
-
-    // Hash da nova senha
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log('✅ Hash gerado com sucesso');
-
-    // Atualizar senha no banco do tenant
-    console.log('🔄 Atualizando senha no banco do tenant...');
-    const tenantDb = multiTenantDb.getTenantDb(tenantId);
-    const updateResult = tenantDb.prepare(`
-      UPDATE usuarios 
-      SET senha_hash = ?, 
-          status = 'active',
-          updated_at = datetime('now')
-      WHERE id = ? AND tenant_id = ?
-    `).run(hashedPassword, userId, tenantId);
-
-    console.log('📊 Resultado da atualização tenant:', updateResult);
-
-    if (updateResult.changes === 0) {
-      console.log('❌ Nenhum usuário foi atualizado no tenant DB');
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado'
-      });
-    }
-
-    console.log('✅ Usuário atualizado no tenant DB');
-
-    // Atualizar master_users também
-    console.log('🔄 Atualizando senha no master DB...');
-    const masterDb = multiTenantDb.getMasterDb();
-    const masterUpdateResult = masterDb.prepare(`
-      UPDATE master_users 
-      SET senha_hash = ?
-      WHERE email = ? AND tenant_id = ?
-    `).run(hashedPassword, req.user.email, tenantId);
-
-    console.log('📊 Resultado da atualização master:', masterUpdateResult);
-
-    console.log('✅ Senha alterada com sucesso para usuário:', userId);
-
-    res.json({
-      success: true,
-      message: 'Senha alterada com sucesso! Você já pode fazer login normalmente.',
-      passwordChanged: true
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao trocar senha:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-// 🔐 ESQUECI MINHA SENHA - Solicitar redefinição
-router.post('/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email é obrigatório'
-      });
-    }
-
-    console.log('🔐 Solicitação de redefinição para:', email);
-
-    // Buscar usuário no master DB
-    const masterDb = multiTenantDb.getMasterDb();
-    const user = masterDb.prepare('SELECT id, email, tenant_id FROM master_users WHERE email = ?').get(email);
-
-    if (!user) {
-      // Por segurança, não informar se o email existe ou não
-      return res.json({
-        success: true,
-        message: 'Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.'
-      });
-    }
-
-    // Gerar token único
-    const crypto = require('crypto');
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
-
-    // Salvar token na tabela (criar se não existir)
-    try {
-      masterDb.prepare(`
-        CREATE TABLE IF NOT EXISTS password_reset_tokens (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id INTEGER NOT NULL,
-          tenant_id INTEGER NOT NULL,
-          token TEXT NOT NULL UNIQUE,
-          expires_at DATETIME NOT NULL,
-          used BOOLEAN DEFAULT FALSE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES master_users(id),
-          FOREIGN KEY (tenant_id) REFERENCES tenants(id)
-        )
-      `).run();
-
-      // Remover tokens expirados
-      masterDb.prepare('DELETE FROM password_reset_tokens WHERE expires_at < datetime(\'now\')').run();
-
-      // Inserir novo token
-      masterDb.prepare(`
-        INSERT INTO password_reset_tokens (user_id, tenant_id, token, expires_at)
-        VALUES (?, ?, ?, ?)
-      `).run(user.id, user.tenant_id, resetToken, expiresAt.toISOString());
-
-    } catch (dbError) {
-      console.error('Erro ao salvar token:', dbError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro interno do servidor'
-      });
-    }
-
-    // Enviar email de forma assíncrona (não bloquear resposta)
-    setImmediate(async () => {
-      try {
-        console.log('📧 Iniciando envio de email de redefinição para:', email);
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || '587'),
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-          },
-          // Aumentar timeouts
-          connectionTimeout: 60000,
-          greetingTimeout: 30000,
-          socketTimeout: 60000,
-          tls: {
-            rejectUnauthorized: false,
-            minVersion: 'TLSv1.2'
-          }
-        });
-
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-
-      const mailOptions = {
-        from: process.env.EMAIL_FROM,
-        to: email,
-        subject: '🔐 Redefinição de Senha - AltClinic',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1976d2;">Redefinição de Senha</h2>
-            <p>Olá,</p>
-            <p>Recebemos uma solicitação para redefinir sua senha no sistema AltClinic.</p>
-            <p>Clique no link abaixo para criar uma nova senha:</p>
-            <p style="margin: 20px 0;">
-              <a href="${resetUrl}" style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                Redefinir Senha
-              </a>
-            </p>
-            <p><strong>Importante:</strong></p>
-            <ul>
-              <li>Este link expira em 1 hora</li>
-              <li>Se você não solicitou esta redefinição, ignore este email</li>
-              <li>Por segurança, não compartilhe este link com ninguém</li>
-            </ul>
-            <p>Se o botão não funcionar, copie e cole este link no seu navegador:</p>
-            <p style="word-break: break-all; color: #666;">${resetUrl}</p>
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <p style="color: #666; font-size: 12px;">
-              Esta é uma mensagem automática. Não responda este email.
-            </p>
-          </div>
-        `
-      };
-
-      await transporter.sendMail(mailOptions);
-      console.log('📧 Email de redefinição enviado para:', email);
-
-      } catch (emailError) {
-        console.error('⚠️ Erro ao enviar email:', emailError);
-        // Não retornar erro para não expor se o email existe
-      }
-    });
-
-    // Retornar resposta imediatamente (não esperar email)
-    res.json({
-      success: true,
-      message: 'Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.'
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao solicitar redefinição:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-// 🔍 VALIDAR TOKEN DE REDEFINIÇÃO
-router.post('/validate-reset-token', async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token é obrigatório'
-      });
-    }
-
-    const masterDb = multiTenantDb.getMasterDb();
-
-    // Buscar token válido
-    const tokenData = masterDb.prepare(`
-      SELECT prt.*, mu.email
-      FROM password_reset_tokens prt
-      JOIN master_users mu ON prt.user_id = mu.id
-      WHERE prt.token = ?
-        AND prt.expires_at > datetime('now')
-        AND prt.used = FALSE
-    `).get(token);
-
-    if (!tokenData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token inválido ou expirado'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Token válido',
-      expiresAt: tokenData.expires_at,
-      email: tokenData.email
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao validar token:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-// 🔄 REDEFINIR SENHA
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-
-    if (!token || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token e nova senha são obrigatórios'
-      });
-    }
-
-    // Validar força da senha
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: 'A senha deve ter pelo menos 8 caracteres'
-      });
-    }
-
-    if (!/[A-Z]/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        message: 'A senha deve conter pelo menos uma letra maiúscula'
-      });
-    }
-
-    if (!/\d/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        message: 'A senha deve conter pelo menos um número'
-      });
-    }
-
-    const masterDb = multiTenantDb.getMasterDb();
-
-    // Buscar e validar token
-    const tokenData = masterDb.prepare(`
-      SELECT prt.*, mu.email
-      FROM password_reset_tokens prt
-      JOIN master_users mu ON prt.user_id = mu.id
-      WHERE prt.token = ?
-        AND prt.expires_at > datetime('now')
-        AND prt.used = FALSE
-    `).get(token);
-
-    if (!tokenData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token inválido ou expirado'
-      });
-    }
-
-    // Hash da nova senha
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-    // Atualizar senha no master DB
-    const masterUpdate = masterDb.prepare(`
-      UPDATE master_users
-      SET senha_hash = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(hashedPassword, tokenData.user_id);
-
-    if (masterUpdate.changes === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado'
-      });
-    }
-
-    // Atualizar senha no tenant DB
-    try {
-      const tenantDb = multiTenantDb.getTenantDb(tokenData.tenant_id);
-      tenantDb.prepare(`
-        UPDATE usuarios
-        SET senha_hash = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE email = ?
-      `).run(hashedPassword, tokenData.email);
-    } catch (tenantError) {
-      console.error('Erro ao atualizar senha no tenant DB:', tenantError);
-      // Continuar mesmo se falhar no tenant DB
-    }
-
-    // Marcar token como usado
-    masterDb.prepare(`
-      UPDATE password_reset_tokens
-      SET used = TRUE, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(tokenData.id);
-
-    // Limpar tokens expirados
-    masterDb.prepare('DELETE FROM password_reset_tokens WHERE expires_at < datetime(\'now\')').run();
-
-    console.log('✅ Senha redefinida com sucesso para:', tokenData.email);
-
-    res.json({
-      success: true,
-      message: 'Senha redefinida com sucesso! Você pode fazer login com sua nova senha.'
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao redefinir senha:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor'
-    });
-  }
-});
-
-// 📋 ENDPOINT PARA OBTER INFORMAÇÕES DO USUÁRIO AUTENTICADO
+// 👤 OBTER DADOS DO USUÁRIO AUTENTICADO
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    console.log('🔐 GET /me: Starting');
-    console.log('🔐 GET /me: req.user:', req.user);
+    const user = await firestoreService.getUserByEmail(req.user.tenantId, req.user.email);
     
-    const userId = req.user.userId; // Corrigir: era req.user.id, mas o token tem userId
-    const tenantId = req.user.tenantId;
-    
-    console.log('🔐 GET /me: userId:', userId, 'tenantId:', tenantId);
-
-    // Buscar informações completas do usuário
-    const UsuarioModel = require('../models/UsuarioMultiTenant');
-    
-    const usuario = await UsuarioModel.findById(userId, tenantId);
-    
-    console.log('🔐 GET /me: usuario found:', !!usuario);
-    
-    if (!usuario) {
-      console.log('🔐 GET /me: Usuario not found');
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'Usuário não encontrado'
       });
     }
-    
-    // Buscar informações completas do tenant
-    const masterDb = multiTenantDb.getMasterDb();
-    const tenantInfo = masterDb.prepare('SELECT id, nome, slug FROM tenants WHERE id = ?').get(tenantId);
-    
-    if (!tenantInfo) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tenant não encontrado'
-      });
-    }
-    
-    // Retornar informações do usuário (sem senha)
-    const userInfo = {
-      id: usuario.id,
-      tenant_id: usuario.tenant_id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
-      permissions: usuario.permissions,
-      avatar: usuario.avatar,
-      telefone: usuario.telefone,
-      crm: usuario.crm,
-      especialidade: usuario.especialidade,
-      status: usuario.status,
-      last_login: usuario.last_login,
-      created_at: usuario.created_at,
-      updated_at: usuario.updated_at
-    };
-    
-    console.log('✅ GET /me: Informações retornadas para:', usuario.email);
-    
-    res.json({
+
+    // Buscar dados do tenant
+    const tenantSnapshot = await firestoreService.db.collection('tenants').doc(req.user.tenantId).get();
+    const tenantData = tenantSnapshot.exists ? { id: tenantSnapshot.id, ...tenantSnapshot.data() } : null;
+
+    return res.json({
       success: true,
-      user: userInfo,
-      tenant: {
-        id: tenantInfo.id,
-        nome: tenantInfo.nome,
-        slug: tenantInfo.slug
+      user: {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        role: user.papel || user.role
       },
-      license: { id: 'default-license', type: 'owner', permissions: ['all'] }
+      tenant: tenantData ? {
+        id: tenantData.id,
+        nome: tenantData.nome,
+        slug: tenantData.slug
+      } : null,
+      license: null // Pode ser expandido depois se houver sistema de licenças
     });
-    
   } catch (error) {
-    console.error('❌ GET /me: Erro ao buscar informações do usuário:', error);
-    console.error('❌ GET /me: Stack trace:', error.stack);
-    res.status(500).json({
+    console.error('Erro ao buscar usuário:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro ao buscar dados do usuário'
     });
   }
+});
+
+// 🚪 LOGOUT
+router.post('/logout', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Logout realizado com sucesso'
+  });
 });
 
 module.exports = router;
+module.exports.authenticateToken = authenticateToken;

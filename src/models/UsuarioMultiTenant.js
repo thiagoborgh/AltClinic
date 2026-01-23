@@ -96,7 +96,7 @@ class UsuarioMultiTenantModel {
       console.log('🔧 tenantDb obtained for tenant:', tenantId);
 
       const usuario = tenantDb.prepare(`
-        SELECT id, nome, email, senha, role, telefone, avatar,
+        SELECT id, nome, email, senha_hash, role, telefone, avatar,
                status, last_login, created_at, updated_at
         FROM usuarios
         WHERE email = ?
@@ -139,9 +139,9 @@ class UsuarioMultiTenantModel {
     console.log('🔧 UsuarioMultiTenant.authenticate: User found, verifying password');
     console.log('🔧 authUtil.verifyPassword type:', typeof authUtil.verifyPassword);
     console.log('🔧 senha param:', senha);
-    console.log('🔧 usuario.senha:', usuario.senha);
+    console.log('🔧 usuario.senha_hash:', usuario.senha_hash);
     // Usar authUtil para verificar senha
-    const senhaValida = await authUtil.verifyPassword(senha, usuario.senha);
+    const senhaValida = await authUtil.verifyPassword(senha, usuario.senha_hash);
     console.log('🔧 UsuarioMultiTenant.authenticate: senhaValida =', senhaValida);
     
     if (!senhaValida) {

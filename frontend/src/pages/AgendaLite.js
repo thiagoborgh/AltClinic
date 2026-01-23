@@ -65,9 +65,6 @@ import ConfiguracaoGrade from '../components/ConfiguracaoGrade';
 import ModalAgendamento from '../components/ModalAgendamento';
 import ModalListaEspera from '../components/ModalListaEspera';
 
-// Data
-import { mockProcedimentos, mockConvenios, mockSalas, mockProfissionais } from '../data/mockAgendamento';
-
 // Estilos
 import '../styles/agenda-lite.css';
 
@@ -125,12 +122,8 @@ const AgendaLite = () => {
     getAvailableTimesForDay
   } = useProfessionalSchedules(selectedProfessional);
 
-  // Dados mock para profissionais
-  const profissionais = [
-    { id: '1', nome: 'Dr. João Silva', cor: '#4caf50', horario: '08:00-18:00' },
-    { id: '2', nome: 'Dra. Maria Santos', cor: '#2196f3', horario: '09:00-17:00' },
-    { id: '3', nome: 'Dr. Carlos Lima', cor: '#ff9800', horario: '07:00-19:00' }
-  ];
+  // Sistema profissional: sem dados mockados - profissionais virão da API/configuração
+  const profissionais = [];
 
   // Função para salvar agendamento (integrada com API)
   const handleSaveAgendamento = async (agendamentoData) => {
@@ -147,7 +140,7 @@ const AgendaLite = () => {
             horario: agendamentoData.horario,
             data: agendamentoData.data,
             paciente: agendamentoData.paciente,
-            procedimento: mockProcedimentos.find(p => p.id === agendamentoData.procedimento)?.nome || agendamentoData.procedimento,
+            procedimento: agendamentoData.procedimento || 'Consulta',
             status: agendamentoData.status || 'não confirmado',
             valor: parseFloat(agendamentoData.valor) || 0,
             observacoes: agendamentoData.observacoes
@@ -178,7 +171,7 @@ const AgendaLite = () => {
           horario: agendamentoData.horario,
           data: agendamentoData.data,
           paciente: agendamentoData.paciente,
-          procedimento: mockProcedimentos.find(p => p.id === agendamentoData.procedimento)?.nome || 'Consulta',
+          procedimento: agendamentoData.procedimento || 'Consulta',
           status: agendamentoData.status || 'não confirmado',
           valor: parseFloat(agendamentoData.valor) || 0,
           observacoes: agendamentoData.observacoes
@@ -251,16 +244,16 @@ const AgendaLite = () => {
       
       setAgendamentos(agendamentosAPI);
       
-      // Tentar migrar dados do localStorage se existirem e a API estiver vazia
+      // Tentar migrar dados do localStorage se existirem e a API estiver vazia (SEM notificação)
       if (agendamentosAPI.length === 0) {
-        await tentarMigracaoLocalStorage();
+        await tentarMigracaoLocalStorage(true); // Passar flag para silenciar
       }
       
     } catch (error) {
-      console.error('❌ Erro ao carregar agendamentos da API:', error);
+      console.log('ℹ️ Usando agendamentos locais');
       setAgendamentosError(error.message);
       
-      // Fallback para localStorage em caso de erro da API
+      // Fallback para localStorage em caso de erro da API (sem notificação)
       await carregarFallbackLocalStorage();
     } finally {
       setAgendamentosLoading(false);
@@ -268,7 +261,7 @@ const AgendaLite = () => {
   };
 
   // Migração do localStorage para API
-  const tentarMigracaoLocalStorage = async () => {
+  const tentarMigracaoLocalStorage = async (silencioso = false) => {
     try {
       const savedAgendamentos = localStorage.getItem('agendamentos');
       if (savedAgendamentos) {
@@ -284,12 +277,16 @@ const AgendaLite = () => {
             // Limpar localStorage após migração bem-sucedida
             localStorage.removeItem('agendamentos');
             
-            showToast(`${agendamentosMigrados.length} agendamentos migrados com sucesso!`, 'success');
+            // Apenas mostrar toast se não for silencioso
+            if (!silencioso) {
+              showToast(`${agendamentosMigrados.length} agendamentos migrados com sucesso!`, 'success');
+            }
           }
         }
       }
     } catch (error) {
-      console.error('❌ Erro na migração do localStorage:', error);
+      console.log('ℹ️ Nenhuma migração necessária');
+      // NÃO mostrar erro ao usuário
     }
   };
 
@@ -306,7 +303,7 @@ const AgendaLite = () => {
         setAgendamentos([]);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar fallback do localStorage:', error);
+      console.log('ℹ️ Iniciando com agenda vazia');
       setAgendamentos([]);
     }
   };
@@ -392,25 +389,8 @@ const AgendaLite = () => {
         console.log('🕒 DEBUG Profissional selecionado:', selectedProfessional);
         
         if (!availableTimes || availableTimes.length === 0) {
-          console.log('⚠️ DEBUG: Nenhum horário retornado pela API, usando fallback');
-          // Criar slots de fallback para debugging
-          const fallbackSlots = [];
-          for (let hour = 8; hour <= 17; hour++) {
-            for (let min = 0; min < 60; min += 30) {
-              const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-              fallbackSlots.push({
-                horario: timeStr,
-                dia: moment(selectedDate).format('YYYY-MM-DD'),
-                agendamento: null,
-                bloqueado: false,
-                vago: true,
-                potencialReceita: 200,
-                debug: 'fallback'
-              });
-            }
-          }
-          console.log('🔧 DEBUG: Usando', fallbackSlots.length, 'slots de fallback');
-          return fallbackSlots;
+          console.log('⚠️ Sistema profissional: Sem horários configurados - retornando vazio');
+          return [];
         }
         
         const rawSlots = availableTimes.map(timeSlot => {
@@ -1387,10 +1367,10 @@ const AgendaLite = () => {
         }}
         slotData={selectedSlotForAgendamento}
         onSave={handleSaveAgendamento}
-        profissionais={mockProfissionais}
-        procedimentos={mockProcedimentos}
-        convenios={mockConvenios}
-        salas={mockSalas}
+        profissionais={[]}
+        procedimentos={[]}
+        convenios={[]}
+        salas={[]}
       />
     </Box>
   );

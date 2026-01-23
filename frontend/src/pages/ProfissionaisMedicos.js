@@ -114,65 +114,11 @@ const ProfissionaisMedicos = () => {
   // Carregar médicos
   const loadMedicos = useCallback(async () => {
     try {
-      // Mock data para desenvolvimento - substituir pela API real
-      const mockMedicos = [
-        {
-          id: 1,
-          nome: 'Dr. João Silva',
-          crm: 'CRM/SP 123456',
-          especialidade: 'Cardiologia',
-          telefone: '11999999999',
-          email: 'joao.silva@clinic.com',
-          status: 'ativo',
-          dataContratacao: '2020-01-15',
-          observacoes: 'Especialista em cirurgia cardíaca'
-        },
-        {
-          id: 2,
-          nome: 'Dra. Maria Santos',
-          crm: 'CRM/SP 789012',
-          especialidade: 'Dermatologia',
-          telefone: '11888888888',
-          email: 'maria.santos@clinic.com',
-          status: 'ativo',
-          dataContratacao: '2019-05-20',
-          observacoes: 'Foco em dermatologia estética'
-        },
-        {
-          id: 3,
-          nome: 'Dr. Carlos Lima',
-          crm: 'CRM/SP 345678',
-          especialidade: 'Ortopedia',
-          telefone: '11777777777',
-          email: 'carlos.lima@clinic.com',
-          status: 'ativo',
-          dataContratacao: '2021-03-10',
-          observacoes: ''
-        },
-        {
-          id: 4,
-          nome: 'Dr. Pedro Inativo',
-          crm: 'CRM/SP 999999',
-          especialidade: 'Neurologia',
-          telefone: '11666666666',
-          email: 'pedro.inativo@clinic.com',
-          status: 'inativo',
-          dataContratacao: '2018-08-12',
-          observacoes: 'Médico atualmente inativo'
-        }
-      ];
-
-      // Filtrar por busca se necessário
-      const filtered = searchTerm 
-        ? mockMedicos.filter(medico => 
-            medico.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            medico.crm.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            medico.especialidade.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-        : mockMedicos;
-
+      const response = await medicoService.buscar(searchTerm);
+      const medicosData = response.data || [];
+      
       // Aplicar status modificados aos médicos
-      const medicosComStatus = filtered.map(medico => ({
+      const medicosComStatus = medicosData.map(medico => ({
         ...medico,
         status: medicoStatuses[medico.id] !== undefined ? medicoStatuses[medico.id] : medico.status
       }));

@@ -7,8 +7,8 @@ const path = require('path');
 
 // Importar rotas
 const authRoutes = require('./routes/auth');
-const agendamentosRoutes = require('./routes/agendamentos');
-const agendaAgendamentosRoutes = require('./routes/agenda-agendamentos');
+// const agendamentosRoutes = require('./routes/agendamentos'); // ⚠️ AGENDA COMPLETA (não usar - muito pesada)
+const agendaAgendamentosRoutes = require('./routes/agenda-agendamentos'); // ✅ AGENDA LITE (PADRÃO)
 const propostasRoutes = require('./routes/propostas');
 const crmRoutes = require('./routes/crm');
 const prontuariosRoutes = require('./routes/prontuarios');
@@ -23,11 +23,21 @@ const prontuarioRoutes = require('./routes/prontuario-simple');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 const atendimentosRoutes = require('./routes/atendimentos');
-const professionalRoutes = require('./routes/professional');
+// const professionalRoutes = require('./routes/professional'); // ⚠️ SQLite (não usar)
+const professionalFirestoreRoutes = require('./routes/professional-firestore'); // ✅ FIRESTORE
 const manyChatRoutes = require('./routes/manychat');
+
+// 🔥 Rotas Firestore (novas)
+const trialFirestoreRoutes = require('./routes/trial-firestore');
+const pacientesFirestoreRoutes = require('./routes/pacientes-firestore');
+const tenantsAdminFirestoreRoutes = require('./routes/tenants-admin-firestore');
+const dashboardFirestoreRoutes = require('./routes/dashboard-firestore'); // ✅ DASHBOARD FIRESTORE
+const financeiroFirestoreRoutes = require('./routes/financeiro-firestore'); // ✅ FINANCEIRO FIRESTORE
+const crmFirestoreRoutes = require('./routes/crm-firestore'); // ✅ CRM FIRESTORE
 
 // Importar middlewares
 const { extractTenant } = require('./middleware/tenant');
+const { extractTenantFirestore } = require('./middleware/tenantFirestore');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
@@ -70,13 +80,17 @@ class SaeeApp {
     this.app.use(cors({
       origin: process.env.NODE_ENV === 'production' 
         ? function(origin, callback) {
-            // Permitir Vercel, ngrok e localhost
+            // Permitir Firebase, Vercel, ngrok e localhost
             const allowedOrigins = [
+              /\.web\.app$/,
+              /\.firebaseapp\.com$/,
               /\.vercel\.app$/,
               /\.ngrok-free\.app$/,
               /\.ngrok\.io$/,
               'http://localhost:3000',
-              'http://localhost:3001'
+              'http://localhost:3001',
+              'https://meu-app-de-clinica.web.app',
+              'https://meu-app-de-clinica.firebaseapp.com'
             ];
             
             if (!origin || allowedOrigins.some(allowed => 
@@ -84,7 +98,8 @@ class SaeeApp {
             )) {
               callback(null, true);
             } else {
-              callback(null, true); // Permitir por enquanto, você pode restringir depois
+              console.log('CORS blocked origin:', origin);
+              callback(null, true); // Permitir por enquanto para debug
             }
           }
         : ['http://localhost:3000', 'http://localhost:3001'],
@@ -123,21 +138,18 @@ class SaeeApp {
     // Servir arquivos estáticos (imagens, logos, etc.)
     this.app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
-    // Servir arquivos estáticos do frontend em produção
-    if (process.env.NODE_ENV === 'production') {
-      // Middleware para definir MIME types corretos
-      this.app.use(express.static(path.join(__dirname, '../public'), {
-        setHeaders: (res, filePath) => {
-          if (filePath.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-          } else if (filePath.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-          } else if (filePath.endsWith('.html')) {
-            res.setHeader('Content-Type', 'text/html');
-          }
+    // Servir arquivos estáticos do frontend (sempre)
+    this.app.use(express.static(path.join(__dirname, '../public'), {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript');
+        } else if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css');
+        } else if (filePath.endsWith('.html')) {
+          res.setHeader('Content-Type', 'text/html');
         }
-      }));
-    }
+      }
+    }));
 
     // Logs de requisições em desenvolvimento
     if (process.env.NODE_ENV !== 'production') {
@@ -463,24 +475,43 @@ class SaeeApp {
     this.app.use('/api/agendamentos', extractTenant);
     this.app.use('/api/agenda/agendamentos', extractTenant);
     this.app.use('/api/propostas', extractTenant);
-    this.app.use('/api/crm', extractTenant);
+    // this.app.use('/api/crm', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/prontuarios', extractTenant);
-    this.app.use('/api/financeiro', extractTenant);
+    // this.app.use('/api/financeiro', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/configuracoes', extractTenant);
     this.app.use('/api/atendimentos', extractTenant);
-    this.app.use('/api/professional', extractTenant);
+    // this.app.use('/api/professional', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/manychat', extractTenant);
+    
+    // 🆕 Rota WhatsApp com Firestore
+    console.log('🔧 Configurando rota WhatsApp (Firestore)...');
+    const whatsappRoutes = require('./routes/whatsapp');
+    this.app.use('/api/whatsapp', extractTenantFirestore, whatsappRoutes);
+    
+    // 🔥 Rotas Firestore (prioridade - novas versões)
+    console.log('🔧 Configurando rotas Firestore (trial, pacientes, tenants-admin, dashboard)...');
+    this.app.use('/api/tenants', trialFirestoreRoutes); // Inclui /trial
+    this.app.use('/api/pacientes-v2', extractTenantFirestore, pacientesFirestoreRoutes); // Nova versão
+    this.app.use('/api/tenants-admin-v2', tenantsAdminFirestoreRoutes); // Nova versão
+    this.app.use('/api/dashboard', extractTenantFirestore, dashboardFirestoreRoutes); // ✅ DASHBOARD FIRESTORE
     
     // Rotas de auth (SOMENTE as que não precisam de tenant)
     console.log('🔧 Configurando rota /api/auth...');
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/agendamentos', agendamentosRoutes);
-    this.app.use('/api/agenda/agendamentos', agendaAgendamentosRoutes);
+    
+    // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
+    this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
+    this.app.use('/api/agenda/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
+    // this.app.use('/api/agendamentos', agendamentosRoutes); // ⚠️ AGENDA COMPLETA (comentada - muito pesada)
+    
     this.app.use('/api/prontuarios', prontuariosRoutes);
-    this.app.use('/api/financeiro', financeiroRoutes);
+    // this.app.use('/api/financeiro', financeiroRoutes); // ⚠️ SQLite (não usar)
+    this.app.use('/api/financeiro', extractTenantFirestore, financeiroFirestoreRoutes); // ✅ FIRESTORE
+    // this.app.use('/api/crm', crmRoutes); // ⚠️ SQLite (não usar)
+    this.app.use('/api/crm', extractTenantFirestore, crmFirestoreRoutes); // ✅ FIRESTORE
     this.app.use('/api/configuracoes', configuracoesRoutes);
     this.app.use('/api/atendimentos', atendimentosRoutes);
-    this.app.use('/api/professional', professionalRoutes);
+    this.app.use('/api/professional', extractTenantFirestore, professionalFirestoreRoutes); // ✅ FIRESTORE
     this.app.use('/api/manychat', manyChatRoutes);
 
     // Webhook do ManyChat (substituindo Twilio/WhatsApp)
@@ -549,19 +580,17 @@ class SaeeApp {
       });
     });
 
-    // Rota catch-all para SPA (se servindo frontend)
-    if (process.env.NODE_ENV === 'production') {
-      this.app.get('*', (req, res) => {
-        // Evitar interferir com rotas da API
-        if (req.path.startsWith('/api/')) {
-          return res.status(404).json({
-            success: false,
-            message: 'Rota da API não encontrada'
-          });
-        }
-        res.sendFile(path.join(__dirname, '../public/index.html'));
-      });
-    }
+    // Rota catch-all para SPA (servir frontend sempre)
+    this.app.get('*', (req, res) => {
+      // Evitar interferir com rotas da API
+      if (req.path.startsWith('/api/')) {
+        return res.status(404).json({
+          success: false,
+          message: 'Rota da API não encontrada'
+        });
+      }
+      res.sendFile(path.join(__dirname, '../public/index.html'));
+    });
 
     // 404 para rotas da API
     this.app.use('/api/*', (req, res) => {

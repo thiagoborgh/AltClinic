@@ -41,7 +41,7 @@ export const useFinanceiro = () => {
           financeiroService.getContasPagar(),
           financeiroService.getPropostas(),
           financeiroService.getFluxoCaixa(),
-          financeiroService.getInsightsIA()
+          financeiroService.getIAInsights()
         ]);
 
         // Se chegou até aqui, backend está funcionando
@@ -49,11 +49,11 @@ export const useFinanceiro = () => {
         console.log('✅ Backend conectado com sucesso!');
         
         setResumoFinanceiro(resumoResponse.data || {});
-        setContasReceber(contasReceberResponse.data || []);
-        setContasPagar(contasPagarResponse.data || []);
-        setPropostas(propostasResponse.data || []);
-        setFluxoCaixa(fluxoCaixaResponse.data || []);
-        setInsightsIA(insightsResponse.data || []);
+        setContasReceber(Array.isArray(contasReceberResponse.data) ? contasReceberResponse.data : []);
+        setContasPagar(Array.isArray(contasPagarResponse.data) ? contasPagarResponse.data : []);
+        setPropostas(Array.isArray(propostasResponse.data) ? propostasResponse.data : []);
+        setFluxoCaixa(Array.isArray(fluxoCaixaResponse.data) ? fluxoCaixaResponse.data : []);
+        setInsightsIA(Array.isArray(insightsResponse.data) ? insightsResponse.data : []);
 
       } catch (backendError) {
         console.warn('⚠️ Backend não disponível, usando dados mock:', backendError.message);

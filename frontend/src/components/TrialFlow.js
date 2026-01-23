@@ -29,8 +29,8 @@ const TrialFlow = () => {
       // Já tem tenant mas não está logado, redirecionar para login
       navigate('/login');
     } else if (existingToken) {
-      // Já está logado, redirecionar para dashboard
-      navigate('/dashboard');
+      // Já está logado, redirecionar para agenda
+      navigate('/agenda');
     }
   }, [navigate]);
 

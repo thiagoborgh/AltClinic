@@ -63,12 +63,15 @@ const ContasPagar = ({ searchTerm }) => {
     observacoes: ''
   });
 
+  // Garantir que contasPagar é sempre um array
+  const contasPagarArray = Array.isArray(contasPagar) ? contasPagar : [];
+
   // Filtrar contas por termo de busca
-  const contasFiltradas = contasPagar?.filter(conta =>
-    conta.fornecedor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conta.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conta.categoria.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const contasFiltradas = contasPagarArray.filter(conta =>
+    conta.fornecedor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conta.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conta.categoria?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Separar contas por status
   const contasVencidas = contasFiltradas.filter(conta => 

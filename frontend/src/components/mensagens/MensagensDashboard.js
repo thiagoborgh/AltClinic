@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Box, Typography, Paper, Tabs, Tab } from '@mui/material';
 import EnvioMensagemModal from './EnvioMensagemModal';
 import HistoricoMensagens from './HistoricoMensagens';
+import HistoricoMensagensWhatsApp from './HistoricoMensagensWhatsApp';
 import ConfiguracaoAPI from './ConfiguracaoAPI';
 import useMensagens from '../../hooks/mensagens/useMensagens';
 import useConfiguracaoAPI from '../../hooks/mensagens/useConfiguracaoAPI';
@@ -28,7 +29,8 @@ const MensagensDashboard = () => {
 
       <Paper sx={{ mb: 2 }}>
         <Tabs value={tabAtiva} onChange={(e, newValue) => setTabAtiva(newValue)}>
-          <Tab label="Histórico" />
+          <Tab label="Histórico CRM" />
+          <Tab label="Histórico WhatsApp" />
           <Tab label="Configuração API" />
         </Tabs>
       </Paper>
@@ -45,7 +47,18 @@ const MensagensDashboard = () => {
         </Box>
       )}
 
-      {tabAtiva === 1 && <ConfiguracaoAPI />}
+      {tabAtiva === 1 && (
+        <Box>
+          <Paper sx={{ p: 3, mb: 2 }}>
+            <Typography variant="body1" color="textSecondary">
+              Histórico completo de mensagens enviadas via WhatsApp, incluindo status de entrega e reenvio.
+            </Typography>
+          </Paper>
+          <HistoricoMensagensWhatsApp />
+        </Box>
+      )}
+
+      {tabAtiva === 2 && <ConfiguracaoAPI />}
 
       <EnvioMensagemModal 
         open={modalOpen} 

@@ -18,20 +18,21 @@ import DashboardLayout from './layouts/DashboardLayoutNew';
 // Pages
 import Login from './pages/Login';
 import OnboardingPage from './pages/OnboardingPage';
-import MultiTenantLogin from './pages/MultiTenantLogin';
-import LandingPage from './pages/LandingPage';
+// import LandingPage from './pages/LandingPage'; // Temporariamente comentado
 import ResetPassword from './pages/ResetPassword';
 import DashboardNew from './pages/DashboardNew';
 import AgendaNova from './pages/AgendaNova';
 import AgendaLite from './pages/AgendaLite';
-import ListaPacientes from './pages/ListaPacientes';
-import CadastroPaciente from './pages/CadastroPaciente';
-import ProfissionaisMedicos from './pages/ProfissionaisMedicos';
+import ListaPacientesNova from './pages/ListaPacientesNova';
+import CadastroPacienteNovo from './pages/CadastroPacienteNovo';
+import ProfissionaisMedicosNovo from './pages/ProfissionaisMedicosNovo';
+import CadastroProfissionalNovo from './pages/CadastroProfissionalNovo';
 import SalaEspera from './pages/SalaEspera';
 import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
 import CRMDashboard from './pages/crm/CRMDashboard';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes.js';
+import WhatsApp from './pages/WhatsApp';
 
 import BillingPage from './pages/billing/BillingPage';
 const AppContent = () => {
@@ -64,13 +65,13 @@ const AppContent = () => {
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <Routes>
-        {/* Landing Page - rota pública */}
-        <Route path="/landing" element={<LandingPage />} />
+        {/* Landing Page - rota pública - temporariamente desabilitada */}
+        {/* <Route path="/landing" element={<LandingPage />} /> */}
         
         {/* Rota raiz - redireciona baseado na autenticação */}
         <Route path="/" element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : 
-          <Navigate to="/landing" replace />
+          <Navigate to="/login" replace />
         } />
 
         {/* Rotas públicas */}
@@ -84,10 +85,8 @@ const AppContent = () => {
           <AuthLayout><OnboardingPage /></AuthLayout>
         } />
         
-        <Route path="/login/:slug" element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
-          <AuthLayout><MultiTenantLogin /></AuthLayout>
-        } />
+        {/* Rota removida - não é mais necessário especificar slug na URL */}
+        {/* O backend detecta automaticamente o tenant pelo email */}
         
         <Route path="/reset-password" element={
           <AuthLayout><ResetPassword /></AuthLayout>
@@ -99,12 +98,14 @@ const AppContent = () => {
             <Route path="dashboard" element={<DashboardNew />} />
             <Route path="agendamentos" element={<AgendaNova />} />
             <Route path="agenda-lite" element={<AgendaLite />} />
-            <Route path="pacientes" element={<ListaPacientes />} />
-            <Route path="cadastro-paciente" element={<CadastroPaciente />} />
-            <Route path="profissionais" element={<ProfissionaisMedicos />} />
+            <Route path="pacientes" element={<ListaPacientesNova />} />
+            <Route path="cadastro-paciente" element={<CadastroPacienteNovo />} />
+            <Route path="profissionais" element={<ProfissionaisMedicosNovo />} />
+            <Route path="cadastro-profissional" element={<CadastroProfissionalNovo />} />
             <Route path="espera" element={<SalaEspera />} />
             <Route path="financeiro" element={<FinanceiroDashboard />} />
             <Route path="crm" element={<CRMDashboard />} />
+            <Route path="whatsapp" element={<WhatsApp />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="billing" element={<BillingPage />} />

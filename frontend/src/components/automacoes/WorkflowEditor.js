@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,23 +35,34 @@ const eventosTemporais = [
 const WorkflowEditor = ({ open, onClose, onSalvar, workflowEdicao = null }) => {
   const [etapaAtiva, setEtapaAtiva] = useState(0);
   const [dados, setDados] = useState({
-    nome: workflowEdicao?.nome || '',
-    descricao: workflowEdicao?.descricao || '',
-    gatilho: workflowEdicao?.gatilho || {
-      tipo: 'temporal',
-      evento: 'aniversario',
-      condicoes: {}
-    },
-    acoes: workflowEdicao?.acoes || [{
-      tipo: 'mensagem',
-      conteudo: {
-        canal: 'whatsapp',
-        template: ''
-      },
-      intervalo_anterior: 0
-    }],
-    status: workflowEdicao?.status || 'ativo'
+    nome: '',
+    descricao: '',
+    gatilho: { tipo: 'temporal', evento: 'aniversario', condicoes: {} },
+    acoes: [{ tipo: 'mensagem', conteudo: { canal: 'whatsapp', template: '' }, intervalo_anterior: 0 }],
+    status: 'ativo'
   });
+
+  // Atualiza dados quando for fornecido workflowEdicao (edição)
+  useEffect(() => {
+    if (workflowEdicao) {
+      setDados({
+        nome: workflowEdicao.nome || '',
+        descricao: workflowEdicao.descricao || '',
+        gatilho: workflowEdicao.gatilho || { tipo: 'temporal', evento: 'aniversario', condicoes: {} },
+        acoes: workflowEdicao.acoes || [{ tipo: 'mensagem', conteudo: { canal: 'whatsapp', template: '' }, intervalo_anterior: 0 }],
+        status: workflowEdicao.status || 'ativo'
+      });
+    } else if (open) {
+      // reset when opening for new
+      setDados({
+        nome: '',
+        descricao: '',
+        gatilho: { tipo: 'temporal', evento: 'aniversario', condicoes: {} },
+        acoes: [{ tipo: 'mensagem', conteudo: { canal: 'whatsapp', template: '' }, intervalo_anterior: 0 }],
+        status: 'ativo'
+      });
+    }
+  }, [workflowEdicao, open]);
 
   const etapas = ['Básico', 'Gatilho', 'Ações', 'Revisão'];
 

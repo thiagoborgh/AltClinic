@@ -28,12 +28,19 @@ class MedicoService {
       if (filtros.page) params.append('page', filtros.page);
       if (filtros.limit) params.append('limit', filtros.limit);
 
-      const response = await api.get(`/medicos?${params.toString()}`);
+      const response = await api.get(`/professional/medicos?${params.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar médicos:', error);
       throw new Error('Falha ao carregar médicos');
     }
+  }
+
+  /**
+   * Alias para buscarMedicos - usado em alguns componentes
+   */
+  async buscar(termo = '') {
+    return this.buscarMedicos({ nome: termo });
   }
 
   /**
@@ -43,12 +50,19 @@ class MedicoService {
    */
   async buscarMedicoPorId(id) {
     try {
-      const response = await api.get(`/medicos/${id}`);
+      const response = await api.get(`/professional/medicos/${id}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar médico:', error);
       throw new Error('Médico não encontrado');
     }
+  }
+
+  /**
+   * Alias para buscarMedicoPorId - usado em alguns componentes
+   */
+  async buscarPorId(id) {
+    return this.buscarMedicoPorId(id);
   }
 
   /**
@@ -64,7 +78,7 @@ class MedicoService {
       // Formatar dados
       const dadosFormatados = this.formatarDadosMedico(dadosMedico);
       
-      const response = await api.post('/medicos', dadosFormatados);
+      const response = await api.post('/professional/medicos', dadosFormatados);
       return response.data;
     } catch (error) {
       console.error('Erro ao criar médico:', error);
@@ -86,7 +100,7 @@ class MedicoService {
       this.validarDadosMedico(dadosMedico);
       const dadosFormatados = this.formatarDadosMedico(dadosMedico);
       
-      const response = await api.put(`/medicos/${id}`, dadosFormatados);
+      const response = await api.put(`/professional/medicos/${id}`, dadosFormatados);
       return response.data;
     } catch (error) {
       console.error('Erro ao atualizar médico:', error);
@@ -104,7 +118,7 @@ class MedicoService {
    */
   async excluirMedico(id) {
     try {
-      await api.delete(`/medicos/${id}`);
+      await api.delete(`/professional/medicos/${id}`);
     } catch (error) {
       console.error('Erro ao excluir médico:', error);
       if (error.response?.status === 409) {
@@ -135,13 +149,29 @@ class MedicoService {
   }
 
   /**
+   * Enviar convite de acesso ao profissional
+   * @param {string} medicoId - ID do médico
+   * @param {string} email - Email do profissional
+   * @returns {Promise<Object>} Resultado do envio
+   */
+  async enviarConviteAcesso(medicoId, email) {
+    try {
+      const response = await api.post(`/professional/medicos/${medicoId}/enviar-convite`, { email });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao enviar convite:', error);
+      throw new Error(error.response?.data?.message || 'Falha ao enviar convite de acesso');
+    }
+  }
+
+  /**
    * Buscar médicos por especialidade
    * @param {string} especialidade - Nome da especialidade
    * @returns {Promise<Array>} Lista de médicos da especialidade
    */
   async buscarMedicosPorEspecialidade(especialidade) {
     try {
-      const response = await api.get(`/medicos/especialidade/${encodeURIComponent(especialidade)}`);
+      const response = await api.get(`/professional/medicos/especialidade/${encodeURIComponent(especialidade)}`);
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar médicos por especialidade:', error);
@@ -239,12 +269,12 @@ class MedicoService {
     if (!crm) return false;
     
     // Remover espaços e normalizar
-    const crmLimpo = crm.trim().toUpperCase();
+    const crmLimpo = crm.trim();
     
-    // Formato: CRM/UF NNNNNN ou CRM-UF NNNNNN
-    const regexCRM = /^CRM[/-]?[A-Z]{2}\s?\d{4,6}$/;
-    
-    return regexCRM.test(crmLimpo);
+    // Aceitar qualquer formato que contenha letras e números
+    // Exemplos válidos: CRM/SP 123456, CRM-SP 123456, CRMSP123456, CRM 123456, 123456, etc.
+    // Mínimo 4 caracteres (flexível para diferentes formatos)
+    return crmLimpo.length >= 4;
   }
 
   /**

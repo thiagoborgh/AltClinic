@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Paper, List, ListItem, ListItemText, Chip, Typography, Box, FormControl, InputLabel, Select, MenuItem, Grid } from '@mui/material';
-import { mockPacientes } from '../../data/crm/mockCRMData';
+import { crmService } from '../../services/api';
 
 const canalLabel = {
   whatsapp: 'WhatsApp',
@@ -11,6 +11,22 @@ const canalLabel = {
 const HistoricoMensagens = ({ mensagens }) => {
   const [filtroPaciente, setFiltroPaciente] = useState('');
   const [filtroCanal, setFiltroCanal] = useState('');
+  const [pacientes, setPacientes] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadPacientes = async () => {
+      try {
+        const resp = await crmService.getPacientes({ limit: 1000 });
+        if (!mounted) return;
+        setPacientes(Array.isArray(resp.data) ? resp.data : []);
+      } catch (err) {
+        console.error('Erro ao carregar pacientes no histórico de mensagens:', err);
+      }
+    };
+    loadPacientes();
+    return () => { mounted = false; };
+  }, []);
 
   const mensagensFiltradas = mensagens.filter(msg => {
     if (filtroPaciente && msg.pacienteId !== Number(filtroPaciente)) return false;
@@ -33,7 +49,7 @@ const HistoricoMensagens = ({ mensagens }) => {
               onChange={e => setFiltroPaciente(e.target.value)}
             >
               <MenuItem value="">Todos os Pacientes</MenuItem>
-              {mockPacientes.map(p => (
+              {pacientes.map(p => (
                 <MenuItem key={p.id} value={p.id}>{p.nome}</MenuItem>
               ))}
             </Select>
@@ -63,7 +79,7 @@ const HistoricoMensagens = ({ mensagens }) => {
           </ListItem>
         )}
         {mensagensFiltradas.map(msg => {
-          const paciente = mockPacientes.find(p => p.id === Number(msg.pacienteId));
+          const paciente = pacientes.find(p => p.id === Number(msg.pacienteId));
           return (
             <ListItem key={msg.id} alignItems="flex-start">
               <ListItemText

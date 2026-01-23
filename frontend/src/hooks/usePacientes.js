@@ -1,66 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { validationRules, automationConfig } from '../models/pacienteSchema';
+import api from '../services/api';
 
-// URL base da API
-const API_BASE_URL = 'http://localhost:3000/api';
-
-// Dados mock para fallback (quando backend não disponível)
-const mockPacientes = [
-  {
-    id: '1',
-    nome: 'Maria Silva Santos',
-    email: 'maria.santos@email.com',
-    telefone: '(11) 99999-1234',
-    cpf: '123.456.789-01',
-    dataNascimento: '1985-03-15',
-    idade: 39,
-    endereco: {
-      logradouro: 'Rua das Flores, 123',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01234-567'
-    },
-    estadoCivil: 'Casada',
-    profissao: 'Engenheira',
-    convenio: {
-      nome: 'Unimed',
-      numero: '123456789'
-    },
-    observacoes: 'Paciente regular, sem restrições',
-    dataUltimaConsulta: '2024-08-15',
-    proximaConsulta: '2024-09-15',
-    criadoEm: '2024-01-15T10:30:00Z',
-    ultimoAtendimento: '2024-08-15T14:20:00Z',
-    status: 'ativo'
-  },
-  {
-    id: '2',
-    nome: 'João Pedro Oliveira',
-    email: 'joao.oliveira@email.com',
-    telefone: '(11) 88888-5678',
-    cpf: '987.654.321-09',
-    dataNascimento: '1978-07-22',
-    idade: 46,
-    endereco: {
-      logradouro: 'Av. Paulista, 456',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01310-100'
-    },
-    estadoCivil: 'Solteiro',
-    profissao: 'Advogado',
-    convenio: {
-      nome: 'Bradesco Saúde',
-      numero: '987654321'
-    },
-    observacoes: 'Paciente com histórico de hipertensão',
-    dataUltimaConsulta: '2024-08-20',
-    proximaConsulta: null,
-    criadoEm: '2024-02-10T09:15:00Z',
-    ultimoAtendimento: '2024-08-20T16:45:00Z',
-    status: 'ativo'
-  }
-];
+// Sistema profissional: sem dados mockados
 
 // Hook personalizado para gerenciamento de pacientes
 export const usePacientes = () => {
@@ -75,36 +17,17 @@ export const usePacientes = () => {
     setError(null);
     
     try {
-      // Verificar se o backend está disponível
-      const baseURL = 'http://localhost:3000';
-      const queryParams = new URLSearchParams(filtros).toString();
-      const response = await fetch(`${baseURL}/api/pacientes?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/pacientes-v2', { params: filtros });
       
-      if (!response.ok) {
-        // Se for 404 ou erro de rede, usar dados mock
-        console.log('Backend não disponível, usando dados simulados');
-        setPacientes(mockPacientes);
-        return { pacientes: mockPacientes };
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Resposta não é JSON válido');
-      }
-      
-      const data = await response.json();
-      setPacientes(data.pacientes || []);
-      return data;
+      const data = response.data;
+      const listaPacientes = data.data || data.pacientes || [];
+      setPacientes(listaPacientes);
+      return { pacientes: listaPacientes };
     } catch (err) {
-      console.log('Erro na conexão com backend, usando dados simulados:', err.message);
-      // Em caso de erro, usar dados mock para desenvolvimento
-      setPacientes(mockPacientes);
-      return { pacientes: mockPacientes };
+      console.error('Erro ao carregar pacientes:', err);
+      setError(err.message);
+      setPacientes([]);
+      return { pacientes: [] };
     } finally {
       setLoading(false);
     }
@@ -116,31 +39,11 @@ export const usePacientes = () => {
     setError(null);
     
     try {
-      const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/pacientes-v2/${id}`);
       
-      if (!response.ok) {
-        // Se backend não disponível, buscar nos dados mock
-        const pacienteMock = mockPacientes.find(p => p.id === id);
-        if (pacienteMock) return pacienteMock;
-        throw new Error('Paciente não encontrado');
-      }
-      
-      const paciente = await response.json();
+      const paciente = response.data.paciente || response.data.data || response.data;
       return paciente;
     } catch (err) {
-      // Fallback para dados mock
-      const pacienteMock = mockPacientes.find(p => p.id === id);
-      if (pacienteMock) {
-        console.log('Backend não disponível, usando dados simulados');
-        return pacienteMock;
-      }
-      
       setError(err.message);
       console.error('Erro ao buscar paciente:', err);
       return null;
@@ -160,21 +63,9 @@ export const usePacientes = () => {
     setError(null);
     
     try {
-      const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes/buscar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ termo })
-      });
+      const response = await api.get('/pacientes-v2/buscar', { params: { termo } });
       
-      if (!response.ok) {
-        throw new Error('Erro na busca');
-      }
-      
-      const results = await response.json();
+      const results = response.data.data || response.data.pacientes || [];
       setSearchResults(results);
       return results;
     } catch (err) {
@@ -189,22 +80,13 @@ export const usePacientes = () => {
   // Verificar duplicatas (CPF/Telefone)
   const verificarDuplicatas = useCallback(async (cpf, telefone) => {
     try {
-      const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes/verificar-duplicatas`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ cpf, telefone })
-      });
+      const params = {};
+      if (cpf) params.cpf = cpf;
+      if (telefone) params.telefone = telefone;
       
-      if (!response.ok) {
-        throw new Error('Erro ao verificar duplicatas');
-      }
+      const response = await api.get('/pacientes-v2/verificar-duplicatas', { params });
       
-      const result = await response.json();
-      return result; // { exists: boolean, paciente?: object }
+      return response.data; // { cpfDuplicado, telefoneDuplicado }
     } catch (err) {
       console.error('Erro ao verificar duplicatas:', err);
       return { exists: false };
@@ -248,21 +130,14 @@ export const usePacientes = () => {
       }
 
       const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dadosPaciente)
-      });
+      const url = `${baseURL}/api/pacientes-v2`;
+      console.log('🚀 [FIRESTORE] Criando paciente na URL:', url);
+      console.log('🚀 [FIRESTORE] Timestamp:', new Date().toISOString());
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao criar paciente');
-      }
+      const response = await api.post('/pacientes-v2', dadosPaciente);
       
-      const novoPaciente = await response.json();
+      const resultado = response.data;
+      const novoPaciente = resultado.data || resultado.paciente || resultado;
       
       // Atualizar lista local
       setPacientes(prev => [novoPaciente, ...prev]);
@@ -298,21 +173,9 @@ export const usePacientes = () => {
       }
 
       const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dadosAtualizados)
-      });
+      const response = await api.put(`/pacientes-v2/${id}`, dadosAtualizados);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao atualizar paciente');
-      }
-      
-      const pacienteAtualizado = await response.json();
+      const pacienteAtualizado = response.data.paciente || response.data.data || response.data;
       
       // Atualizar lista local
       setPacientes(prev => 
@@ -335,18 +198,7 @@ export const usePacientes = () => {
     setError(null);
     
     try {
-      const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/pacientes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erro ao excluir paciente');
-      }
+      await api.delete(`/pacientes-v2/${id}`);
       
       // Remover da lista local
       setPacientes(prev => prev.filter(p => p.id !== id));
@@ -364,22 +216,8 @@ export const usePacientes = () => {
   // Sugerir anamnese com IA
   const sugerirAnamnese = useCallback(async (genero, idade) => {
     try {
-      const baseURL = 'http://localhost:3000';
-      const response = await fetch(`${baseURL}/api/ai/sugerir-anamnese`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ genero, idade })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erro ao gerar sugestões');
-      }
-      
-      const sugestoes = await response.json();
-      return sugestoes;
+      const response = await api.post('/ai/sugerir-anamnese', { genero, idade });
+      return response.data;
     } catch (err) {
       console.error('Erro ao sugerir anamnese:', err);
       return {
@@ -419,14 +257,14 @@ export const usePacientes = () => {
   const validarDadosPaciente = (dados) => {
     const erros = [];
     
-    // Validar campos obrigatórios
-    if (!dados.nomeCompleto || dados.nomeCompleto.length < 3) {
+    // Validar campos obrigatórios (apenas nome e telefone)
+    const nomeParaValidar = dados.nome || dados.nomeCompleto;
+    if (!nomeParaValidar || nomeParaValidar.trim().length < 3) {
       erros.push('Nome completo deve ter pelo menos 3 caracteres');
     }
     
-    if (!dados.cpf) {
-      erros.push('CPF é obrigatório');
-    } else if (!validationRules.cpf.validator(dados.cpf)) {
+    // CPF é OPCIONAL
+    if (dados.cpf && !validationRules.cpf.validator(dados.cpf)) {
       erros.push(validationRules.cpf.message);
     }
     
@@ -436,13 +274,9 @@ export const usePacientes = () => {
       erros.push(validationRules.telefone.message);
     }
     
-    if (!dados.dataNascimento) {
-      erros.push('Data de nascimento é obrigatória');
-    }
-    
-    if (!dados.genero) {
-      erros.push('Gênero é obrigatório');
-    }
+    // Data de nascimento e gênero são OPCIONAIS
+    // Removido: validação obrigatória de dataNascimento
+    // Removido: validação obrigatória de genero/sexo
     
     if (dados.email && !validationRules.email.validator(dados.email)) {
       erros.push(validationRules.email.message);
@@ -468,15 +302,7 @@ export const usePacientes = () => {
 
   const dispararMensagemBoasVindas = async (paciente) => {
     try {
-      const baseURL = 'http://localhost:3000';
-      await fetch(`${baseURL}/api/automacao/boas-vindas`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ pacienteId: paciente.id })
-      });
+      await api.post('/automacao/boas-vindas', { pacienteId: paciente.id });
     } catch (err) {
       console.error('Erro ao enviar boas-vindas:', err);
     }

@@ -79,13 +79,13 @@ const MultiTenantLogin = () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('tenant', JSON.stringify(data.tenant));
 
-      // Redirecionar para dashboard
+      // Redirecionar para agenda
       if (window.location.hostname.includes(data.tenant.slug)) {
         // Já está no subdomínio correto
-        navigate('/dashboard');
+        navigate('/agenda');
       } else {
         // Redirecionar para subdomínio
-        window.location.href = `https://${data.tenant.slug}.altclinic.com.br/dashboard`;
+        window.location.href = `https://${data.tenant.slug}.altclinic.com.br/agenda`;
       }
       
     } catch (error) {

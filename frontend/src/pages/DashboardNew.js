@@ -47,8 +47,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Agendamentos Hoje"
-            value={metrics.todayAppointments.value}
-            variation={metrics.todayAppointments.variation}
+            value={metrics?.todayAppointments?.value || 0}
+            variation={metrics?.todayAppointments?.variation || 0}
             icon={CalendarMonth}
             color="primary"
           />
@@ -57,8 +57,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Pacientes Ativos"
-            value={metrics.activePatients.value}
-            variation={metrics.activePatients.variation}
+            value={metrics?.activePatients?.value || 0}
+            variation={metrics?.activePatients?.variation || 0}
             icon={People}
             color="success"
           />
@@ -67,8 +67,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Receita Mensal"
-            value={metrics.monthlyRevenue.value}
-            variation={metrics.monthlyRevenue.variation}
+            value={metrics?.monthlyRevenue?.value || 'R$ 0'}
+            variation={metrics?.monthlyRevenue?.variation || 0}
             icon={AttachMoney}
             color="warning"
           />
@@ -77,8 +77,8 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <MetricCard
             title="Taxa de Ocupação"
-            value={metrics.occupationRate.value}
-            variation={metrics.occupationRate.variation}
+            value={metrics?.occupationRate?.value || '0%'}
+            variation={metrics?.occupationRate?.variation || 0}
             icon={TrendingUp}
             color="info"
           />

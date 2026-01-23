@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+frontend
+functions
+.git
+.env
+.env.local
+.env.production
+*.md
+.gitignore
+Dockerfile
+.dockerignore
+docker-compose*.yml
+.firebase
+.firebaserc
+firebase.json

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -20,6 +20,8 @@ import {
   Logout,
   TrendingUp
 } from '@mui/icons-material';
+import { WhatsApp } from '@mui/icons-material';
+import whatsappService from '../../services/whatsappService';
 import { useAuth } from '../../hooks/useAuth';
 import Logo from './Logo';
 import UpgradeDialog from '../UpgradeDialog';
@@ -32,6 +34,7 @@ const Navbar = ({ onMenuClick }) => {
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationCount] = useState(3); // Simular notificações
+  const [waStatus, setWaStatus] = useState({ connected: false });
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
 
   // Verificar se é usuário trial
@@ -50,6 +53,30 @@ const Navbar = ({ onMenuClick }) => {
     logout();
     handleMenuClose();
   };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchStatus = async () => {
+      try {
+        const res = await whatsappService.getStatus();
+        if (!mounted) return;
+        // backend returns structure: { success, connected, session, qrCode, twilio, ... }
+        setWaStatus({
+          connected: !!res.connected,
+          qrCode: !!(res.qrCode && res.qrCode.qrDataUrl),
+          provider: res.provider || null,
+          twilioConfigured: res.twilioConfigured || false
+        });
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    fetchStatus();
+    const id = setInterval(fetchStatus, 10000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
 
   return (
     <AppBar 
@@ -130,6 +157,15 @@ const Navbar = ({ onMenuClick }) => {
             />
           </Button>
         )}
+
+        {/* Indicador WhatsApp */}
+        <IconButton
+          color="inherit"
+          sx={{ mr: 1 }}
+          title={waStatus.connected ? 'WhatsApp conectado' : waStatus.qrCode ? 'WhatsApp: Aguardando QR' : 'WhatsApp desconectado'}
+        >
+          <WhatsApp sx={{ color: waStatus.connected ? 'success.main' : waStatus.qrCode ? 'warning.main' : 'text.secondary' }} />
+        </IconButton>
 
         {/* Notificações */}
         <IconButton color="inherit" sx={{ mr: 1 }}>
