@@ -26,6 +26,7 @@ const atendimentosRoutes = require('./routes/atendimentos');
 // const professionalRoutes = require('./routes/professional'); // ⚠️ SQLite (não usar)
 const professionalFirestoreRoutes = require('./routes/professional-firestore'); // ✅ FIRESTORE
 const manyChatRoutes = require('./routes/manychat');
+const onboardingRoutes = require('./routes/onboarding'); // 🆕 ONBOARDING
 
 // 🔥 Rotas Firestore (novas)
 const trialFirestoreRoutes = require('./routes/trial-firestore');
@@ -482,6 +483,7 @@ class SaeeApp {
     this.app.use('/api/atendimentos', extractTenant);
     // this.app.use('/api/professional', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/manychat', extractTenant);
+    this.app.use('/api/onboarding', extractTenantFirestore, onboardingRoutes); // 🆕 ONBOARDING
     
     // 🆕 Rota WhatsApp com Firestore
     console.log('🔧 Configurando rota WhatsApp (Firestore)...');

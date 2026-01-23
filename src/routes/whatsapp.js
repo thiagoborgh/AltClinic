@@ -3,6 +3,7 @@ const router = express.Router();
 const firestoreWhatsappService = require('../services/firestoreWhatsappService');
 const whatsappWebService = require('../services/whatsappWebService');
 const twilioService = require('../utils/twilio');
+const automationGuard = require('../services/automationGuard');
 
 /**
  * Rotas para gerenciamento de WhatsApp com whatsapp-web.js (100% GRATUITO)
@@ -46,6 +47,31 @@ router.get('/session/status', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao verificar status da sessão',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/whatsapp/automation/status
+ * Verifica status das automações WhatsApp do tenant
+ */
+router.get('/automation/status', async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+
+    const automationStatus = await automationGuard.getAutomationStatus(tenantId);
+
+    res.json({
+      success: true,
+      ...automationStatus
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar status das automações:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar status das automações',
       error: error.message
     });
   }

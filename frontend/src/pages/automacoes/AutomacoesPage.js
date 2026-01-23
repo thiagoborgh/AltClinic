@@ -10,7 +10,8 @@ import {
   Chip,
   Switch,
   IconButton,
-  Fab
+  Fab,
+  Alert
 } from '@mui/material';
 import { Add, Edit, PlayArrow, Pause, Delete } from '@mui/icons-material';
 import useAutomacoes from '../../hooks/automacoes/useAutomacoes';
@@ -18,16 +19,31 @@ import WorkflowEditor from '../../components/automacoes/WorkflowEditor';
 
 const AutomacoesPage = () => {
   const [modalNovoWorkflow, setModalNovoWorkflow] = useState(false);
-  const { workflows, toggleWorkflow, excluirWorkflow, adicionarWorkflow, atualizarWorkflow } = useAutomacoes();
+  const { 
+    workflows, 
+    toggleWorkflow, 
+    excluirWorkflow, 
+    adicionarWorkflow, 
+    atualizarWorkflow,
+    automationStatus,
+    automationStatusLoading
+  } = useAutomacoes();
   const [editingWorkflow, setEditingWorkflow] = useState(null);
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ativo': return 'success';
+      case 'ativo': return automationStatus?.blocked ? 'warning' : 'success';
       case 'pausado': return 'warning';
       case 'inativo': return 'default';
       default: return 'default';
     }
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === 'ativo' && automationStatus?.blocked) {
+      return 'Bloqueado (WhatsApp desconectado)';
+    }
+    return status;
   };
 
   const handleSalvarWorkflow = (dadosWorkflow) => {
@@ -54,6 +70,17 @@ const AutomacoesPage = () => {
         </Button>
       </Box>
 
+      {/* Alerta quando automações estão bloqueadas */}
+      {automationStatus?.blocked && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Automações pausadas:</strong> WhatsApp desconectado. 
+            As automações estão temporariamente desabilitadas para evitar falhas no envio de mensagens.
+            Conecte o WhatsApp nas configurações para reativar.
+          </Typography>
+        </Alert>
+      )}
+
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
           Workflows Configurados
@@ -75,6 +102,7 @@ const AutomacoesPage = () => {
                     <Switch
                       checked={workflow.status === 'ativo'}
                       onChange={() => toggleWorkflow(workflow.id)}
+                      disabled={automationStatus?.blocked && workflow.status !== 'ativo'}
                       size="small"
                     />
                     <IconButton size="small" onClick={() => { setEditingWorkflow(workflow); setModalNovoWorkflow(true); }}>
@@ -95,7 +123,7 @@ const AutomacoesPage = () => {
                     <Box display="flex" alignItems="center" gap={2}>
                       <Typography variant="subtitle1">{workflow.nome}</Typography>
                       <Chip
-                        label={workflow.status}
+                        label={getStatusLabel(workflow.status)}
                         color={getStatusColor(workflow.status)}
                         size="small"
                       />

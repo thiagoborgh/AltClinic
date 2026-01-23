@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { crmService } from '../../services/api';
+import useAutomationStatus from '../useAutomationStatus';
 
 // Hook principal para o CRM
 export const useCRM = () => {
@@ -7,6 +8,9 @@ export const useCRM = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [backendConnected, setBackendConnected] = useState(false);
+
+  // Status das automações WhatsApp
+  const automationStatus = useAutomationStatus();
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -37,7 +41,8 @@ export const useCRM = () => {
     loading, 
     error, 
     refetch: fetchMetrics,
-    backendConnected
+    backendConnected,
+    automationStatus
   };
 };
 

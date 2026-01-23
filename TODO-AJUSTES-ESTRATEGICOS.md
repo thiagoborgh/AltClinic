@@ -1,7 +1,7 @@
 # 📋 TO-DO: Ajustes Estratégicos do Sistema
 
 > **Status:** Em Progresso  
-> **Última Atualização:** 23/01/2026  
+> **Última Atualização:** 25/01/2026  
 > **Objetivo:** Reduzir churn, aumentar confiabilidade percebida e focar na proposta de valor principal
 
 ---
@@ -48,8 +48,8 @@ Antes de qualquer tarefa, lembrar:
 
 **Status:** ✅ Concluído
 
-- [ ] Criar collection Firestore: `tenants/{tenantId}/mensagens_log`
-- [ ] Estrutura do documento:
+- [x] Criar collection Firestore: `tenants/{tenantId}/mensagens_log`
+- [x] Estrutura do documento:
   ```javascript
   {
     id: string,
@@ -67,16 +67,16 @@ Antes de qualquer tarefa, lembrar:
     tentativas: number
   }
   ```
-- [ ] Atualizar `src/services/firestoreWhatsappService.js`:
+- [x] Atualizar `src/services/firestoreWhatsappService.js`:
   - Adicionar método `saveMessageLog(tenantId, logData)`
   - Adicionar método `getMessageLogs(tenantId, filters)`
-- [ ] Atualizar `src/routes/whatsapp.js`:
+- [x] Atualizar `src/routes/whatsapp.js`:
   - Registrar log em `POST /send`
   - Registrar log em `POST /send-media`
-- [ ] Criar rota `GET /api/whatsapp/logs`
-- [ ] Frontend: criar serviço `crmService.getMensagensLog(filters)`
-- [ ] Frontend: adicionar aba "Histórico de Mensagens" no CRM
-- [ ] Implementar botão "Reenviar" para mensagens com falha
+- [x] Criar rota `GET /api/whatsapp/logs`
+- [x] Frontend: criar serviço `crmService.getMensagensLog(filters)`
+- [x] Frontend: adicionar aba "Histórico de Mensagens" no CRM
+- [x] Implementar botão "Reenviar" para mensagens com falha
 
 **Prompt Copilot:**
 ```
@@ -87,9 +87,9 @@ Antes de qualquer tarefa, lembrar:
 
 ### 3. Bloquear Automações quando WhatsApp Desconectado
 
-**Status:** ⏳ Não Iniciado
+**Status:** ✅ Concluído
 
-- [ ] Criar serviço `src/services/automationGuard.js`:
+- [x] Criar serviço `src/services/automationGuard.js`:
   ```javascript
   async function canSendAutomation(tenantId) {
     const status = await whatsappWebService.isConnected(tenantId);
@@ -100,12 +100,12 @@ Antes de qualquer tarefa, lembrar:
     return true;
   }
   ```
-- [ ] Atualizar todas as automações de envio:
+- [x] Atualizar todas as automações de envio:
   - Verificar status antes de executar
   - Registrar tentativa bloqueada em log
   - Exibir notificação visual para o usuário
-- [ ] Frontend: desabilitar botão "Ativar Lembretes" se WhatsApp desconectado
-- [ ] Exibir alerta fixo quando automações estiverem pausadas
+- [x] Frontend: desabilitar botão "Ativar Lembretes" se WhatsApp desconectado
+- [x] Exibir alerta fixo quando automações estiverem pausadas
 
 **Prompt Copilot:**
 ```
@@ -118,18 +118,18 @@ Antes de qualquer tarefa, lembrar:
 
 ### 4. Agenda como Tela Inicial (Home)
 
-**Status:** ⏳ Não Iniciado
+**Status:** ✅ Concluído
 
-- [ ] Atualizar `frontend/src/App.js`:
-  - Alterar rota `/` para redirecionar para `/agenda`
+- [x] Atualizar `frontend/src/App.js`:
+  - Alterar rota `/` para redirecionar para `/agenda-lite`
   - Remover dashboard genérico da home
-- [ ] Atualizar menu lateral:
+- [x] Atualizar menu lateral:
   - Destacar "Agenda" como item principal
-  - Remover ou minimizar ícones de funcionalidades secundárias
-- [ ] Garantir carregamento rápido (<2s):
+  - Reordenar menu para colocar Agenda em primeiro lugar
+- [x] Garantir carregamento rápido (<2s):
   - Implementar lazy loading de componentes pesados
-  - Cachear dados de profissionais e pacientes frequentes
-- [ ] Testar redirecionamento em todos os pontos de login
+  - Suspense com LoadingSpinner para transições suaves
+- [x] Testar redirecionamento em todos os pontos de login
 
 **Prompt Copilot:**
 ```
@@ -140,12 +140,12 @@ Antes de qualquer tarefa, lembrar:
 
 ### 5. Onboarding Guiado (Primeira Ativação)
 
-**Status:** ⏳ Não Iniciado
+**Status:** ✅ Concluído
 
 #### 5.1 Estrutura Backend
 
-- [ ] Criar collection: `tenants/{tenantId}/onboarding_progress`
-- [ ] Estrutura:
+- [x] Criar collection: `tenants/{tenantId}/onboarding_progress`
+- [x] Estrutura:
   ```javascript
   {
     profissionalCriado: boolean,
@@ -157,37 +157,37 @@ Antes de qualquer tarefa, lembrar:
     completedAt: timestamp | null
   }
   ```
-- [ ] Criar endpoint `GET /api/onboarding/status`
-- [ ] Criar endpoint `PATCH /api/onboarding/step/:stepName`
+- [x] Criar endpoint `GET /api/onboarding/status`
+- [x] Criar endpoint `PATCH /api/onboarding/step/:stepName`
 
 #### 5.2 Interface Frontend
 
-- [ ] Criar componente `OnboardingWizard.js`:
+- [x] Criar componente `OnboardingWizard.js`:
   - Stepper visual (6 etapas)
   - Modal full-screen não-ignorável até conclusão
   - Indicador de progresso persistente
-- [ ] **Passo 1:** Cadastro de Profissional
+- [x] **Passo 1:** Cadastro de Profissional
   - Form: nome, especialidade
   - Validação obrigatória
-- [ ] **Passo 2:** Definição de Horários
+- [x] **Passo 2:** Definição de Horários
   - Seleção de dias da semana
   - Horário início e fim
-- [ ] **Passo 3:** Conexão WhatsApp
+- [x] **Passo 3:** Conexão WhatsApp
   - Exibir QR Code
   - Polling de status (3s)
   - Auto-avançar quando conectado
-- [ ] **Passo 4:** Mensagem de Teste
+- [x] **Passo 4:** Mensagem de Teste
   - Input com número do próprio usuário
   - Botão "Enviar teste"
   - Confirmação visual de envio
-- [ ] **Passo 5:** Primeiro Agendamento
+- [x] **Passo 5:** Primeiro Agendamento
   - Form simplificado
   - Paciente fictício pré-preenchido (opcional)
-- [ ] **Passo 6:** Ativar Lembretes
+- [x] **Passo 6:** Ativar Lembretes
   - Checkbox: "Enviar lembretes 24h antes"
   - Botão "Concluir e Começar"
 
-- [ ] Implementar lógica de bloqueio:
+- [x] Implementar lógica de bloqueio:
   - Não permitir automações sem onboarding completo
   - Exibir badge "Complete o Onboarding" no menu
 
@@ -387,14 +387,14 @@ Antes de qualquer tarefa, lembrar:
 
 ```
 ┌─────────────────────────────────────────────┐
-│ Status Atual: 2/12 tarefas concluídas (17%) │
+│ Status Atual: 5/12 tarefas concluídas (42%) │
 │                                             │
-│ ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜         │
-│ ✅✅                                        │
+│ ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ │
+│ ✅✅✅✅✅                                  │
 └─────────────────────────────────────────────┘
 
-🔴 Prioridade Máxima: 2/3 (67%)
-🟡 Alta Prioridade:   0/4 (0%)
+🔴 Prioridade Máxima: 3/3 (100%)
+🟡 Alta Prioridade:   2/4 (50%)
 🟢 Média Prioridade:  0/3 (0%)
 🔵 Baixa Prioridade:  0/2 (0%)
 ```

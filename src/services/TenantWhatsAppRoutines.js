@@ -13,6 +13,8 @@
 const path = require('path');
 const AdminWhatsAppManager = require('../../admin/backend/services/AdminWhatsAppManager');
 const UnifiedWhatsAppService = require('./UnifiedWhatsAppService');
+const automationGuard = require('./automationGuard');
+const firestoreWhatsappService = require('./firestoreWhatsappService');
 
 class TenantWhatsAppRoutines {
     constructor() {
@@ -38,9 +40,12 @@ class TenantWhatsAppRoutines {
                 return false;
             }
 
+            // Buscar configuração adicional do firestore
+            const firestoreConfig = await firestoreWhatsappService.getConfig(tenantId);
+
             // Configurar rotinas padrão se não especificadas
             const defaultRoutines = {
-                appointmentReminders: true,
+                appointmentReminders: firestoreConfig?.lembretesAtivos !== false, // Padrão true, mas pode ser desabilitado
                 paymentReminders: true,
                 appointmentConfirmations: true,
                 welcomeMessages: true,
@@ -81,16 +86,22 @@ class TenantWhatsAppRoutines {
                 return { success: false, reason: 'routine_disabled' };
             }
 
-            // Obter configuração WhatsApp
-            const config = await this.getTenantWhatsAppConfig(tenantId);
-            if (!config) {
-                return { success: false, reason: 'whatsapp_not_configured' };
-            }
+      // VERIFICAR PERMISSÃO COM AUTOMATION GUARD
+      const guardResult = await automationGuard.canSendAutomation(
+        tenantId,
+        'appointment_reminder',
+        appointmentData.appointmentId
+      );
 
-            // Preparar dados da mensagem
-            const messageData = {
-                phone: appointmentData.patientPhone,
-                content: this.buildAppointmentReminderMessage(appointmentData),
+      if (!guardResult.canSend) {
+        console.log(`🚫 Lembrete bloqueado pelo guard: ${guardResult.reason}`);
+        return {
+          success: false,
+          reason: guardResult.reason,
+          message: guardResult.message
+        };
+      }
+
                 tenantId,
                 eventType: 'appointment_reminder',
                 eventId: appointmentData.appointmentId
@@ -132,15 +143,22 @@ class TenantWhatsAppRoutines {
                 return { success: false, reason: 'routine_disabled' };
             }
 
-            const config = await this.getTenantWhatsAppConfig(tenantId);
-            if (!config) {
-                return { success: false, reason: 'whatsapp_not_configured' };
-            }
+      // VERIFICAR PERMISSÃO COM AUTOMATION GUARD
+      const guardResult = await automationGuard.canSendAutomation(
+        tenantId,
+        'payment_reminder',
+        paymentData.invoiceId
+      );
 
-            const messageData = {
-                phone: paymentData.patientPhone,
-                content: this.buildPaymentReminderMessage(paymentData),
-                tenantId,
+      if (!guardResult.canSend) {
+        console.log(`🚫 Lembrete de pagamento bloqueado pelo guard: ${guardResult.reason}`);
+        return {
+          success: false,
+          reason: guardResult.reason,
+          message: guardResult.message
+        };
+      }
+
                 eventType: 'payment_reminder',
                 eventId: paymentData.invoiceId
             };

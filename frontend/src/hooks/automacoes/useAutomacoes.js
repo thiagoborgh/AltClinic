@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { crmService } from '../../services/api';
+import useAutomationStatus from '../useAutomationStatus';
 
 // Hook para gerenciar automações e workflows via API
 const useAutomacoes = () => {
@@ -7,6 +8,9 @@ const useAutomacoes = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [backendConnected, setBackendConnected] = useState(false);
+
+  // Usar o hook de status das automações
+  const { automationStatus, loading: automationStatusLoading } = useAutomationStatus();
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -61,7 +65,14 @@ const useAutomacoes = () => {
       setLoading(true);
       const target = workflows.find(w => w.id === id);
       if (!target) return;
+      
       const novoStatus = target.status === 'ativo' ? 'pausado' : 'ativo';
+      
+      // Verificar se está tentando ativar e se as automações estão bloqueadas
+      if (novoStatus === 'ativo' && automationStatus?.blocked) {
+        throw new Error('Não é possível ativar automações: WhatsApp desconectado. Conecte o WhatsApp primeiro.');
+      }
+      
       if (crmService.updateAutomacao) {
         await crmService.updateAutomacao(id, { status: novoStatus });
       }
@@ -94,6 +105,8 @@ const useAutomacoes = () => {
     loading,
     error,
     backendConnected,
+    automationStatus,
+    automationStatusLoading,
     fetchWorkflows,
     adicionarWorkflow,
     atualizarWorkflow,

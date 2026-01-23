@@ -1,40 +1,40 @@
-import React from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 
 // Hooks
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useTrialManager } from './hooks/useTrialManager';
+import { crmService } from './services/api';
 
 // Components
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LicenseSelector from './components/Auth/LicenseSelector';
 import TrialExpiredModal from './components/TrialExpiredModal';
+import OnboardingWizard from './components/common/OnboardingWizard';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
 import DashboardLayout from './layouts/DashboardLayoutNew';
 
-// Pages
-import Login from './pages/Login';
-import OnboardingPage from './pages/OnboardingPage';
-// import LandingPage from './pages/LandingPage'; // Temporariamente comentado
-import ResetPassword from './pages/ResetPassword';
-import DashboardNew from './pages/DashboardNew';
-import AgendaNova from './pages/AgendaNova';
-import AgendaLite from './pages/AgendaLite';
-import ListaPacientesNova from './pages/ListaPacientesNova';
-import CadastroPacienteNovo from './pages/CadastroPacienteNovo';
-import ProfissionaisMedicosNovo from './pages/ProfissionaisMedicosNovo';
-import CadastroProfissionalNovo from './pages/CadastroProfissionalNovo';
-import SalaEspera from './pages/SalaEspera';
-import FinanceiroDashboard from './pages/financeiro/FinanceiroDashboard';
-import CRMDashboard from './pages/crm/CRMDashboard';
-import Relatorios from './pages/Relatorios';
-import Configuracoes from './pages/Configuracoes.js';
-import WhatsApp from './pages/WhatsApp';
-
-import BillingPage from './pages/billing/BillingPage';
+// Lazy loaded pages
+const Login = lazy(() => import('./pages/Login'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const DashboardNew = lazy(() => import('./pages/DashboardNew'));
+const AgendaNova = lazy(() => import('./pages/AgendaNova'));
+const AgendaLite = lazy(() => import('./pages/AgendaLite'));
+const ListaPacientesNova = lazy(() => import('./pages/ListaPacientesNova'));
+const CadastroPacienteNovo = lazy(() => import('./pages/CadastroPacienteNovo'));
+const ProfissionaisMedicosNovo = lazy(() => import('./pages/ProfissionaisMedicosNovo'));
+const CadastroProfissionalNovo = lazy(() => import('./pages/CadastroProfissionalNovo'));
+const SalaEspera = lazy(() => import('./pages/SalaEspera'));
+const FinanceiroDashboard = lazy(() => import('./pages/financeiro/FinanceiroDashboard'));
+const CRMDashboard = lazy(() => import('./pages/crm/CRMDashboard'));
+const Relatorios = lazy(() => import('./pages/Relatorios'));
+const Configuracoes = lazy(() => import('./pages/Configuracoes.js'));
+const WhatsApp = lazy(() => import('./pages/WhatsApp'));
+const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const AppContent = () => {
   const { 
     isAuthenticated, 
@@ -52,7 +52,41 @@ const AppContent = () => {
     showTrialExpiredModal,
     closeTrialExpiredModal,
     handleUpgrade
-  } = useTrialManager();  if (loading) {
+  } = useTrialManager();
+
+  // Estado para onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  // Verificar status do onboarding quando usuário está autenticado
+  useEffect(() => {
+    if (isAuthenticated && !onboardingCompleted) {
+      checkOnboardingStatus();
+    }
+  }, [isAuthenticated, onboardingCompleted]);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const response = await crmService.getOnboardingStatus();
+      if (response.success) {
+        const { isCompleted } = response.data;
+        if (!isCompleted) {
+          setShowOnboarding(true);
+        } else {
+          setOnboardingCompleted(true);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status do onboarding:', error);
+      // Em caso de erro, não bloquear o usuário
+      setOnboardingCompleted(true);
+    }
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setOnboardingCompleted(true);
+  };  if (loading) {
     console.log('Mostrando tela de loading');
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -64,13 +98,14 @@ const AppContent = () => {
   console.log('Renderizando rotas principais');
   return (
     <Box sx={{ minHeight: '100vh' }}>
-      <Routes>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
         {/* Landing Page - rota pública - temporariamente desabilitada */}
         {/* <Route path="/landing" element={<LandingPage />} /> */}
         
         {/* Rota raiz - redireciona baseado na autenticação */}
         <Route path="/" element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : 
+          isAuthenticated ? <Navigate to="/agenda-lite" replace /> : 
           <Navigate to="/login" replace />
         } />
 
@@ -118,6 +153,7 @@ const AppContent = () => {
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
         } />
       </Routes>
+      </Suspense>
 
       {/* Modal de Seleção de Licença */}
       <LicenseSelector
@@ -134,6 +170,13 @@ const AppContent = () => {
         open={showTrialExpiredModal}
         onClose={closeTrialExpiredModal}
         onUpgrade={handleUpgrade}
+      />
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={handleOnboardingComplete}
       />
     </Box>
   );

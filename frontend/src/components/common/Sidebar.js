@@ -33,14 +33,14 @@ const DRAWER_WIDTH = 240;
 // Menu principal do sistema
 const menuItems = [
   {
-    text: 'Dashboard',
-    icon: DashboardIcon,
-    path: '/dashboard'
-  },
-  {
     text: 'Agenda',
     icon: CalendarIcon,
     path: '/agenda-lite'
+  },
+  {
+    text: 'Dashboard',
+    icon: DashboardIcon,
+    path: '/dashboard'
   },
   {
     text: 'Pacientes',

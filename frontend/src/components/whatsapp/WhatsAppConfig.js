@@ -17,6 +17,7 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 import whatsappService from '../../services/whatsappService';
+import useAutomationStatus from '../../hooks/useAutomationStatus';
 
 
 export default function WhatsAppConfig() {
@@ -28,13 +29,17 @@ export default function WhatsAppConfig() {
       startTime: '09:00',
       endTime: '18:00'
     },
-    webhookUrl: ''
+    webhookUrl: '',
+    lembretesAtivos: false
   });
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  // Hook para status das automações
+  const { automationStatus, loading: automationStatusLoading } = useAutomationStatus();
 
   useEffect(() => {
     loadConfig();
@@ -54,7 +59,8 @@ export default function WhatsAppConfig() {
             startTime: '09:00',
             endTime: '18:00'
           },
-          webhookUrl: data.config.webhookUrl || ''
+          webhookUrl: data.config.webhookUrl || '',
+          lembretesAtivos: data.config.lembretesAtivos || false
         });
       }
     } catch (err) {
@@ -233,7 +239,46 @@ export default function WhatsAppConfig() {
         </CardContent>
       </Card>
 
-      {/* Botão Salvar */}
+      {/* Lembretes Automáticos */}
+      <Card variant="outlined" sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Lembretes Automáticos
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure lembretes automáticos para agendamentos
+          </Typography>
+
+          {automationStatus?.blocked && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Automações bloqueadas:</strong> WhatsApp desconectado. 
+                Os lembretes estão temporariamente desabilitados.
+              </Typography>
+            </Alert>
+          )}
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={config.lembretesAtivos}
+                onChange={(e) => setConfig({ ...config, lembretesAtivos: e.target.checked })}
+                disabled={automationStatus?.blocked}
+              />
+            }
+            label="Ativar lembretes automáticos"
+          />
+
+          {config.lembretesAtivos && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                Lembretes serão enviados automaticamente 24h antes dos agendamentos.
+                Certifique-se de que o WhatsApp está conectado para o funcionamento correto.
+              </Typography>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button
           variant="contained"

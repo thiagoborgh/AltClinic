@@ -285,6 +285,9 @@ export const crmService = {
   // Log de Mensagens WhatsApp
   getMensagensLog: (filters) => api.get('/whatsapp/logs', { params: filters }),
   
+  // Status das Automações WhatsApp
+  getAutomationStatus: () => api.get('/whatsapp/automation/status'),
+  
   // Automações
   getAutomacoes: () => api.get('/crm/automacoes'),
   createAutomacao: (dados) => api.post('/crm/automacao', dados),
@@ -293,6 +296,26 @@ export const crmService = {
   
   // Relatórios
   getRelatorioInativos: (dias) => api.get('/crm/relatorios/inativos', { params: { dias } }),
+
+  // Onboarding
+  getOnboardingStatus: () => api.get('/onboarding/status'),
+  updateOnboardingStep: (stepName, completed) => api.patch(`/onboarding/step/${stepName}`, { completed }),
+  resetOnboarding: () => api.post('/onboarding/reset'),
+
+  // Profissionais (para onboarding)
+  createProfissional: (dados) => api.post('/professional', dados),
+
+  // WhatsApp Status (para onboarding)
+  getWhatsAppStatus: () => api.get('/whatsapp/session/status'),
+
+  // Mensagem de teste (para onboarding)
+  sendTestMessage: (numero) => api.post('/whatsapp/send-test', { numero }),
+
+  // Agendamentos (para onboarding)
+  createAgendamento: (dados) => api.post('/agenda/agendamentos', dados),
+
+  // Lembretes (para onboarding)
+  activateLembretes: () => api.post('/automacao/activate-lembretes'),
 };
 
 // Professional Service
