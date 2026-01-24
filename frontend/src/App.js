@@ -12,6 +12,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import LicenseSelector from './components/Auth/LicenseSelector';
 import TrialExpiredModal from './components/TrialExpiredModal';
 import OnboardingWizard from './components/common/OnboardingWizard';
+import { ToastContainer } from './hooks/useToast';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -21,6 +22,7 @@ import DashboardLayout from './layouts/DashboardLayoutNew';
 const Login = lazy(() => import('./pages/Login'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const DashboardNew = lazy(() => import('./pages/DashboardNew'));
 const AgendaNova = lazy(() => import('./pages/AgendaNova'));
 const AgendaLite = lazy(() => import('./pages/AgendaLite'));
@@ -36,6 +38,7 @@ const Relatorios = lazy(() => import('./pages/Relatorios'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes.js'));
 const WhatsApp = lazy(() => import('./pages/WhatsApp'));
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
+const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
 const AppContent = () => {
   const { 
     isAuthenticated, 
@@ -101,13 +104,13 @@ const AppContent = () => {
     <Box sx={{ minHeight: '100vh' }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-        {/* Landing Page - rota pública - temporariamente desabilitada */}
-        {/* <Route path="/landing" element={<LandingPage />} /> */}
+        {/* Landing Page - rota pública */}
+        <Route path="/landing" element={<LandingPage />} />
         
         {/* Rota raiz - redireciona baseado na autenticação */}
         <Route path="/" element={
           isAuthenticated ? <Navigate to="/agenda-lite" replace /> : 
-          <Navigate to="/login" replace />
+          <Navigate to="/landing" replace />
         } />
 
         {/* Rotas públicas */}
@@ -146,6 +149,7 @@ const AppContent = () => {
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="billing" element={<BillingPage />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
             {/* <Route path="billing" element={<BillingPage />} /> */}
           </Route>
         )}
@@ -180,6 +184,7 @@ const AppContent = () => {
         onClose={() => setShowOnboarding(false)}
         onComplete={handleOnboardingComplete}
       />
+      <ToastContainer />
     </Box>
   );
 };

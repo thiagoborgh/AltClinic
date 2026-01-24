@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   Alert,
   Grid,
-  Divider,
   CircularProgress
 } from '@mui/material';
 import {
@@ -39,7 +38,7 @@ export default function WhatsAppConfig() {
   const [success, setSuccess] = useState(false);
 
   // Hook para status das automações
-  const { automationStatus, loading: automationStatusLoading } = useAutomationStatus();
+  const { automationStatus } = useAutomationStatus();
 
   useEffect(() => {
     loadConfig();

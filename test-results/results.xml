@@ -1,0 +1,536 @@
+<testsuites id="" name="" tests="128" failures="0" skipped="128" errors="0" time="0.47495400000000015">
+<testsuite name="complete-system.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="chromium" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve navegar pelo dashboard principal" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve gerenciar pacientes" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve configurar WhatsApp" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve realizar fluxo completo de atendimento" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve fazer login na intranet" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve navegar pelo dashboard admin" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerenciar licenças" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve configurar licença específica" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerar relatórios" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve sincronizar configurações entre sistemas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve monitorar WhatsApp globalmente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em dispositivos móveis" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em tablets" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve proteger rotas administrativas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve fazer logout corretamente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve validar formulários" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="chromium" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="complete-system.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="firefox" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve navegar pelo dashboard principal" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve gerenciar pacientes" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve configurar WhatsApp" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve realizar fluxo completo de atendimento" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve fazer login na intranet" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve navegar pelo dashboard admin" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerenciar licenças" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve configurar licença específica" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerar relatórios" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve sincronizar configurações entre sistemas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve monitorar WhatsApp globalmente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em dispositivos móveis" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em tablets" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve proteger rotas administrativas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve fazer logout corretamente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve validar formulários" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="firefox" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="complete-system.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="webkit" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve navegar pelo dashboard principal" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve gerenciar pacientes" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve configurar WhatsApp" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve realizar fluxo completo de atendimento" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve fazer login na intranet" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve navegar pelo dashboard admin" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerenciar licenças" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve configurar licença específica" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerar relatórios" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve sincronizar configurações entre sistemas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve monitorar WhatsApp globalmente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em dispositivos móveis" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em tablets" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve proteger rotas administrativas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve fazer logout corretamente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve validar formulários" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="webkit" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="complete-system.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="Mobile Chrome" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve navegar pelo dashboard principal" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve gerenciar pacientes" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve configurar WhatsApp" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve realizar fluxo completo de atendimento" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve fazer login na intranet" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve navegar pelo dashboard admin" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerenciar licenças" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve configurar licença específica" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerar relatórios" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve sincronizar configurações entre sistemas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve monitorar WhatsApp globalmente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em dispositivos móveis" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em tablets" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve proteger rotas administrativas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve fazer logout corretamente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve validar formulários" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="Mobile Chrome" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="complete-system.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="Mobile Safari" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve navegar pelo dashboard principal" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve gerenciar pacientes" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve configurar WhatsApp" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🎭 E2E - Sistema SAEE Completo › Deve realizar fluxo completo de atendimento" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve fazer login na intranet" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve navegar pelo dashboard admin" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerenciar licenças" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve configurar licença específica" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🏢 E2E - Intranet Altclinic › Deve gerar relatórios" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve sincronizar configurações entre sistemas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔄 E2E - Integração SAEE x Admin › Deve monitorar WhatsApp globalmente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em dispositivos móveis" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="📱 E2E - Responsividade › Deve funcionar em tablets" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve proteger rotas administrativas" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve fazer logout corretamente" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🔒 E2E - Segurança › Deve validar formulários" classname="complete-system.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="Mobile Safari" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="critical-flows.spec.js" timestamp="2026-01-24T00:41:54.279Z" hostname="critical-flows" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › ✅ Fluxo Completo de Onboarding" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Conexão e Desconexão WhatsApp" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📅 Criação de Agendamento" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 💬 Envio de Mensagem Teste" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔄 Reenvio de Mensagem com Falha" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📊 Verificação de Analytics" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 🔐 Validação de Segurança" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="🚀 E2E - Fluxos Críticos do SAEE › 📱 Responsividade Mobile" classname="critical-flows.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

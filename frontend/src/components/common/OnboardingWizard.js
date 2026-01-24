@@ -40,6 +40,7 @@ import {
   ArrowBack
 } from '@mui/icons-material';
 import { useToast } from '../../hooks/useToast';
+import { useAnalytics, ANALYTICS_EVENTS } from '../../hooks/useAnalytics';
 import { crmService } from '../../services/api';
 
 const OnboardingWizard = ({ open, onClose, onComplete }) => {
@@ -76,6 +77,7 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
   });
 
   const { showToast } = useToast();
+  const { trackEvent } = useAnalytics();
 
   const steps = [
     {
@@ -114,6 +116,10 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
   useEffect(() => {
     if (open) {
       loadProgress();
+      // Track onboarding iniciado
+      trackEvent(ANALYTICS_EVENTS.ONBOARDING_STARTED, {
+        step: 'modal_opened'
+      });
     }
   }, [open]);
 
@@ -147,6 +153,15 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
       const response = await crmService.updateOnboardingStep(stepName, completed);
       if (response.success) {
         setProgress(response.data);
+
+        // Track conclusão de etapa
+        if (completed) {
+          trackEvent(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
+            step: stepName,
+            stepIndex: activeStep
+          });
+        }
+
         return response.data;
       }
     } catch (error) {
@@ -174,6 +189,13 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
       } else {
         // Onboarding completo
         showToast('🎉 Parabéns! Você completou o onboarding!', 'success');
+
+        // Track onboarding concluído
+        trackEvent(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
+          totalSteps: steps.length,
+          completionTime: Date.now() // Pode ser usado para calcular tempo total
+        });
+
         onComplete && onComplete();
         onClose();
       }
@@ -260,6 +282,12 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
         showToast('Conecte seu WhatsApp primeiro nas configurações', 'warning');
         throw new Error('WhatsApp não conectado');
       }
+
+      // Track WhatsApp conectado
+      trackEvent(ANALYTICS_EVENTS.WHATSAPP_CONNECTED, {
+        context: 'onboarding'
+      });
+
       showToast('WhatsApp conectado!', 'success');
     } catch (error) {
       showToast('WhatsApp não está conectado', 'error');
@@ -283,6 +311,12 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
         whatsapp: { ...prev.whatsapp, mensagemEnviada: true }
       }));
 
+      // Track mensagem de teste enviada
+      trackEvent(ANALYTICS_EVENTS.FIRST_MESSAGE_SENT, {
+        context: 'onboarding',
+        testMessage: true
+      });
+
       showToast('Mensagem de teste enviada!', 'success');
     } catch (error) {
       showToast('Erro ao enviar mensagem de teste', 'error');
@@ -301,6 +335,13 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
     try {
       // Por enquanto, apenas simulamos a criação
       // TODO: Implementar API real quando disponível
+
+      // Track primeiro agendamento criado
+      trackEvent(ANALYTICS_EVENTS.FIRST_APPOINTMENT_CREATED, {
+        context: 'onboarding',
+        service: servico
+      });
+
       showToast('Primeiro agendamento criado!', 'success');
     } catch (error) {
       showToast('Erro ao criar agendamento', 'error');
@@ -319,6 +360,12 @@ const OnboardingWizard = ({ open, onClose, onComplete }) => {
     try {
       // Por enquanto, apenas simulamos a ativação
       // TODO: Implementar API real quando disponível
+
+      // Track lembretes ativados
+      trackEvent(ANALYTICS_EVENTS.REMINDERS_ACTIVATED, {
+        context: 'onboarding'
+      });
+
       showToast('Lembretes ativados!', 'success');
     } catch (error) {
       showToast('Erro ao ativar lembretes', 'error');

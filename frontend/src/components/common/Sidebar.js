@@ -24,7 +24,8 @@ import {
   Settings as ConfiguracoesIcon,
   LocalHospital as MedicosIcon,
   AccessTime as EsperaIcon,
-  CreditCard as LicencasIcon
+  CreditCard as LicencasIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isFeatureEnabled } from '../../config/features';
@@ -92,6 +93,12 @@ const menuItems = [
     icon: LicencasIcon,
     path: '/billing',
     feature: 'licencas'
+  },
+  {
+    text: 'Analytics',
+    icon: AnalyticsIcon,
+    path: '/analytics',
+    feature: 'analytics'
   },
   {
     text: 'Configurações',

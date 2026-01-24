@@ -18,7 +18,6 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Alert,
   CircularProgress,
   Paper,
   Divider,
@@ -48,13 +47,15 @@ const MessageTemplatesManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [activeTab, setActiveTab] = useState('confirmacao');
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
   const [formData, setFormData] = useState({
     nome: '',
     tipo: 'confirmacao',
     mensagem: '',
     ativo: true
   });
-  const [previewData, setPreviewData] = useState({
+  const [previewData] = useState({
     nome: 'Maria Silva',
     hora: '14:30',
     data: '15/01/2026',
@@ -356,8 +357,8 @@ const MessageTemplatesManager = () => {
                           <IconButton
                             size="small"
                             onClick={() => {
-                              const preview = renderPreview(template.mensagem);
-                              alert(`Preview:\n\n${preview}`);
+                              setPreviewTemplate(template);
+                              setPreviewDialogOpen(true);
                             }}
                           >
                             <Preview />
@@ -494,6 +495,31 @@ const MessageTemplatesManager = () => {
             startIcon={<Save />}
           >
             {editingTemplate ? 'Atualizar' : 'Criar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de Preview */}
+      <Dialog
+        open={previewDialogOpen}
+        onClose={() => setPreviewDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Preview: {previewTemplate?.nome}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+            {previewTemplate ? renderPreview(previewTemplate.mensagem) : ''}
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            * Este é um exemplo com dados fictícios para preview
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialogOpen(false)}>
+            Fechar
           </Button>
         </DialogActions>
       </Dialog>

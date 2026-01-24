@@ -23,6 +23,7 @@ export const FEATURES_ENABLED = {
   relatorios: getEnvFeature('REACT_APP_FEATURE_RELATORIOS', false),
   sala_espera: getEnvFeature('REACT_APP_FEATURE_SALA_ESPERA', false),
   licencas: getEnvFeature('REACT_APP_FEATURE_LICENCAS', false),
+  analytics: getEnvFeature('REACT_APP_FEATURE_ANALYTICS', false),
 
   // Funcionalidades experimentais
   automacoes_avancadas: getEnvFeature('REACT_APP_FEATURE_AUTOMACOES_AVANCADAS', false),

@@ -56,14 +56,17 @@ import 'moment/locale/pt-br';
 // Hooks
 import { useProfessionalSchedules } from '../hooks/useProfessionalSchedules';
 import { useToast } from '../hooks/useToast';
+import { useAgendaCache } from '../stores/agendaCache';
+import { usePacienteSearch } from '../hooks/useDebounce';
 
 // Serviços
 import agendamentoService from '../services/agendamentoService';
 
 // Componentes
 import ConfiguracaoGrade from '../components/ConfiguracaoGrade';
-import ModalAgendamento from '../components/ModalAgendamento';
-import ModalListaEspera from '../components/ModalListaEspera';
+import LoadingButton from '../components/common/LoadingButton';
+import VirtualizedAgendaList from '../components/common/VirtualizedAgendaList';
+import { LazyModalAgendamento, LazyModalListaEspera, LazyConfiguracaoGrade } from '../components/common/LazyModal';
 
 // Estilos
 import '../styles/agenda-lite.css';
@@ -72,6 +75,19 @@ import '../styles/agenda-lite.css';
 moment.locale('pt-br');
 
 const AgendaLite = () => {
+  // Hooks de cache e busca
+  const {
+    fetchProfissionais,
+    fetchPacientes,
+    setProfissionais,
+    setPacientes,
+    profissionais,
+    pacientes,
+    getPacienteById,
+    getProfissionalById
+  } = useAgendaCache();
+
+  const { showToast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedProfessional, setSelectedProfessional] = useState('1');
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -93,7 +109,12 @@ const AgendaLite = () => {
   const [blockReason, setBlockReason] = useState('');
   const [blockDuration, setBlockDuration] = useState(30);
   
-  const { showToast } = useToast();
+  // Hook para busca de pacientes com debounce
+  const {
+    isSearching: pacientesSearching,
+    results: pacientesFiltrados,
+    clearResults
+  } = usePacienteSearch(searchTerm);
   
   // Função para obter cores das campanhas sazonais
   const getCampanhaColor = () => {
@@ -122,8 +143,7 @@ const AgendaLite = () => {
     getAvailableTimesForDay
   } = useProfessionalSchedules(selectedProfessional);
 
-  // Sistema profissional: sem dados mockados - profissionais virão da API/configuração
-  const profissionais = [];
+  // Profissionais vêm do cache do Zustand
 
   // Função para salvar agendamento (integrada com API)
   const handleSaveAgendamento = async (agendamentoData) => {
@@ -220,21 +240,28 @@ const AgendaLite = () => {
 
   // Estado dos agendamentos - carregar da API
   const [agendamentos, setAgendamentos] = useState([]);
-  const [agendamentosLoading, setAgendamentosLoading] = useState(true);
-  const [agendamentosError, setAgendamentosError] = useState(null);
 
   // Carregar agendamentos da API
   const carregarAgendamentos = async () => {
     try {
-      setAgendamentosLoading(true);
-      setAgendamentosError(null);
-      
       console.log('🔄 Carregando agendamentos da API...');
-      
+
+      // Carregar dados em paralelo para performance
+      const [profissionaisData, pacientesData] = await Promise.all([
+        fetchProfissionais().catch(err => {
+          console.warn('Erro ao carregar profissionais:', err);
+          return [];
+        }),
+        fetchPacientes().catch(err => {
+          console.warn('Erro ao carregar pacientes:', err);
+          return [];
+        })
+      ]);
+
       // Definir intervalo de datas (ex: últimos 30 dias e próximos 30 dias)
       const dataInicio = moment().subtract(30, 'days').format('YYYY-MM-DD');
       const dataFim = moment().add(30, 'days').format('YYYY-MM-DD');
-      
+
       const agendamentosAPI = await agendamentoService.buscarAgendamentosLite({
         data_inicio: dataInicio,
         data_fim: dataFim
@@ -251,12 +278,9 @@ const AgendaLite = () => {
       
     } catch (error) {
       console.log('ℹ️ Usando agendamentos locais');
-      setAgendamentosError(error.message);
       
       // Fallback para localStorage em caso de erro da API (sem notificação)
       await carregarFallbackLocalStorage();
-    } finally {
-      setAgendamentosLoading(false);
     }
   };
 
@@ -1289,14 +1313,15 @@ const AgendaLite = () => {
           <Button onClick={() => setBlockModalOpen(false)}>
             Cancelar
           </Button>
-          <Button 
+          <LoadingButton 
             onClick={handleBlockSlot} 
             variant="contained" 
             startIcon={<Block />}
             disabled={!blockReason.trim()}
+            loading={false} // Por enquanto sem loading, pode ser implementado depois
           >
             Confirmar Bloqueio
-          </Button>
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -1347,8 +1372,8 @@ const AgendaLite = () => {
         professionalId={selectedProfessional}
       />
 
-      {/* Modal de Lista de Espera */}
-      <ModalListaEspera
+      {/* Modal de Lista de Espera - Lazy Loaded */}
+      <LazyModalListaEspera
         open={listaEsperaOpen}
         onClose={() => setListaEsperaOpen(false)}
         professionalId={selectedProfessional}
@@ -1358,8 +1383,8 @@ const AgendaLite = () => {
         }}
       />
 
-      {/* Modal de Agendamento */}
-      <ModalAgendamento
+      {/* Modal de Agendamento - Lazy Loaded */}
+      <LazyModalAgendamento
         open={agendamentoModalOpen}
         onClose={() => {
           setAgendamentoModalOpen(false);

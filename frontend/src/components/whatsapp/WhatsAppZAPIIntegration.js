@@ -32,6 +32,7 @@ import {
   BarChart
 } from '@mui/icons-material';
 import api from '../../services/api';
+import { useToast } from '../../hooks/useToast';
 
 const WhatsAppZAPIIntegration = () => {
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,8 @@ const WhatsAppZAPIIntegration = () => {
   const [selectedPlan, setSelectedPlan] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+
+  const { showSuccess, showError, showInfo } = useToast();
 
   // Carregar dados iniciais
   const loadData = useCallback(async () => {
@@ -79,7 +82,7 @@ const WhatsAppZAPIIntegration = () => {
   // Ativar WhatsApp Z-API
   const handleActivate = async () => {
     if (!phoneNumber.match(/^\+55\d{10,11}$/)) {
-      alert('Número deve estar no formato +55DDDXXXXXXX');
+      showError('Número deve estar no formato +55DDDXXXXXXX');
       return;
     }
 
@@ -90,10 +93,10 @@ const WhatsAppZAPIIntegration = () => {
       if (response.data.success) {
         setInstanceId(response.data.instanceId);
         setActivationStatus('pending');
-        alert('Instância criada! Agora obtenha o QR code para conectar.');
+        showSuccess('Instância criada! Agora obtenha o QR code para conectar.');
       }
     } catch (error) {
-      alert('Erro ao ativar: ' + error.response?.data?.message);
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -111,7 +114,7 @@ const WhatsAppZAPIIntegration = () => {
         setQrCode(response.data.qrCode);
       }
     } catch (error) {
-      alert('Erro ao obter QR: ' + error.response?.data?.message);
+      showError(error);
     } finally {
       setLoading(false);
     }
@@ -144,7 +147,7 @@ const WhatsAppZAPIIntegration = () => {
         window.location.href = response.data.checkoutUrl;
       }
     } catch (error) {
-      alert('Erro no upgrade: ' + error.response?.data?.message);
+      showError(error);
     } finally {
       setLoading(false);
     }

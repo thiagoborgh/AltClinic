@@ -12,10 +12,12 @@ export default defineConfig({
     ['junit', { outputFile: 'test-results/results.xml' }]
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 10000,
+    navigationTimeout: 30000,
   },
 
   projects: [
@@ -39,6 +41,12 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
     },
+    // Projeto específico para fluxos críticos
+    {
+      name: 'critical-flows',
+      testMatch: '**/critical-flows.spec.js',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 
   webServer: [
@@ -46,6 +54,7 @@ export default defineConfig({
       command: 'npm run dev',
       port: 3000,
       reuseExistingServer: !process.env.CI,
+      timeout: 120000,
     },
     {
       command: 'cd admin/backend && npm run dev',
@@ -58,4 +67,13 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
   ],
+
+  // Configurações específicas para testes E2E
+  expect: {
+    timeout: 10000,
+  },
+
+  // Hooks globais
+  globalSetup: require.resolve('./tests/e2e/global-setup.js'),
+  globalTeardown: require.resolve('./tests/e2e/global-teardown.js'),
 });

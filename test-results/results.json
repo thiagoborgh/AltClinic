@@ -1,0 +1,2770 @@
+{
+  "config": {
+    "configFile": "C:\\Projetos\\clinica-estetica-mvp\\playwright.config.js",
+    "rootDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "C:\\Projetos\\clinica-estetica-mvp\\tests\\e2e\\global-setup.js",
+    "globalTeardown": "C:\\Projetos\\clinica-estetica-mvp\\tests\\e2e\\global-teardown.js",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Projetos/clinica-estetica-mvp/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "critical-flows",
+        "name": "critical-flows",
+        "testDir": "C:/Projetos/clinica-estetica-mvp/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/critical-flows.spec.js"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/results.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.0",
+    "workers": 2,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "complete-system.spec.js",
+      "file": "complete-system.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "🎭 E2E - Sistema SAEE Completo",
+          "file": "complete-system.spec.js",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Deve navegar pelo dashboard principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-541464c857bdee479987",
+              "file": "complete-system.spec.js",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar pacientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-d3b87f719d01942b172a",
+              "file": "complete-system.spec.js",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-93bd1dc3244542aa95b0",
+              "file": "complete-system.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Deve realizar fluxo completo de atendimento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-9939880be9c5d949382a",
+              "file": "complete-system.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ea89a6e888f35ecc0d8d",
+              "file": "complete-system.spec.js",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar pacientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-e2220ffab52a8c3ff3ad",
+              "file": "complete-system.spec.js",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-00a0e090403d5c2cee9b",
+              "file": "complete-system.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Deve realizar fluxo completo de atendimento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-4547c8165ac7bcda307b",
+              "file": "complete-system.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-9b54f4cd41d44c9e6955",
+              "file": "complete-system.spec.js",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar pacientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-615a1bf724373cbffc36",
+              "file": "complete-system.spec.js",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-96731d55c808fc8735ee",
+              "file": "complete-system.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Deve realizar fluxo completo de atendimento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-494377a15008fc57a3cc",
+              "file": "complete-system.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-55ea09f42623ebc90378",
+              "file": "complete-system.spec.js",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar pacientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-0cc4f2920393931ad872",
+              "file": "complete-system.spec.js",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-2f262e64bb5f356b7d00",
+              "file": "complete-system.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Deve realizar fluxo completo de atendimento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-a3078879569cd587eb69",
+              "file": "complete-system.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard principal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-133714dcb34d64b3c444",
+              "file": "complete-system.spec.js",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar pacientes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-e672ba345c06ec243ad1",
+              "file": "complete-system.spec.js",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-3ab3822db0bc84457814",
+              "file": "complete-system.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Deve realizar fluxo completo de atendimento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-2a8f6a5a523e2e856d22",
+              "file": "complete-system.spec.js",
+              "line": 67,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "🏢 E2E - Intranet Altclinic",
+          "file": "complete-system.spec.js",
+          "line": 94,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Deve fazer login na intranet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-f1dda1c6f50f898bf6fa",
+              "file": "complete-system.spec.js",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-f9117f1b476409262921",
+              "file": "complete-system.spec.js",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar licenças",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-adf45c59d6a154f5bba0",
+              "file": "complete-system.spec.js",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar licença específica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-597b84e9668e5b001d81",
+              "file": "complete-system.spec.js",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "Deve gerar relatórios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ecf320417a5b4cf45356",
+              "file": "complete-system.spec.js",
+              "line": 197,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer login na intranet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-3adf003281b72b3f2157",
+              "file": "complete-system.spec.js",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-8aa0e6d00855c9a0766c",
+              "file": "complete-system.spec.js",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar licenças",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-d9e567d6e5078bf35fc8",
+              "file": "complete-system.spec.js",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar licença específica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-834f47aebbd16315795a",
+              "file": "complete-system.spec.js",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "Deve gerar relatórios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-1eba4a062141c1200f0a",
+              "file": "complete-system.spec.js",
+              "line": 197,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer login na intranet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ec03076823387bdeb541",
+              "file": "complete-system.spec.js",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-1079c6e3f47b6566c551",
+              "file": "complete-system.spec.js",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar licenças",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-25bd92ff2d6a65de0d35",
+              "file": "complete-system.spec.js",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar licença específica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-2c517f2a14d4b844f3d2",
+              "file": "complete-system.spec.js",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "Deve gerar relatórios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-b7609a0efb250f927599",
+              "file": "complete-system.spec.js",
+              "line": 197,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer login na intranet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ae6059bc7b8a55da1490",
+              "file": "complete-system.spec.js",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-f711f65bb43cb408dece",
+              "file": "complete-system.spec.js",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar licenças",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-0d8cfc5582bc3a86ca12",
+              "file": "complete-system.spec.js",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar licença específica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-e0794077ec9b4a76a9e4",
+              "file": "complete-system.spec.js",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "Deve gerar relatórios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-a13ecdd4008214a925be",
+              "file": "complete-system.spec.js",
+              "line": 197,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer login na intranet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-e7aa61bd4425405b7f4d",
+              "file": "complete-system.spec.js",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "Deve navegar pelo dashboard admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ce54697be27c07adc062",
+              "file": "complete-system.spec.js",
+              "line": 112,
+              "column": 7
+            },
+            {
+              "title": "Deve gerenciar licenças",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-96f97e9652d8b80cd879",
+              "file": "complete-system.spec.js",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "Deve configurar licença específica",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-879d51218f7e9f04ee93",
+              "file": "complete-system.spec.js",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "Deve gerar relatórios",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-0022e2cbd2a2d029d8e7",
+              "file": "complete-system.spec.js",
+              "line": 197,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "🔄 E2E - Integração SAEE x Admin",
+          "file": "complete-system.spec.js",
+          "line": 225,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Deve sincronizar configurações entre sistemas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-aa11cef743cc4e7d1d79",
+              "file": "complete-system.spec.js",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "Deve monitorar WhatsApp globalmente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-d5a82faddf320b6e6b11",
+              "file": "complete-system.spec.js",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "Deve sincronizar configurações entre sistemas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-6455fa1152fa7c619796",
+              "file": "complete-system.spec.js",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "Deve monitorar WhatsApp globalmente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-b41705291fadd9813475",
+              "file": "complete-system.spec.js",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "Deve sincronizar configurações entre sistemas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-d8eea682585afc39c713",
+              "file": "complete-system.spec.js",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "Deve monitorar WhatsApp globalmente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-e52ba0ef25b656026975",
+              "file": "complete-system.spec.js",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "Deve sincronizar configurações entre sistemas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-41ed5ffaf76756206857",
+              "file": "complete-system.spec.js",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "Deve monitorar WhatsApp globalmente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-b8d04c98840f75f52acd",
+              "file": "complete-system.spec.js",
+              "line": 260,
+              "column": 7
+            },
+            {
+              "title": "Deve sincronizar configurações entre sistemas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-ca93ee8290a41d6733f4",
+              "file": "complete-system.spec.js",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "Deve monitorar WhatsApp globalmente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-0dd217df52df08938330",
+              "file": "complete-system.spec.js",
+              "line": 260,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "📱 E2E - Responsividade",
+          "file": "complete-system.spec.js",
+          "line": 282,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Deve funcionar em dispositivos móveis",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-25de98a005aafe38fbf4",
+              "file": "complete-system.spec.js",
+              "line": 284,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-451bcf22f5a48327acc2",
+              "file": "complete-system.spec.js",
+              "line": 303,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em dispositivos móveis",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-824bc5b16a7c4c147898",
+              "file": "complete-system.spec.js",
+              "line": 284,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-9189f3221ae8c1fa4321",
+              "file": "complete-system.spec.js",
+              "line": 303,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em dispositivos móveis",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-47f655328a861f50af85",
+              "file": "complete-system.spec.js",
+              "line": 284,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-f7f1ab5d841e1b10cd28",
+              "file": "complete-system.spec.js",
+              "line": 303,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em dispositivos móveis",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-688662f1351a5a30679a",
+              "file": "complete-system.spec.js",
+              "line": 284,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-18e28bbff3162eaae41d",
+              "file": "complete-system.spec.js",
+              "line": 303,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em dispositivos móveis",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-bb4f7fd17129c0e1bebe",
+              "file": "complete-system.spec.js",
+              "line": 284,
+              "column": 7
+            },
+            {
+              "title": "Deve funcionar em tablets",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-2cc3e9f9d667cedc5c96",
+              "file": "complete-system.spec.js",
+              "line": 303,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "🔒 E2E - Segurança",
+          "file": "complete-system.spec.js",
+          "line": 320,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Deve proteger rotas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-c3e3ef0bfe01faa86117",
+              "file": "complete-system.spec.js",
+              "line": 322,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer logout corretamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-3707fc624b4a64345f54",
+              "file": "complete-system.spec.js",
+              "line": 330,
+              "column": 7
+            },
+            {
+              "title": "Deve validar formulários",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-92fcb3f3c7f67f8ed4dc",
+              "file": "complete-system.spec.js",
+              "line": 349,
+              "column": 7
+            },
+            {
+              "title": "Deve proteger rotas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-a58f531ac2cd6d9583de",
+              "file": "complete-system.spec.js",
+              "line": 322,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer logout corretamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-7b134ec89fa92025b57d",
+              "file": "complete-system.spec.js",
+              "line": 330,
+              "column": 7
+            },
+            {
+              "title": "Deve validar formulários",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-30e3fcf82078faddb0e2",
+              "file": "complete-system.spec.js",
+              "line": 349,
+              "column": 7
+            },
+            {
+              "title": "Deve proteger rotas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-12b8c2fb90e5dadd8616",
+              "file": "complete-system.spec.js",
+              "line": 322,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer logout corretamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-25185fd87e7b34b575c4",
+              "file": "complete-system.spec.js",
+              "line": 330,
+              "column": 7
+            },
+            {
+              "title": "Deve validar formulários",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-d1d127db6f46e3d7153e",
+              "file": "complete-system.spec.js",
+              "line": 349,
+              "column": 7
+            },
+            {
+              "title": "Deve proteger rotas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-f72c3be9670401a7a718",
+              "file": "complete-system.spec.js",
+              "line": 322,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer logout corretamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-7399502dab09678a5655",
+              "file": "complete-system.spec.js",
+              "line": 330,
+              "column": 7
+            },
+            {
+              "title": "Deve validar formulários",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-0744d8694d144d85f0ea",
+              "file": "complete-system.spec.js",
+              "line": 349,
+              "column": 7
+            },
+            {
+              "title": "Deve proteger rotas administrativas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-7541e8714e7199c8aa8a",
+              "file": "complete-system.spec.js",
+              "line": 322,
+              "column": 7
+            },
+            {
+              "title": "Deve fazer logout corretamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-9c20ed627a5153da7e23",
+              "file": "complete-system.spec.js",
+              "line": 330,
+              "column": 7
+            },
+            {
+              "title": "Deve validar formulários",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "62276153bebd0f0335bb-051e16d38007e5750640",
+              "file": "complete-system.spec.js",
+              "line": 349,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "critical-flows.spec.js",
+      "file": "critical-flows.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "🚀 E2E - Fluxos Críticos do SAEE",
+          "file": "critical-flows.spec.js",
+          "line": 18,
+          "column": 6,
+          "specs": [
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-02c6315772abc340adf6",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-694850e943cbb072659c",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-30722e449cb3062d1f97",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-4c52f3e7d587f88cbabb",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-c4891b3442e5a096af61",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-e6bc24de12ffa71fda22",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-72b1b017e814d7cca6a4",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-8320ebe4d6c6f201fdcd",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            },
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-495c17ae6cb8d146ea60",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-1cb72d0573ac5d5c1d96",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-12ca0106ea0776430af4",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-e842b4cebda26dc502f6",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-a113cf55c461eeae1de8",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-3a2aea25f8fafc63b85f",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-311a6e67a92f75edb111",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-63cb55cd0189161b811c",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            },
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-bcaf3901ea2868c8de8f",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-1e00cd6994b9eefbf9ec",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-b83c21c08136a5a7e6c9",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-8d3e51924e8ae8806582",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-5deb186a7c79f299f4c0",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-11d134a5826c27289511",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-0028c51082589be88705",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-479d2bed077ae01f0d05",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            },
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-7cc3376196002aab06e6",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-f296463a739e3519d6e9",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-6645574905d807161baa",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-73ff38f1559cd37bd1dd",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-3c155a464cf558c5d008",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-58de041fc3fa4c1a100d",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-4b8aa950f16fa1dfb651",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-aa7ff75857d009036db9",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            },
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-132e933bed1f9c217738",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-e0a589fd50dc673b3d9b",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-2dd18a61b685067748bb",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-cc0378a22c60a6f32189",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-eaea1ac2032ca2c48908",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-020d75b01455d53d696e",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-22b278daffbb155a3236",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-314808de619565665aae",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            },
+            {
+              "title": "✅ Fluxo Completo de Onboarding",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-9216a7a829f463c763da",
+              "file": "critical-flows.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "📱 Conexão e Desconexão WhatsApp",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-55669771041601525edb",
+              "file": "critical-flows.spec.js",
+              "line": 110,
+              "column": 7
+            },
+            {
+              "title": "📅 Criação de Agendamento",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-2fb4099a93c7c51e1172",
+              "file": "critical-flows.spec.js",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "💬 Envio de Mensagem Teste",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-aa000feba17a8c55be08",
+              "file": "critical-flows.spec.js",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "🔄 Reenvio de Mensagem com Falha",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-033eb9cdedbd79f7f780",
+              "file": "critical-flows.spec.js",
+              "line": 243,
+              "column": 7
+            },
+            {
+              "title": "📊 Verificação de Analytics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-6222ccc3c60789f0b66d",
+              "file": "critical-flows.spec.js",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "🔐 Validação de Segurança",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-4f7171bfbee288993a95",
+              "file": "critical-flows.spec.js",
+              "line": 310,
+              "column": 7
+            },
+            {
+              "title": "📱 Responsividade Mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "critical-flows",
+                  "projectName": "critical-flows",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e14dd59f59bd59baee8e-676f24d1d19964b8bdf1",
+              "file": "critical-flows.spec.js",
+              "line": 336,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-24T00:41:53.806Z",
+    "duration": 474.9540000000002,
+    "expected": 0,
+    "skipped": 128,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
