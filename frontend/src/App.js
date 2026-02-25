@@ -39,6 +39,7 @@ const Configuracoes = lazy(() => import('./pages/Configuracoes.js'));
 const WhatsApp = lazy(() => import('./pages/WhatsApp'));
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
+const Cadastros = lazy(() => import('./pages/Cadastros'));
 const AppContent = () => {
   const { 
     isAuthenticated, 
@@ -91,7 +92,6 @@ const AppContent = () => {
     setShowOnboarding(false);
     setOnboardingCompleted(true);
   };  if (loading) {
-    console.log('Mostrando tela de loading');
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <LoadingSpinner message="Verificando autenticação..." />
@@ -99,7 +99,6 @@ const AppContent = () => {
     );
   }
 
-  console.log('Renderizando rotas principais');
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <Suspense fallback={<LoadingSpinner />}>
@@ -137,6 +136,7 @@ const AppContent = () => {
             <Route path="dashboard" element={<DashboardNew />} />
             <Route path="agendamentos" element={<AgendaNova />} />
             <Route path="agenda-lite" element={<AgendaLite />} />
+            <Route path="cadastros" element={<Cadastros />} />
             <Route path="pacientes" element={<ListaPacientesNova />} />
             <Route path="cadastro-paciente" element={<CadastroPacienteNovo />} />
             <Route path="profissionais" element={<ProfissionaisMedicosNovo />} />
@@ -150,7 +150,6 @@ const AppContent = () => {
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="analytics" element={<AnalyticsDashboard />} />
-            {/* <Route path="billing" element={<BillingPage />} /> */}
           </Route>
         )}
 
@@ -191,8 +190,6 @@ const AppContent = () => {
 
 // Componente principal
 function App() {
-  console.log('App com rotas completas renderizando...');
-  
   return (
     <AuthProvider>
       <AppContent />

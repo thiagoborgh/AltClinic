@@ -11,6 +11,7 @@ const getEnvFeature = (envVar, defaultValue = false) => {
 export const FEATURES_ENABLED = {
   // Funcionalidades principais (sempre visíveis por padrão)
   agenda: getEnvFeature('REACT_APP_FEATURE_AGENDA', true),
+  cadastros: getEnvFeature('REACT_APP_FEATURE_CADASTROS', true),
   pacientes: getEnvFeature('REACT_APP_FEATURE_PACIENTES', true),
   profissionais: getEnvFeature('REACT_APP_FEATURE_PROFISSIONAIS', true),
   whatsapp: getEnvFeature('REACT_APP_FEATURE_WHATSAPP', true),

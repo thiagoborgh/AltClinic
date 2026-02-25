@@ -50,6 +50,7 @@ import {
   Settings,
   Edit
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 
@@ -75,6 +76,8 @@ import '../styles/agenda-lite.css';
 moment.locale('pt-br');
 
 const AgendaLite = () => {
+  const navigate = useNavigate();
+
   // Hooks de cache e busca
   const {
     fetchProfissionais,
@@ -89,7 +92,7 @@ const AgendaLite = () => {
 
   const { showToast } = useToast();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedProfessional, setSelectedProfessional] = useState('1');
+  const [selectedProfessional, setSelectedProfessional] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [blockModalOpen, setBlockModalOpen] = useState(false);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
@@ -101,9 +104,7 @@ const AgendaLite = () => {
   const [listaEsperaOpen, setListaEsperaOpen] = useState(false); // Modal de lista de espera
   const [agendamentoModalOpen, setAgendamentoModalOpen] = useState(false); // Modal de agendamento
   const [selectedSlotForAgendamento, setSelectedSlotForAgendamento] = useState(null); // Slot selecionado para agendamento
-  
-  // Debug log
-  console.log('📊 AgendaLite - configGradeOpen:', configGradeOpen);
+  const [addProfissionalModalOpen, setAddProfissionalModalOpen] = useState(false); // Modal aviso de cobrança ao adicionar profissional
   
   // Estados para bloqueio
   const [blockReason, setBlockReason] = useState('');
@@ -140,7 +141,8 @@ const AgendaLite = () => {
   
   // Hook para horários dinâmicos
   const {
-    getAvailableTimesForDay
+    getAvailableTimesForDay,
+    refetch: refetchSchedules
   } = useProfessionalSchedules(selectedProfessional);
 
   // Profissionais vêm do cache do Zustand
@@ -161,6 +163,8 @@ const AgendaLite = () => {
             data: agendamentoData.data,
             paciente: agendamentoData.paciente,
             procedimento: agendamentoData.procedimento || 'Consulta',
+            profissional: agendamentoData.profissional || selectedProfessional,
+            convenio: agendamentoData.convenio || 'particular',
             status: agendamentoData.status || 'não confirmado',
             valor: parseFloat(agendamentoData.valor) || 0,
             observacoes: agendamentoData.observacoes
@@ -169,14 +173,15 @@ const AgendaLite = () => {
         
         console.log('✅ API: Agendamento atualizado:', agendamentoAtualizado);
         
-        // Atualizar estado local
+        // Atualizar estado local e recarregar para garantir sincronia
         setAgendamentos(prev => {
-          const updated = prev.map(ag => 
+          const updated = prev.map(ag =>
             ag.id === agendamentoData.agendamentoId ? agendamentoAtualizado : ag
           );
           console.log('📋 EDIÇÃO: Lista após atualização:', updated);
           return updated;
         });
+        await carregarAgendamentos();
         
         // Mostrar mensagem de sucesso
         const statusMsg = agendamentoData.status === 'não confirmado' ? 'Status: Não confirmado' : `Status: ${agendamentoData.status}`;
@@ -192,6 +197,8 @@ const AgendaLite = () => {
           data: agendamentoData.data,
           paciente: agendamentoData.paciente,
           procedimento: agendamentoData.procedimento || 'Consulta',
+          profissional: agendamentoData.profissional || selectedProfessional,
+          convenio: agendamentoData.convenio || 'particular',
           status: agendamentoData.status || 'não confirmado',
           valor: parseFloat(agendamentoData.valor) || 0,
           observacoes: agendamentoData.observacoes
@@ -338,6 +345,13 @@ const AgendaLite = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-selecionar primeiro profissional quando a lista carregar
+  useEffect(() => {
+    if (profissionais.length > 0 && !selectedProfessional) {
+      setSelectedProfessional(String(profissionais[0].id));
+    }
+  }, [profissionais, selectedProfessional]);
+
   // Obter profissional atual
   const profissionalAtual = profissionais.find(p => p.id === selectedProfessional);
 
@@ -379,7 +393,6 @@ const AgendaLite = () => {
 
   // Gerar slots dinâmicos com base na visualização
   const slots = useMemo(() => {
-    console.log('🏁 INICIO: Gerando slots com agendamentos:', agendamentos);
     
     // Funções auxiliares para diferentes visualizações
     const getWeekDays = (date) => {
@@ -406,126 +419,72 @@ const AgendaLite = () => {
 
     try {
       if (viewMode === 'diaria') {
-        // Visualização diária - apenas um dia
-        const availableTimes = getAvailableTimesForDay(selectedDate, selectedProfessional);
-        console.log('🕒 DEBUG Horários disponíveis (diária):', availableTimes);
-        console.log('🕒 DEBUG Data selecionada:', selectedDate);
-        console.log('🕒 DEBUG Profissional selecionado:', selectedProfessional);
-        
-        if (!availableTimes || availableTimes.length === 0) {
-          console.log('⚠️ Sistema profissional: Sem horários configurados - retornando vazio');
-          return [];
-        }
-        
-        const rawSlots = availableTimes.map(timeSlot => {
-          const horario = timeSlot.time;
-          const diaFormatado = moment(selectedDate).format('YYYY-MM-DD');
-          
-          // Debug detalhado dos agendamentos
-          console.log(`🔍 DEBUG: Procurando agendamento para ${horario} no dia ${diaFormatado}. Total de agendamentos: ${agendamentos.length}`);
-          
-          // Filtrar agendamentos do dia selecionado primeiro
-          const agendamentosDoDia = agendamentos.filter(a => {
-            const dataAgendamento = moment(a.data).format('YYYY-MM-DD');
-            const match = dataAgendamento === diaFormatado;
-            console.log(`📅 DEBUG FILTRO: ${a.paciente} - Data: ${a.data} -> Formatada: ${dataAgendamento} | Dia selecionado: ${diaFormatado} | Match: ${match}`);
-            return match;
-          });
-          
-          console.log(`📅 DEBUG: Agendamentos do dia ${diaFormatado}:`, agendamentosDoDia);
-          
-          // Verificar se tem agendamento no horário específico
-          const agendamento = agendamentosDoDia.find(a => a.horario === horario);
-          
-          // Debug de agendamentos
-          if (agendamento) {
-            console.log(`✅ Agendamento encontrado: ${horario} - ${agendamento.paciente}`);
-          } else {
-            console.log(`❌ Nenhum agendamento encontrado para ${horario}`);
-          }
-          
-          // DEBUG: Temporariamente ignorando lógica de bloqueio
-          // const bloqueado = bloqueios.some(b => {
-          //   const inicioBloco = moment(horario, 'HH:mm');
-          //   const fimBloco = moment(b.horario, 'HH:mm').add(b.duracao, 'minutes');
-          //   const slotTime = moment(horario, 'HH:mm');
-          //   return slotTime.isBetween(inicioBloco, fimBloco, null, '[)');
-          // });
+        const scheduledTimes = new Set(
+          getAvailableTimesForDay(selectedDate, selectedProfessional).map(t => t.time)
+        );
 
+        // Grade completa 08:00–17:30 (30 min), independente de grade configurada
+        const fullGrid = [];
+        for (let h = 8; h <= 17; h++) {
+          fullGrid.push(`${String(h).padStart(2, '0')}:00`);
+          fullGrid.push(`${String(h).padStart(2, '0')}:30`);
+        }
+
+        const diaFormatado = moment(selectedDate).format('YYYY-MM-DD');
+        const agendamentosDoDia = agendamentos.filter(a =>
+          moment(a.data).format('YYYY-MM-DD') === diaFormatado
+        );
+
+        return fullGrid.map(horario => {
+          const agendamento = agendamentosDoDia.find(a => a.horario === horario);
+          const isScheduled = scheduledTimes.has(horario);
           return {
             horario,
-            dia: moment(selectedDate).format('YYYY-MM-DD'),
+            dia: diaFormatado,
             agendamento,
-            bloqueado: false, // FORÇAR DESBLOQUEADO PARA DEBUG
-            vago: !agendamento, // VAGO APENAS SE NÃO TEM AGENDAMENTO
+            bloqueado: false,
+            vago: !agendamento,
+            tipo: isScheduled ? 'normal' : 'encaixe',
             potencialReceita: 200,
-            debug: agendamento ? 'has appointment' : 'available'
           };
         });
-        
-        // Remover duplicatas por horário
-        const uniqueSlots = rawSlots.reduce((unique, slot) => {
-          const exists = unique.find(s => s.horario === slot.horario);
-          if (!exists) {
-            unique.push(slot);
-          }
-          return unique;
-        }, []);
-        
-        console.log(`🔧 DEBUG: Slots antes da deduplicação: ${rawSlots.length}, após: ${uniqueSlots.length}`);
-        
-        return uniqueSlots;
       } else if (viewMode === 'semanal') {
-        // Visualização semanal - 7 dias
         const weekDays = getWeekDays(selectedDate);
         const weekSlots = [];
-        
+
+        // Grade completa 08:00–17:30 reutilizada para todos os dias da semana
+        const fullGrid = [];
+        for (let h = 8; h <= 17; h++) {
+          fullGrid.push(`${String(h).padStart(2, '0')}:00`);
+          fullGrid.push(`${String(h).padStart(2, '0')}:30`);
+        }
+
         weekDays.forEach(day => {
-          const availableTimes = getAvailableTimesForDay(day, selectedProfessional);
-          
-          availableTimes.forEach(timeSlot => {
-            const horario = timeSlot.time;
-            const dayKey = moment(day).format('YYYY-MM-DD');
-            
-            // Buscar agendamento para este horário e dia específico
-            console.log(`🔍 DEBUG SEMANAL: Procurando agendamento para ${horario} no dia ${dayKey}. Total de agendamentos: ${agendamentos.length}`);
-            const agendamento = agendamentos.find(a => {
-              const agendamentoMatch = a.horario === horario;
-              const dataMatch = moment(a.data || day).format('YYYY-MM-DD') === dayKey;
-              
-              if (agendamentoMatch && dataMatch) {
-                console.log(`✅ SEMANAL: Agendamento encontrado: ${horario} - ${a.paciente} no dia ${dayKey}`);
-                return true;
-              }
-              return false;
-            });
-            
-            if (!agendamento) {
-              console.log(`❌ SEMANAL: Nenhum agendamento encontrado para ${horario} no dia ${dayKey}`);
-            }
-            
-            // DEBUG: Temporariamente ignorando lógica de bloqueio (mesma correção da diária)
-            // const bloqueado = bloqueios.some(b => {
-            //   const inicioBloco = moment(horario, 'HH:mm');
-            //   const fimBloco = moment(b.horario, 'HH:mm').add(b.duracao, 'minutes');
-            //   const slotTime = moment(horario, 'HH:mm');
-            //   return slotTime.isBetween(inicioBloco, fimBloco, null, '[)') && 
-            //          moment(b.data || day).format('YYYY-MM-DD') === dayKey;
-            // });
+          const scheduledTimes = new Set(
+            getAvailableTimesForDay(day, selectedProfessional).map(t => t.time)
+          );
+          const dayKey = moment(day).format('YYYY-MM-DD');
+
+          fullGrid.forEach(horario => {
+            const agendamento = agendamentos.find(a =>
+              a.horario === horario &&
+              moment(a.data || day).format('YYYY-MM-DD') === dayKey
+            );
+            const isScheduled = scheduledTimes.has(horario);
 
             weekSlots.push({
               horario,
               dia: dayKey,
               diaFormatado: moment(day).format('ddd DD/MM'),
               agendamento,
-              bloqueado: false, // FORÇAR DESBLOQUEADO PARA DEBUG (mesma correção da diária)
-              vago: !agendamento, // VAGO APENAS SE NÃO TEM AGENDAMENTO (mesma correção da diária)
+              bloqueado: false,
+              vago: !agendamento,
+              tipo: isScheduled ? 'normal' : 'encaixe',
               potencialReceita: 200,
-              debug: agendamento ? 'has appointment' : 'available'
             });
           });
         });
-        
+
         return weekSlots;
       } else {
         // Visualização mensal - resumo dos dias
@@ -593,7 +552,15 @@ const AgendaLite = () => {
   const handleSlotClick = (slot) => {
     setSelectedSlot(slot);
     if (slot.vago) {
-      // Slot vago - pode agendar ou bloquear
+      setSelectedSlotForAgendamento({
+        ...slot,
+        professionalId: selectedProfessional,
+        isEncaixe: slot.tipo === 'encaixe',
+      });
+      setAgendamentoModalOpen(true);
+    } else if (slot.agendamento) {
+      setSelectedSlotForAgendamento({ ...slot, professionalId: selectedProfessional, isEdit: true });
+      setAgendamentoModalOpen(true);
     }
   };
 
@@ -776,7 +743,7 @@ const AgendaLite = () => {
           <Grid item xs={12} md={3}>
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <Tooltip title="Atualizar">
-                <IconButton size="small">
+                <IconButton size="small" onClick={() => carregarAgendamentos()}>
                   <Refresh />
                 </IconButton>
               </Tooltip>
@@ -796,16 +763,18 @@ const AgendaLite = () => {
                   <HourglassEmpty />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Configurar Grade">
-                <IconButton 
-                  size="small"
-                  onClick={() => {
-                    console.log('🔧 Abrindo configuração de grade');
-                    setConfigGradeOpen(true);
-                  }}
-                >
-                  <Settings />
-                </IconButton>
+              <Tooltip title={profissionais.length === 0 ? "Cadastre um profissional primeiro" : "Configurar Grade"}>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={profissionais.length === 0}
+                    onClick={() => {
+                      setConfigGradeOpen(true);
+                    }}
+                  >
+                    <Settings />
+                  </IconButton>
+                </span>
               </Tooltip>
             </Stack>
           </Grid>
@@ -860,35 +829,79 @@ const AgendaLite = () => {
             <Typography variant="h6" sx={{ mb: 2 }}>
               Filtros
             </Typography>
-            
-            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Profissional</InputLabel>
-              <Select
-                value={selectedProfessional}
-                label="Profissional"
-                onChange={(e) => setSelectedProfessional(e.target.value)}
-              >
-                {profissionais.map(prof => (
-                  <MenuItem key={prof.id} value={prof.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 24, height: 24, bgcolor: prof.cor }}>
-                        {prof.nome.charAt(0)}
-                      </Avatar>
-                      {prof.nome}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
+
+            {profissionais.length === 0 ? (
+              <Box sx={{ mb: 2 }}>
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  Nenhum profissional cadastrado. A agenda fica desabilitada até adicionar um profissional.
+                </Alert>
+                <Alert severity="info" icon={false} sx={{ mb: 2, py: 1 }}>
+                  <Typography variant="caption" display="block" fontWeight="bold" sx={{ mb: 0.5 }}>
+                    Cada profissional: +R$ 19,90/mês
+                  </Typography>
+                  <Typography variant="caption" display="block" color="text.secondary">
+                    Plano base R$ 79,90/mês inclui 1 profissional. Confira em <strong>Assinatura</strong>.
+                  </Typography>
+                </Alert>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="small"
+                  startIcon={<Add />}
+                  onClick={() => { navigate('/profissionais'); }}
+                >
+                  Cadastrar Profissional
+                </Button>
+              </Box>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                  <InputLabel>Profissional</InputLabel>
+                  <Select
+                    value={selectedProfessional}
+                    label="Profissional"
+                    onChange={(e) => setSelectedProfessional(e.target.value)}
+                  >
+                    {profissionais.map(prof => (
+                      <MenuItem key={prof.id} value={String(prof.id)}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 24, height: 24, bgcolor: prof.cor || 'primary.main', fontSize: 12 }}>
+                            {prof.nome.charAt(0)}
+                          </Avatar>
+                          {prof.nome}
+                          {prof.especialidade && (
+                            <Typography variant="caption" color="text.secondary">
+                              · {prof.especialidade}
+                            </Typography>
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={() => setAddProfissionalModalOpen(true)}
+                  sx={{ mb: 2 }}
+                >
+                  Adicionar Profissional
+                </Button>
+              </>
+            )}
+
             {profissionalAtual && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2" fontWeight="bold">
                   {profissionalAtual.nome}
                 </Typography>
-                <Typography variant="caption">
-                  Horário: {profissionalAtual.horario}
-                </Typography>
+                {profissionalAtual.especialidade && (
+                  <Typography variant="caption">
+                    {profissionalAtual.especialidade}
+                  </Typography>
+                )}
               </Alert>
             )}
             
@@ -916,26 +929,80 @@ const AgendaLite = () => {
             <Typography variant="h6" sx={{ mb: 2 }}>
               Próximos Agendamentos
             </Typography>
-            <List dense>
-              {agendamentos.slice(0, 3).map(agendamento => (
-                <ListItem key={agendamento.id} divider>
-                  <ListItemIcon>
-                    <Event color={agendamento.status === 'confirmado' ? 'success' : 'warning'} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={`${agendamento.horario} - ${agendamento.paciente}`}
-                    secondary={`${agendamento.procedimento} - R$ ${agendamento.valor}`}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            {(() => {
+              const agora = moment();
+              const proximos = agendamentos
+                .filter(a => {
+                  const dt = moment(`${a.data} ${a.horario}`, 'YYYY-MM-DD HH:mm');
+                  return dt.isSameOrAfter(agora) && a.status !== 'cancelado';
+                })
+                .sort((a, b) => {
+                  const da = moment(`${a.data} ${a.horario}`, 'YYYY-MM-DD HH:mm');
+                  const db = moment(`${b.data} ${b.horario}`, 'YYYY-MM-DD HH:mm');
+                  return da - db;
+                })
+                .slice(0, 5);
+
+              if (proximos.length === 0) {
+                return (
+                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 2 }}>
+                    Nenhum agendamento futuro
+                  </Typography>
+                );
+              }
+
+              return (
+                <List dense>
+                  {proximos.map(agendamento => (
+                    <ListItem key={agendamento.id} divider>
+                      <ListItemIcon>
+                        <Event color={agendamento.status === 'confirmado' ? 'success' : 'warning'} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`${agendamento.horario} – ${agendamento.paciente}`}
+                        secondary={`${moment(agendamento.data).format('DD/MM')} · ${agendamento.procedimento}`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              );
+            })()}
           </Paper>
           </Grid>
         )}
 
         {/* Grade Central */}
         <Grid item xs={12} md={sidebarExpanded ? 9 : 12} className="main-content-expanded">
-          {viewMode === 'mensal' ? (
+          {profissionais.length === 0 ? (
+            // Empty state quando não há profissional cadastrado
+            <Paper sx={{ p: 6, textAlign: 'center' }}>
+              <Typography variant="h4" sx={{ mb: 2 }}>👨‍⚕️</Typography>
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                Nenhum profissional cadastrado
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2, maxWidth: 420, mx: 'auto' }}>
+                Para usar a agenda você precisa cadastrar ao menos um profissional e configurar os horários de atendimento.
+              </Typography>
+              <Alert severity="info" icon={false} sx={{ mb: 3, maxWidth: 420, mx: 'auto', textAlign: 'left' }}>
+                <Typography variant="caption" display="block" fontWeight="bold" sx={{ mb: 0.5 }}>
+                  Impacto na assinatura: +R$ 19,90/mês por profissional
+                </Typography>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  Plano base R$ 79,90/mês inclui 1 profissional. Cada adicional é +R$ 19,90/mês. Veja detalhes em <strong>Assinatura</strong>.
+                </Typography>
+              </Alert>
+              <Stack direction="row" spacing={2} justifyContent="center">
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<Add />}
+                  onClick={() => { navigate('/profissionais'); }}
+                >
+                  Cadastrar Profissional
+                </Button>
+              </Stack>
+            </Paper>
+          ) : viewMode === 'mensal' ? (
             // Visualização Mensal - Calendário
             <Paper sx={{ p: 2 }}>
               <Typography variant="h6" sx={{ mb: 2 }}>
@@ -953,21 +1020,43 @@ const AgendaLite = () => {
                 
                 {slots.map((daySlot, index) => (
                   <Grid item xs key={index}>
-                    <Card 
-                      sx={{ 
-                        p: 1, 
+                    <Card
+                      sx={{
+                        p: 1,
                         minHeight: 60,
                         cursor: 'pointer',
-                        bgcolor: daySlot.totalAgendamentos > 0 ? 'primary.light' : 'grey.100'
+                        bgcolor: daySlot.totalAgendamentos > 0 ? 'primary.light' : 'grey.100',
+                        '&:hover .add-day-btn': { opacity: 1 }
                       }}
                       onClick={() => {
                         setSelectedDate(new Date(daySlot.dia));
                         setViewMode('diaria');
                       }}
                     >
-                      <Typography variant="body2" fontWeight="bold">
-                        {daySlot.diaFormatado}
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          {daySlot.diaFormatado}
+                        </Typography>
+                        <Tooltip title="Novo agendamento">
+                          <IconButton
+                            className="add-day-btn"
+                            size="small"
+                            sx={{ p: 0.25, opacity: 0, transition: 'opacity 0.2s' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSlotForAgendamento({
+                                dia: daySlot.dia,
+                                horario: null,
+                                vago: true,
+                                professionalId: selectedProfessional
+                              });
+                              setAgendamentoModalOpen(true);
+                            }}
+                          >
+                            <Add fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                       {daySlot.totalAgendamentos > 0 && (
                         <>
                           <Badge badgeContent={daySlot.totalAgendamentos} color="primary" />
@@ -1000,7 +1089,7 @@ const AgendaLite = () => {
                         {dia}
                       </Typography>
                       <Typography variant="caption" textAlign="center" display="block" color="primary">
-                        {moment().startOf('week').add(index, 'days').format('DD/MM')}
+                        {moment(selectedDate).startOf('week').add(index + 1, 'days').format('DD/MM')}
                       </Typography>
                     </Grid>
                   ))}
@@ -1023,55 +1112,33 @@ const AgendaLite = () => {
                   // Grade diária - lista vertical
                   (() => {
                     const slotsToRender = stats.hasFilter ? stats.filteredSlots : slots;
-                    
-                    // Debug para verificar duplicação
-                    const horariosUnicos = [...new Set(slots.map(s => s.horario))];
-                    console.log('🔍 DEBUG DUPLICAÇÃO:', {
-                      totalSlots: slots.length,
-                      horariosUnicos: horariosUnicos.length,
-                      primeiros5Horarios: slots.slice(0, 5).map(s => s.horario),
-                      hasDuplicacao: slots.length !== horariosUnicos.length
-                    });
-                    
-                    console.log('🎯 Renderizando slots diários:', {
-                      totalSlots: slots.length,
-                      slotsToRender: slotsToRender.length,
-                      hasFilter: stats.hasFilter,
-                      viewMode,
-                      selectedProfessional,
-                      selectedDate: selectedDate.toDateString()
-                    });
-                    
+
                     if (slotsToRender.length === 0) {
                       return (
-                        <Card sx={{ p: 3, textAlign: 'center' }}>
-                          <Typography variant="h6" color="text.secondary">
-                            Nenhum horário disponível para este dia
+                        <Card sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="h6" color="text.secondary" gutterBottom>
+                            Nenhum horário configurado para este dia
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Selecione outro dia ou configure novos horários para este profissional
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Configure a grade de horários do profissional para habilitar agendamentos.
                           </Typography>
+                          <Button
+                            variant="outlined"
+                            startIcon={<Settings />}
+                            onClick={() => setConfigGradeOpen(true)}
+                            disabled={profissionais.length === 0}
+                          >
+                            Configurar grade de horários
+                          </Button>
                         </Card>
                       );
                     }
                     
                     return slotsToRender.map((slot, index) => {
-                      // Debug detalhado de cada slot
-                      if (index < 5) { // Log apenas os primeiros 5 slots
-                        console.log(`🔍 SLOT ${index} DEBUG:`, {
-                          horario: slot.horario,
-                          vago: slot.vago,
-                          bloqueado: slot.bloqueado,
-                          agendamento: slot.agendamento,
-                          potencialReceita: slot.potencialReceita,
-                          originalData: slot
-                        });
-                      }
-                      
                       return (
                     <Card
                       key={index}
-                      className={`slot-card-new ${slot.vago ? 'slot-vago-new' : slot.bloqueado ? 'slot-bloqueado-new' : 'slot-ocupado-new'} ${selectedSlot?.horario === slot.horario ? 'selected' : ''}`}
+                      className={`slot-card-new ${slot.agendamento ? 'slot-ocupado-new' : slot.tipo === 'encaixe' ? 'slot-encaixe-new' : 'slot-vago-new'} ${selectedSlot?.horario === slot.horario ? 'selected' : ''}`}
                       sx={{ p: 2, mb: 1 }}
                       onClick={() => handleSlotClick(slot)}
                     >
@@ -1095,7 +1162,7 @@ const AgendaLite = () => {
                               Bloqueado
                             </Typography>
                           )}
-                          {slot.vago && (
+                          {slot.vago && slot.tipo === 'normal' && (
                             <Box>
                               <Typography variant="body1" color="success.main" fontWeight="bold">
                                 Disponível – Potencial R$ {slot.potencialReceita}
@@ -1105,8 +1172,13 @@ const AgendaLite = () => {
                               </Typography>
                             </Box>
                           )}
+                          {slot.vago && slot.tipo === 'encaixe' && (
+                            <Typography variant="body2" color="text.disabled">
+                              Vazio
+                            </Typography>
+                          )}
                         </Box>
-                        
+
                         <Box>
                           {slot.agendamento ? (
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -1135,7 +1207,7 @@ const AgendaLite = () => {
                                 Editar
                               </Button>
                             </Stack>
-                          ) : slot.vago ? (
+                          ) : slot.vago && slot.tipo === 'normal' ? (
                             <Stack direction="row" spacing={1}>
                               <Button
                                 size="small"
@@ -1144,11 +1216,7 @@ const AgendaLite = () => {
                                 color="success"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const slotWithProfessional = {
-                                    ...slot,
-                                    professionalId: selectedProfessional
-                                  };
-                                  setSelectedSlotForAgendamento(slotWithProfessional);
+                                  setSelectedSlotForAgendamento({ ...slot, professionalId: selectedProfessional });
                                   setAgendamentoModalOpen(true);
                                 }}
                               >
@@ -1185,7 +1253,7 @@ const AgendaLite = () => {
                           {dia}
                         </Typography>
                         <Typography variant="caption" display="block">
-                          {moment().startOf('week').add(index, 'days').format('DD/MM')}
+                          {moment(selectedDate).startOf('week').add(index + 1, 'days').format('DD/MM')}
                         </Typography>
                       </Box>
                     ))}
@@ -1210,15 +1278,18 @@ const AgendaLite = () => {
                         ...slotsByHour[horario].map((slot, dayIndex) => (
                           <Card
                             key={`${horario}-${dayIndex}`}
-                            className={`weekly-slot ${slot ? (slot.vago ? 'available' : slot.bloqueado ? 'blocked' : 'occupied') : 'empty'}`}
-                            sx={{ 
+                            className={`weekly-slot ${slot ? (slot.agendamento ? 'occupied' : slot.tipo === 'encaixe' ? 'encaixe' : 'available') : 'empty'}`}
+                            sx={{
                               minHeight: 50,
                               p: 0.5,
                               cursor: slot ? 'pointer' : 'default',
                               opacity: slot ? 1 : 0.3,
                               display: 'flex',
                               flexDirection: 'column',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              ...(slot?.tipo === 'encaixe' && slot?.vago && {
+                                opacity: 0.5,
+                              })
                             }}
                             onClick={() => slot && handleSlotClick(slot)}
                           >
@@ -1229,9 +1300,14 @@ const AgendaLite = () => {
                                     {slot.agendamento.paciente}
                                   </Typography>
                                 )}
-                                {slot.vago && (
+                                {slot.vago && slot.tipo === 'normal' && (
                                   <Typography variant="caption" color="success.main" fontWeight="bold">
                                     Livre
+                                  </Typography>
+                                )}
+                                {slot.vago && slot.tipo === 'encaixe' && (
+                                  <Typography variant="caption" color="text.disabled">
+                                    Vazio
                                   </Typography>
                                 )}
                                 {slot.bloqueado && (
@@ -1370,6 +1446,7 @@ const AgendaLite = () => {
         open={configGradeOpen}
         onClose={() => setConfigGradeOpen(false)}
         professionalId={selectedProfessional}
+        onSave={() => refetchSchedules()}
       />
 
       {/* Modal de Lista de Espera - Lazy Loaded */}
@@ -1392,11 +1469,56 @@ const AgendaLite = () => {
         }}
         slotData={selectedSlotForAgendamento}
         onSave={handleSaveAgendamento}
-        profissionais={[]}
+        profissionais={profissionais}
         procedimentos={[]}
         convenios={[]}
         salas={[]}
       />
+
+      {/* Modal de aviso de cobrança ao adicionar profissional */}
+      <Dialog
+        open={addProfissionalModalOpen}
+        onClose={() => setAddProfissionalModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="warning" />
+            Adicionar Profissional
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold" gutterBottom>
+              Impacto na sua mensalidade
+            </Typography>
+            <Typography variant="body2">
+              Ao cadastrar um novo profissional, sua assinatura será acrescida de{' '}
+              <strong>R$ 19,90/mês</strong> a partir da próxima fatura.
+            </Typography>
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Você tem atualmente <strong>{profissionais.length} profissional{profissionais.length !== 1 ? 'is' : ''}</strong>.
+            Com mais um, sua mensalidade passará para{' '}
+            <strong>
+              R$ {(79.90 + profissionais.length * 19.90).toFixed(2).replace('.', ',')}/mês
+            </strong>.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddProfissionalModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => { navigate('/profissionais'); }}
+          >
+            Entendi, Adicionar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

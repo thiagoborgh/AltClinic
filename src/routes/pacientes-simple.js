@@ -1,246 +1,212 @@
 const express = require('express');
 const router = express.Router();
+const multiTenantDb = require('../models/MultiTenantDatabase');
 
-// Dados mock para desenvolvimento
-const mockPacientes = [
-  {
-    id: 1,
-    nome: 'Maria Silva Santos',
-    email: 'maria.santos@email.com',
-    telefone: '(11) 99999-1234',
-    cpf: '123.456.789-01',
-    dataNascimento: '1985-03-15',
-    endereco: {
-      logradouro: 'Rua das Flores, 123',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01234-567'
-    },
-    estadoCivil: 'Casada',
-    profissao: 'Engenheira',
-    convenio: {
-      nome: 'Unimed',
-      numero: '123456789'
-    },
-    observacoes: 'Paciente regular, sem restrições',
-    criadoEm: '2024-01-15T10:30:00Z',
-    ultimoAtendimento: '2024-08-15T14:20:00Z',
-    status: 'ativo'
-  },
-  {
-    id: 2,
-    nome: 'João Pedro Oliveira',
-    email: 'joao.oliveira@email.com',
-    telefone: '(11) 88888-5678',
-    cpf: '987.654.321-09',
-    dataNascimento: '1978-07-22',
-    endereco: {
-      logradouro: 'Av. Paulista, 456',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01310-100'
-    },
-    estadoCivil: 'Solteiro',
-    profissao: 'Advogado',
-    convenio: {
-      nome: 'Bradesco Saúde',
-      numero: '987654321'
-    },
-    observacoes: 'Primeira consulta agendada',
-    criadoEm: '2024-02-20T09:15:00Z',
-    ultimoAtendimento: '2024-08-22T16:30:00Z',
-    status: 'ativo'
-  },
-  {
-    id: 3,
-    nome: 'Ana Carolina Lima',
-    email: 'ana.lima@email.com',
-    telefone: '(11) 77777-9999',
-    cpf: '456.789.123-45',
-    dataNascimento: '1992-11-08',
-    endereco: {
-      logradouro: 'Rua Augusta, 789',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cep: '01305-000'
-    },
-    estadoCivil: 'Solteira',
-    profissao: 'Designer',
-    convenio: {
-      nome: 'SulAmérica',
-      numero: '456789123'
-    },
-    observacoes: 'Paciente VIP',
-    criadoEm: '2024-03-10T11:45:00Z',
-    ultimoAtendimento: '2024-08-25T09:00:00Z',
-    status: 'ativo'
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function ensureTables(tenantDb) {
+  tenantDb.exec(`
+    CREATE TABLE IF NOT EXISTS pacientes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      cpf TEXT DEFAULT '',
+      telefone TEXT DEFAULT '',
+      email TEXT DEFAULT '',
+      data_nascimento TEXT DEFAULT '',
+      convenio TEXT DEFAULT '',
+      observacoes TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'ativo',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
+function getDb(tenantId) {
+  const db = multiTenantDb.getTenantDb(tenantId);
+  ensureTables(db);
+  return db;
+}
+
+function requireTenant(req, res) {
+  if (!req.tenantId) {
+    res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+    return false;
   }
-];
+  return true;
+}
+
+// ── Rotas ────────────────────────────────────────────────────────────────────
 
 /**
- * @route GET /api/pacientes
- * @desc Lista todos os pacientes
+ * GET /api/pacientes/buscar?q=termo
+ * Busca por nome, CPF ou telefone (server-side, para o Autocomplete)
  */
-router.get('/', (req, res) => {
-  try {
-    const pacientesFormatados = mockPacientes.map(p => ({
-      ...p,
-      idade: new Date().getFullYear() - new Date(p.dataNascimento).getFullYear()
-    }));
+router.get('/buscar', (req, res) => {
+  if (!requireTenant(req, res)) return;
+  const { q = '' } = req.query;
+  const term = q.trim();
 
-    res.json({
-      success: true,
-      pacientes: pacientesFormatados,
-      total: pacientesFormatados.length,
-      page: 1,
-      totalPages: 1
-    });
-  } catch (error) {
-    console.error('Erro ao listar pacientes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+  if (term.length < 2) {
+    return res.json({ success: true, pacientes: [] });
   }
-});
 
-/**
- * @route GET /api/pacientes/:id
- * @desc Busca paciente por ID
- */
-router.get('/:id', (req, res) => {
   try {
-    const { id } = req.params;
-    const paciente = mockPacientes.find(p => p.id.toString() === id);
+    const db = getDb(req.tenantId);
+    const like = `%${term}%`;
+    const termNum = term.replace(/\D/g, '');
+    const likeNum = termNum ? `%${termNum}%` : null;
 
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
-    }
-
-    const pacienteFormatado = {
-      ...paciente,
-      idade: new Date().getFullYear() - new Date(paciente.dataNascimento).getFullYear()
-    };
-
-    res.json({
-      success: true,
-      paciente: pacienteFormatado
-    });
-  } catch (error) {
-    console.error('Erro ao buscar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
-  }
-});
-
-/**
- * @route POST /api/pacientes/buscar
- * @desc Busca pacientes por termo
- */
-router.post('/buscar', (req, res) => {
-  try {
-    const { termo } = req.body;
-    
-    if (!termo || termo.length < 3) {
-      return res.json({
-        success: true,
-        pacientes: []
-      });
-    }
-
-    const pacientesFiltrados = mockPacientes.filter(p => 
-      p.nome.toLowerCase().includes(termo.toLowerCase()) ||
-      p.email.toLowerCase().includes(termo.toLowerCase()) ||
-      p.telefone.includes(termo) ||
-      p.cpf.includes(termo)
+    const rows = db.prepare(`
+      SELECT id, nome, cpf, telefone, email, data_nascimento, convenio, status
+      FROM pacientes
+      WHERE tenant_id = ?
+        AND status = 'ativo'
+        AND (
+          nome LIKE ? COLLATE NOCASE
+          OR cpf LIKE ?
+          OR telefone LIKE ?
+          ${likeNum ? 'OR REPLACE(REPLACE(REPLACE(cpf, ".", ""), "-", ""), " ", "") LIKE ?' : ''}
+          ${likeNum ? 'OR REPLACE(REPLACE(REPLACE(telefone, "(", ""), ")", ""), " ", "") LIKE ?' : ''}
+        )
+      ORDER BY nome ASC
+      LIMIT 50
+    `).all(
+      req.tenantId,
+      like, like, like,
+      ...(likeNum ? [likeNum, likeNum] : [])
     );
 
-    const pacientesFormatados = pacientesFiltrados.map(p => ({
-      ...p,
-      idade: new Date().getFullYear() - new Date(p.dataNascimento).getFullYear()
-    }));
-
-    res.json({
-      success: true,
-      pacientes: pacientesFormatados
-    });
+    res.json({ success: true, pacientes: rows });
   } catch (error) {
-    console.error('Erro na busca:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    console.error('Erro na busca de pacientes:', error);
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
   }
 });
 
 /**
- * @route POST /api/pacientes/verificar-duplicatas
- * @desc Verifica duplicatas de CPF ou telefone
+ * GET /api/pacientes
+ * Lista os 100 pacientes mais recentes (para fallback / telas de listagem)
  */
-router.post('/verificar-duplicatas', (req, res) => {
+router.get('/', (req, res) => {
+  if (!requireTenant(req, res)) return;
   try {
-    const { cpf, telefone } = req.body;
-    
-    const duplicataCpf = mockPacientes.find(p => p.cpf === cpf);
-    const duplicataTelefone = mockPacientes.find(p => p.telefone === telefone);
+    const db = getDb(req.tenantId);
+    const rows = db.prepare(`
+      SELECT id, nome, cpf, telefone, email, data_nascimento, convenio, status, created_at
+      FROM pacientes
+      WHERE tenant_id = ?
+      ORDER BY nome ASC
+      LIMIT 100
+    `).all(req.tenantId);
 
-    res.json({
-      success: true,
-      duplicatas: {
-        cpf: duplicataCpf ? duplicataCpf.nome : null,
-        telefone: duplicataTelefone ? duplicataTelefone.nome : null
-      }
-    });
+    res.json({ success: true, pacientes: rows, total: rows.length });
   } catch (error) {
-    console.error('Erro ao verificar duplicatas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    console.error('Erro ao listar pacientes:', error);
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
   }
 });
 
 /**
- * @route POST /api/pacientes
- * @desc Cria novo paciente
+ * GET /api/pacientes/:id
+ */
+router.get('/:id', (req, res) => {
+  if (!requireTenant(req, res)) return;
+  try {
+    const db = getDb(req.tenantId);
+    const row = db.prepare(
+      'SELECT * FROM pacientes WHERE id = ? AND tenant_id = ?'
+    ).get(req.params.id, req.tenantId);
+
+    if (!row) return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+
+    res.json({ success: true, paciente: row });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
+  }
+});
+
+/**
+ * POST /api/pacientes
  */
 router.post('/', (req, res) => {
+  if (!requireTenant(req, res)) return;
+  const { nome, cpf = '', telefone = '', email = '', data_nascimento = '', convenio = '', observacoes = '' } = req.body;
+
+  if (!nome || !nome.trim()) {
+    return res.status(400).json({ success: false, message: 'Nome é obrigatório' });
+  }
+
   try {
-    const novoPaciente = {
-      id: mockPacientes.length + 1,
-      ...req.body,
-      criadoEm: new Date().toISOString(),
-      status: 'ativo'
-    };
+    const db = getDb(req.tenantId);
+    const result = db.prepare(`
+      INSERT INTO pacientes (tenant_id, nome, cpf, telefone, email, data_nascimento, convenio, observacoes, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ativo')
+    `).run(req.tenantId, nome.trim(), cpf, telefone, email, data_nascimento, convenio, observacoes);
 
-    mockPacientes.push(novoPaciente);
-
-    const pacienteFormatado = {
-      ...novoPaciente,
-      idade: new Date().getFullYear() - new Date(novoPaciente.dataNascimento).getFullYear()
-    };
-
-    res.status(201).json({
-      success: true,
-      paciente: pacienteFormatado,
-      message: 'Paciente criado com sucesso'
-    });
+    const novo = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({ success: true, paciente: novo, message: 'Paciente criado com sucesso' });
   } catch (error) {
     console.error('Erro ao criar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
+  }
+});
+
+/**
+ * PUT /api/pacientes/:id
+ */
+router.put('/:id', (req, res) => {
+  if (!requireTenant(req, res)) return;
+  const { nome, cpf, telefone, email, data_nascimento, convenio, observacoes, status } = req.body;
+
+  if (!nome || !nome.trim()) {
+    return res.status(400).json({ success: false, message: 'Nome é obrigatório' });
+  }
+
+  try {
+    const db = getDb(req.tenantId);
+    const exists = db.prepare('SELECT id FROM pacientes WHERE id = ? AND tenant_id = ?')
+      .get(req.params.id, req.tenantId);
+    if (!exists) return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+
+    db.prepare(`
+      UPDATE pacientes
+      SET nome = ?, cpf = ?, telefone = ?, email = ?, data_nascimento = ?,
+          convenio = ?, observacoes = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND tenant_id = ?
+    `).run(
+      nome.trim(), cpf || '', telefone || '', email || '', data_nascimento || '',
+      convenio || '', observacoes || '', status || 'ativo',
+      req.params.id, req.tenantId
+    );
+
+    const updated = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(req.params.id);
+    res.json({ success: true, paciente: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/pacientes/:id  (soft-delete)
+ */
+router.delete('/:id', (req, res) => {
+  if (!requireTenant(req, res)) return;
+  try {
+    const db = getDb(req.tenantId);
+    const exists = db.prepare('SELECT id FROM pacientes WHERE id = ? AND tenant_id = ?')
+      .get(req.params.id, req.tenantId);
+    if (!exists) return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+
+    db.prepare(`
+      UPDATE pacientes SET status = 'inativo', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND tenant_id = ?
+    `).run(req.params.id, req.tenantId);
+
+    res.json({ success: true, message: 'Paciente removido com sucesso' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro interno', error: error.message });
   }
 });
 

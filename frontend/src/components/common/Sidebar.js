@@ -25,7 +25,8 @@ import {
   LocalHospital as MedicosIcon,
   AccessTime as EsperaIcon,
   CreditCard as LicencasIcon,
-  Analytics as AnalyticsIcon
+  Analytics as AnalyticsIcon,
+  ListAlt as CadastrosIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isFeatureEnabled } from '../../config/features';
@@ -39,6 +40,12 @@ const menuItems = [
     icon: CalendarIcon,
     path: '/agenda-lite',
     feature: 'agenda'
+  },
+  {
+    text: 'Cadastros',
+    icon: CadastrosIcon,
+    path: '/cadastros',
+    feature: 'cadastros'
   },
   {
     text: 'Dashboard',

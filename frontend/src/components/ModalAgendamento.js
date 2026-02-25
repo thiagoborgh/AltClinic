@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,7 +17,8 @@ import {
   FormControl,
   InputLabel,
   InputAdornment,
-  Autocomplete
+  Autocomplete,
+  Chip
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -30,6 +31,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import moment from 'moment';
 import 'moment/locale/pt-br';
+import api from '../services/api';
 
 moment.locale('pt-br');
 
@@ -63,6 +65,8 @@ const ModalAgendamento = ({
 
   const [pacienteOptions, setPacienteOptions] = useState([]);
   const [pacienteLoading, setPacienteLoading] = useState(false);
+  const [pacienteInput, setPacienteInput] = useState('');
+  const debounceRef = useRef(null);
   const [errors, setErrors] = useState({});
 
   // Opções de duração em minutos
@@ -84,6 +88,29 @@ const ModalAgendamento = ({
     { value: 'finalizado', label: 'Finalizado', color: 'default' }
   ];
 
+  // Busca debounced de pacientes na API
+  const handlePacienteInputChange = (value) => {
+    setPacienteInput(value);
+    setFormData(prev => ({ ...prev, paciente: value }));
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!value || value.length < 2) {
+      setPacienteOptions([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      setPacienteLoading(true);
+      api.get(`/pacientes/buscar?q=${encodeURIComponent(value)}`)
+        .then(res => {
+          setPacienteOptions(res.data?.pacientes || []);
+        })
+        .catch(err => console.error('Erro na busca de pacientes:', err))
+        .finally(() => setPacienteLoading(false));
+    }, 300);
+  };
+
   // Inicializar dados quando o slot é selecionado
   useEffect(() => {
     if (slotData && open) {
@@ -103,8 +130,10 @@ const ModalAgendamento = ({
         // Buscar sala ID pelo nome
         const salaEncontrada = salas.find(s => s.nome === agendamento.sala);
         
-        // Buscar profissional ID pelo nome
-        const profissionalEncontrado = profissionais.find(p => p.nome === agendamento.profissional);
+        // Buscar profissional por nome OU por ID (DB pode guardar ID ou nome)
+        const profissionalEncontrado = profissionais.find(
+          p => p.nome === agendamento.profissional || String(p.id) === String(agendamento.profissional)
+        );
         
         setFormData(prev => ({
           ...prev,
@@ -115,21 +144,22 @@ const ModalAgendamento = ({
           email: agendamento.email || '',
           horario: moment(slotData.horario, 'HH:mm'),
           duracao: agendamento.duracao || 30,
-          procedimento: procedimentoEncontrado ? procedimentoEncontrado.id : '',
-          profissional: profissionalEncontrado ? profissionalEncontrado.id : (slotData.professionalId || ''),
+          procedimento: procedimentoEncontrado ? procedimentoEncontrado.id : (agendamento.procedimento || ''),
+          profissional: profissionalEncontrado ? profissionalEncontrado.id : (agendamento.profissional || slotData.professionalId || ''),
           sala: salaEncontrada ? salaEncontrada.id : '',
-          convenio: convenioEncontrado ? convenioEncontrado.id : '',
+          convenio: convenioEncontrado ? convenioEncontrado.id : (agendamento.convenio || 'particular'),
           status: agendamento.status || 'não confirmado',
           valor: agendamento.valor ? agendamento.valor.toString() : '',
           observacoes: agendamento.observacoes || ''
         }));
         
         console.log('✅ EDIÇÃO: Formulário preenchido com sucesso');
+        setPacienteInput(agendamento.paciente || '');
       } else {
         // Novo agendamento
         setFormData(prev => ({
           ...prev,
-          horario: moment(slotData.horario, 'HH:mm'),
+          horario: slotData.horario ? moment(slotData.horario, 'HH:mm') : null,
           profissional: slotData.professionalId || ''
         }));
       }
@@ -157,64 +187,30 @@ const ModalAgendamento = ({
       });
       setErrors({});
       setPacienteOptions([]);
+      setPacienteInput('');
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     }
   }, [open]);
 
-  // Função para buscar pacientes (simulação - implementar com API real)
-  const handlePacienteSearch = async (inputValue) => {
-    if (inputValue.length < 2) {
-      setPacienteOptions([]);
-      return;
-    }
+  // Busca é server-side; desabilitar filtragem client-side do MUI
+  const pacienteFilterOptions = (options) => options;
 
-    setPacienteLoading(true);
-    try {
-      // TODO: Implementar busca real de pacientes
-      // Simulação de dados com mock dos dados
-      const { mockPacientes } = await import('../data/mockAgendamento');
-      const filtered = mockPacientes.filter(p => 
-        p.nome.toLowerCase().includes(inputValue.toLowerCase()) ||
-        p.cpf.includes(inputValue)
-      );
-
-      setPacienteOptions(filtered);
-    } catch (error) {
-      console.error('Erro ao buscar pacientes:', error);
-    } finally {
-      setPacienteLoading(false);
-    }
-  };
-
-  // Função para verificar duplicação de CPF
-  const checkCpfDuplication = async (cpf) => {
-    if (!cpf || cpf.length < 14) return false;
-    
-    try {
-      // TODO: Implementar verificação real com API
-      // Simulação de verificação
-      const { mockPacientes } = await import('../data/mockAgendamento');
-      const exists = mockPacientes.some(p => p.cpf === cpf);
-      
-      if (exists) {
-        setErrors(prev => ({
-          ...prev,
-          cpf: 'CPF já cadastrado no sistema'
-        }));
-        return true;
-      }
-      
-      // Limpar erro se CPF não existe
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.cpf;
-        return newErrors;
-      });
-      
-      return false;
-    } catch (error) {
-      console.error('Erro ao verificar CPF:', error);
-      return false;
-    }
+  // Verificar duplicação de CPF consultando a API
+  const checkCpfDuplication = (cpf) => {
+    if (!cpf || cpf.length < 14) return;
+    api.get(`/pacientes/buscar?q=${encodeURIComponent(cpf)}`)
+      .then(res => {
+        const cpfNum = cpf.replace(/\D/g, '');
+        const exists = (res.data?.pacientes || []).some(
+          p => (p.cpf || '').replace(/\D/g, '') === cpfNum
+        );
+        if (exists) {
+          setErrors(prev => ({ ...prev, cpf: 'CPF já cadastrado no sistema' }));
+        } else {
+          setErrors(prev => { const e = { ...prev }; delete e.cpf; return e; });
+        }
+      })
+      .catch(() => {});
   };
 
   // Verificar CPF quando alterar
@@ -222,6 +218,7 @@ const ModalAgendamento = ({
     if (formData.pacienteNovo && formData.cpf && formData.cpf.length === 14) {
       checkCpfDuplication(formData.cpf);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.cpf, formData.pacienteNovo]);
 
   // Validação do formulário
@@ -252,7 +249,7 @@ const ModalAgendamento = ({
       }
     }
 
-    if (!formData.horario) {
+    if (!formData.horario || !formData.horario.isValid()) {
       newErrors.horario = 'Horário é obrigatório';
     }
 
@@ -338,6 +335,16 @@ const ModalAgendamento = ({
 
         {/* Content */}
         <DialogContent sx={{ pt: 3 }}>
+          {slotData?.isEncaixe && !slotData?.isEdit && (
+            <Box sx={{ mb: 2 }}>
+              <Chip
+                label="Encaixe — horário fora da grade configurada"
+                color="warning"
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+          )}
           <Grid container spacing={4}>
             {/* Coluna Esquerda - Informações do Paciente */}
             <Grid item xs={12} md={6}>
@@ -351,17 +358,26 @@ const ModalAgendamento = ({
                 <Autocomplete
                   freeSolo
                   options={pacienteOptions}
-                  getOptionLabel={(option) => 
-                    typeof option === 'string' ? option : `${option.nome} - ${option.cpf}`
+                  filterOptions={pacienteFilterOptions}
+                  inputValue={pacienteInput}
+                  getOptionLabel={(option) =>
+                    typeof option === 'string' ? option : option.nome || ''
                   }
                   loading={pacienteLoading}
+                  noOptionsText={pacienteInput.length < 2 ? 'Digite ao menos 2 caracteres' : 'Nenhum paciente encontrado'}
                   onInputChange={(event, value) => {
-                    setFormData(prev => ({ ...prev, paciente: value }));
-                    handlePacienteSearch(value);
+                    handlePacienteInputChange(value);
                   }}
                   onChange={(event, value) => {
-                    if (typeof value === 'object' && value !== null) {
-                      setFormData(prev => ({ ...prev, paciente: value.nome }));
+                    if (value && typeof value === 'object') {
+                      setPacienteInput(value.nome || '');
+                      setFormData(prev => ({
+                        ...prev,
+                        paciente: value.nome || '',
+                        cpf: value.cpf || prev.cpf,
+                        telefone: value.telefone || prev.telefone,
+                        email: value.email || prev.email,
+                      }));
                     }
                   }}
                   renderInput={(params) => (
@@ -384,11 +400,11 @@ const ModalAgendamento = ({
                     />
                   )}
                   renderOption={(props, option) => (
-                    <Box component="li" {...props}>
+                    <Box component="li" {...props} key={option.id || option.cpf || option.nome}>
                       <Box>
                         <Typography variant="body1">{option.nome}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {option.cpf} • {option.telefone}
+                          {[option.cpf, option.telefone].filter(Boolean).join(' • ')}
                         </Typography>
                       </Box>
                     </Box>
@@ -536,25 +552,37 @@ const ModalAgendamento = ({
 
                   {/* Procedimento */}
                   <Grid item xs={12}>
-                    <FormControl fullWidth error={!!errors.procedimento}>
-                      <InputLabel>Procedimento *</InputLabel>
-                      <Select
-                        value={formData.procedimento}
+                    {procedimentos.length > 0 ? (
+                      <FormControl fullWidth error={!!errors.procedimento}>
+                        <InputLabel>Procedimento *</InputLabel>
+                        <Select
+                          value={formData.procedimento}
+                          label="Procedimento *"
+                          onChange={(e) => setFormData(prev => ({ ...prev, procedimento: e.target.value }))}
+                        >
+                          {procedimentos.map((proc) => (
+                            <MenuItem key={proc.id} value={proc.id}>
+                              {proc.nome} {proc.valor && `- R$ ${proc.valor.toFixed(2)}`}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {errors.procedimento && (
+                          <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                            {errors.procedimento}
+                          </Typography>
+                        )}
+                      </FormControl>
+                    ) : (
+                      <TextField
                         label="Procedimento *"
+                        fullWidth
+                        value={formData.procedimento}
                         onChange={(e) => setFormData(prev => ({ ...prev, procedimento: e.target.value }))}
-                      >
-                        {procedimentos.map((proc) => (
-                          <MenuItem key={proc.id} value={proc.id}>
-                            {proc.nome} {proc.valor && `- R$ ${proc.valor.toFixed(2)}`}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.procedimento && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                          {errors.procedimento}
-                        </Typography>
-                      )}
-                    </FormControl>
+                        placeholder="Ex: Consulta, Limpeza de pele, Botox..."
+                        error={!!errors.procedimento}
+                        helperText={errors.procedimento}
+                      />
+                    )}
                   </Grid>
 
                   {/* Profissional */}
