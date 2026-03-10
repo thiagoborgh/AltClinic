@@ -31,6 +31,8 @@ const dashboardFirestoreRoutes = require('./dashboard-firestore');
 const financeiroFirestoreRoutes = require('./financeiro-firestore');
 const crmFirestoreRoutes      = require('./crm-firestore');
 const whatsappRoutes          = require('./whatsapp');
+const metaWebhookRoutes       = require('./whatsapp-meta-webhook');
+const asaasWebhookRoutes      = require('./asaas-webhooks');
 
 const cronManager = require('../cron/inactivityChecker');
 const TenantWhatsAppService = require('../services/TenantWhatsAppService');
@@ -92,6 +94,10 @@ function registerRoutes(app) {
   // ── Cleanup (temporário) ───────────────────────────────────────────────────
   app.use(require('./cleanup'));
 
+  // ── Webhooks externos (sem autenticação JWT) ───────────────────────────────
+  // Asaas deve ser registrado ANTES de qualquer middleware de auth
+  app.use('/api/webhooks', asaasWebhookRoutes);
+
   // ── Multi-tenant / billing / admin ─────────────────────────────────────────
   app.use('/api/tenants',            tenantsRoutes);
   app.use('/api/tenants/admin',      tenantsAdminRoutes);
@@ -106,6 +112,9 @@ function registerRoutes(app) {
   // ── Onboarding / templates / WhatsApp (Firestore) ─────────────────────────
   app.use('/api/onboarding', extractTenantFirestore, onboardingRoutes);
   app.use('/api/templates',  extractTenantFirestore, templatesRoutes);
+  // Meta webhook — deve ser montado ANTES do bloco autenticado /api/whatsapp
+  // porque o Meta faz um GET de verificação sem headers de tenant
+  app.use('/api/whatsapp/webhook/meta', metaWebhookRoutes);
   app.use('/api/whatsapp',   extractTenantFirestore, whatsappRoutes);
 
   // ── Firestore routes (priority) ────────────────────────────────────────────

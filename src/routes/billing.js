@@ -3,6 +3,15 @@ const router = express.Router();
 const billingManager = require('../services/BillingManager');
 // const { Tenant } = require('../models'); // TODO: configurar modelos
 const { authenticateToken } = require('../middleware/auth');
+const multiTenantDb = require('../models/MultiTenantDatabase');
+const asaasService = require('../services/AsaasService');
+
+// ─── Tabela de planos Asaas ───────────────────────────────────────────────────
+const PLANOS = {
+  starter:    { nome: 'Starter',    value: 149 },
+  pro:        { nome: 'Pro',        value: 349 },
+  enterprise: { nome: 'Enterprise', value: 799 },
+};
 
 /**
  * Rotas para Sistema de Cobrança
@@ -294,6 +303,117 @@ router.get('/usage', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Erro ao obter uso:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+/**
+ * POST /api/billing/subscribe
+ * Assinar um plano via Asaas (boleto / Pix / cartão).
+ *
+ * Body: { plano: 'starter' | 'pro' | 'enterprise' }
+ *
+ * Fluxo:
+ *  1. Valida o plano
+ *  2. Busca dados do tenant no banco master
+ *  3. Cria ou reutiliza customer no Asaas
+ *  4. Cria assinatura mensal com externalReference = tenantId
+ *  5. Salva asaas_customer_id e asaas_subscription_id no billing do tenant
+ *  6. Retorna link de pagamento para o frontend
+ */
+router.post('/subscribe', authenticateToken, async (req, res) => {
+  try {
+    const { plano } = req.body;
+
+    // 1. Validar plano
+    if (!plano || !PLANOS[plano]) {
+      return res.status(400).json({
+        success: false,
+        error: 'Plano inválido',
+        message: `Plano deve ser um dos: ${Object.keys(PLANOS).join(', ')}`,
+      });
+    }
+
+    const planConfig = PLANOS[plano];
+    const tenantId = req.user.tenantId;
+
+    // 2. Buscar dados do tenant no banco master
+    const masterDb = multiTenantDb.getMasterDb();
+    const tenant = await masterDb.get(
+      'SELECT id, nome, email, telefone, cnpj_cpf, billing FROM tenants WHERE id=$1',
+      [tenantId]
+    );
+
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
+    }
+
+    const billing = typeof tenant.billing === 'string'
+      ? JSON.parse(tenant.billing)
+      : (tenant.billing || {});
+
+    // 3. Criar ou reutilizar customer no Asaas
+    let asaasCustomerId = billing.asaas_customer_id || null;
+
+    if (!asaasCustomerId) {
+      const customer = await asaasService.createCustomer({
+        name: tenant.nome,
+        email: tenant.email,
+        cpfCnpj: tenant.cnpj_cpf || undefined,
+        phone: tenant.telefone || undefined,
+      });
+      asaasCustomerId = customer.id;
+      console.log(`[billing/subscribe] Customer Asaas criado: ${asaasCustomerId} para tenant ${tenantId}`);
+    } else {
+      console.log(`[billing/subscribe] Reutilizando customer Asaas existente: ${asaasCustomerId}`);
+    }
+
+    // 4. Criar assinatura recorrente no Asaas
+    const subscription = await asaasService.createSubscription({
+      customerId: asaasCustomerId,
+      planName: planConfig.nome,
+      value: planConfig.value,
+      description: `AltClinic — Plano ${planConfig.nome} (R$${planConfig.value}/mês)`,
+      externalReference: tenantId, // usado pelo webhook para identificar o tenant
+    });
+
+    // 5. Salvar IDs Asaas no billing do tenant
+    const updatedBilling = {
+      ...billing,
+      asaas_customer_id: asaasCustomerId,
+      asaas_subscription_id: subscription.id,
+      status: 'pending',          // ativado pelo webhook PAYMENT_CONFIRMED
+      plano,
+      subscribed_at: new Date().toISOString(),
+    };
+
+    await masterDb.run(
+      'UPDATE tenants SET plano=$1, billing=$2, updated_at=NOW() WHERE id=$3',
+      [plano, JSON.stringify(updatedBilling), tenantId]
+    );
+
+    console.log(`[billing/subscribe] Tenant ${tenantId} assinou plano "${plano}" — sub: ${subscription.id}`);
+
+    // 6. Retornar link de pagamento
+    return res.status(201).json({
+      success: true,
+      message: `Assinatura do plano ${planConfig.nome} criada com sucesso`,
+      data: {
+        plano,
+        valor: `R$${planConfig.value}/mês`,
+        subscriptionId: subscription.id,
+        paymentLink: subscription.paymentLink || subscription.invoiceUrl || null,
+        status: subscription.status,
+        nextDueDate: subscription.nextDueDate || null,
+        mock: subscription._mock || false,
+      },
+    });
+  } catch (error) {
+    console.error('[billing/subscribe] Erro ao criar assinatura:', error.message, error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao processar assinatura',
+      message: error.message,
+    });
   }
 });
 
