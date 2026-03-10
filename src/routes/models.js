@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const dbManager = require('../models/database');
 const authUtil = require('../utils/auth');
 
 /**
@@ -9,13 +8,10 @@ const authUtil = require('../utils/auth');
  */
 router.get('/procedimentos', authUtil.authenticate, async (req, res) => {
   try {
-    const db = dbManager.getDb();
-    
-    const procedimentos = db.prepare(`
-      SELECT * FROM procedimento 
-      WHERE clinica_id = ? 
-      ORDER BY nome
-    `).all(req.user.clinica_id);
+    const procedimentos = await req.db.all(
+      `SELECT * FROM procedimento WHERE clinica_id = $1 ORDER BY nome`,
+      [req.user.clinica_id]
+    );
 
     res.json({
       success: true,
@@ -46,14 +42,16 @@ router.post('/procedimentos', authUtil.authenticate, authUtil.authorize(['admin'
       });
     }
 
-    const db = dbManager.getDb();
-    
-    const result = db.prepare(`
-      INSERT INTO procedimento (clinica_id, nome, duracao_minutos, preco, preparo_texto)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(req.user.clinica_id, nome, duracao_minutos, preco, preparo_texto);
+    const result = await req.db.run(
+      `INSERT INTO procedimento (clinica_id, nome, duracao_minutos, preco, preparo_texto)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [req.user.clinica_id, nome, duracao_minutos, preco, preparo_texto]
+    );
 
-    const procedimento = db.prepare('SELECT * FROM procedimento WHERE id = ?').get(result.lastInsertRowid);
+    const procedimento = await req.db.get(
+      'SELECT * FROM procedimento WHERE id = $1',
+      [result.lastID]
+    );
 
     res.status(201).json({
       success: true,
@@ -76,13 +74,10 @@ router.post('/procedimentos', authUtil.authenticate, authUtil.authorize(['admin'
  */
 router.get('/equipamentos', authUtil.authenticate, async (req, res) => {
   try {
-    const db = dbManager.getDb();
-    
-    const equipamentos = db.prepare(`
-      SELECT * FROM equipamento 
-      WHERE clinica_id = ? 
-      ORDER BY nome
-    `).all(req.user.clinica_id);
+    const equipamentos = await req.db.all(
+      `SELECT * FROM equipamento WHERE clinica_id = $1 ORDER BY nome`,
+      [req.user.clinica_id]
+    );
 
     res.json({
       success: true,
@@ -113,14 +108,16 @@ router.post('/equipamentos', authUtil.authenticate, authUtil.authorize(['admin']
       });
     }
 
-    const db = dbManager.getDb();
-    
-    const result = db.prepare(`
-      INSERT INTO equipamento (clinica_id, nome, capacidade, descricao)
-      VALUES (?, ?, ?, ?)
-    `).run(req.user.clinica_id, nome, capacidade, descricao);
+    const result = await req.db.run(
+      `INSERT INTO equipamento (clinica_id, nome, capacidade, descricao)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [req.user.clinica_id, nome, capacidade, descricao]
+    );
 
-    const equipamento = db.prepare('SELECT * FROM equipamento WHERE id = ?').get(result.lastInsertRowid);
+    const equipamento = await req.db.get(
+      'SELECT * FROM equipamento WHERE id = $1',
+      [result.lastID]
+    );
 
     res.status(201).json({
       success: true,
@@ -145,7 +142,7 @@ router.get('/pacientes', authUtil.authenticate, async (req, res) => {
   try {
     const PacienteModel = require('../models/Paciente');
     const { nome, telefone, inativos, limit, offset } = req.query;
-    
+
     const filters = {
       nome,
       telefone,
@@ -186,7 +183,7 @@ router.post('/pacientes', authUtil.authenticate, async (req, res) => {
     }
 
     const PacienteModel = require('../models/Paciente');
-    
+
     const paciente = PacienteModel.create({
       clinica_id: req.user.clinica_id,
       nome,
@@ -217,7 +214,7 @@ router.get('/pacientes/:id', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const PacienteModel = require('../models/Paciente');
-    
+
     const paciente = PacienteModel.findById(id);
 
     if (!paciente) {
@@ -257,7 +254,7 @@ router.put('/pacientes/:id', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, telefone, email } = req.body;
-    
+
     const PacienteModel = require('../models/Paciente');
 
     // Verificar se pertence à clínica
