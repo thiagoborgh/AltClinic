@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multiTenantDb = require('../models/MultiTenantDatabase');
+const { checkMedicoLimit } = require('../middleware/planLimits');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -207,7 +208,7 @@ router.get('/usuarios', (req, res) => {
   }
 });
 
-router.post('/usuarios', (req, res) => {
+router.post('/usuarios', checkMedicoLimit, (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, email, cargo = '' } = req.body;
   if (!nome || !email) return res.status(400).json({ success: false, message: 'Nome e e-mail são obrigatórios' });
