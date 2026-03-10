@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const mgr = require('../database/MultiTenantPostgres');
 
 /**
  * ADMIN: Listar todos os tenants
@@ -9,10 +9,10 @@ const multiTenantDb = require('../models/MultiTenantDatabase');
  */
 router.get('/list', async (req, res) => {
   try {
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Buscar todos os tenants com informações do owner
-    const tenants = masterDb.prepare(`
+    const tenants = await masterDb.all(`
       SELECT
         t.*,
         mu.email as owner_email,
@@ -21,7 +21,7 @@ router.get('/list', async (req, res) => {
       FROM tenants t
       LEFT JOIN master_users mu ON t.id = mu.tenant_id AND mu.role = 'owner'
       ORDER BY t.created_at DESC
-    `).all();
+    `, []);
 
     // Formatar dados para resposta
     const formattedTenants = tenants.map(tenant => ({
@@ -73,10 +73,10 @@ router.get('/list', async (req, res) => {
  */
 router.get('/stats', async (req, res) => {
   try {
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Estatísticas gerais
-    const stats = masterDb.prepare(`
+    const stats = await masterDb.get(`
       SELECT
         COUNT(*) as total_tenants,
         SUM(CASE WHEN status = 'trial' THEN 1 ELSE 0 END) as trial_tenants,
@@ -87,28 +87,28 @@ router.get('/stats', async (req, res) => {
         SUM(CASE WHEN plano = 'basic' THEN 1 ELSE 0 END) as basic_plan,
         SUM(CASE WHEN plano = 'premium' THEN 1 ELSE 0 END) as premium_plan
       FROM tenants
-    `).get();
+    `, []);
 
     // Tenants próximos da expiração (próximos 7 dias)
-    const proximosVencimentos = masterDb.prepare(`
+    const proximosVencimentos = await masterDb.all(`
       SELECT id, nome, slug, trial_expire_at
       FROM tenants
       WHERE status = 'trial'
         AND trial_expire_at IS NOT NULL
-        AND trial_expire_at <= datetime('now', '+7 days')
-        AND trial_expire_at > datetime('now')
+        AND trial_expire_at <= NOW() + INTERVAL '7 days'
+        AND trial_expire_at > NOW()
       ORDER BY trial_expire_at ASC
       LIMIT 10
-    `).all();
+    `, []);
 
     // Novos tenants (últimos 30 dias)
-    const novosTenants = masterDb.prepare(`
+    const novosTenants = await masterDb.all(`
       SELECT id, nome, slug, created_at
       FROM tenants
-      WHERE created_at >= datetime('now', '-30 days')
+      WHERE created_at >= NOW() - INTERVAL '30 days'
       ORDER BY created_at DESC
       LIMIT 10
-    `).all();
+    `, []);
 
     res.json({
       success: true,
@@ -147,10 +147,10 @@ router.get('/stats', async (req, res) => {
 router.get('/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Buscar tenant específico
-    const tenant = masterDb.prepare(`
+    const tenant = await masterDb.get(`
       SELECT
         t.*,
         mu.email as owner_email,
@@ -158,8 +158,8 @@ router.get('/:tenantId', async (req, res) => {
         mu.created_at as owner_created_at
       FROM tenants t
       LEFT JOIN master_users mu ON t.id = mu.tenant_id AND mu.role = 'owner'
-      WHERE t.id = ?
-    `).get(tenantId);
+      WHERE t.id = $1
+    `, [tenantId]);
 
     if (!tenant) {
       return res.status(404).json({
@@ -217,10 +217,10 @@ router.put('/:tenantId/reset-trial', async (req, res) => {
     const { tenantId } = req.params;
     const { dias = 30 } = req.body;
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Verificar se tenant existe
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [tenantId]);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -232,11 +232,10 @@ router.put('/:tenantId/reset-trial', async (req, res) => {
     const novaDataExpiracao = new Date(Date.now() + (dias * 24 * 60 * 60 * 1000));
 
     // Atualizar tenant
-    const updateResult = masterDb.prepare(`
-      UPDATE tenants
-      SET trial_expire_at = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(novaDataExpiracao.toISOString(), tenantId);
+    const updateResult = await masterDb.run(
+      'UPDATE tenants SET trial_expire_at = $1, updated_at = NOW() WHERE id = $2',
+      [novaDataExpiracao.toISOString(), tenantId]
+    );
 
     if (updateResult.changes === 0) {
       return res.status(400).json({
@@ -283,10 +282,10 @@ router.put('/:tenantId/change-plan', async (req, res) => {
       });
     }
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Verificar se tenant existe
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [tenantId]);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -295,11 +294,10 @@ router.put('/:tenantId/change-plan', async (req, res) => {
     }
 
     // Atualizar tenant
-    const updateResult = masterDb.prepare(`
-      UPDATE tenants
-      SET plano = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(plano, tenantId);
+    const updateResult = await masterDb.run(
+      'UPDATE tenants SET plano = $1, updated_at = NOW() WHERE id = $2',
+      [plano, tenantId]
+    );
 
     if (updateResult.changes === 0) {
       return res.status(400).json({
@@ -347,10 +345,10 @@ router.put('/:tenantId/change-status', async (req, res) => {
       });
     }
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Verificar se tenant existe
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [tenantId]);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -359,11 +357,10 @@ router.put('/:tenantId/change-status', async (req, res) => {
     }
 
     // Atualizar status
-    const updateResult = masterDb.prepare(`
-      UPDATE tenants
-      SET status = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(status, tenantId);
+    const updateResult = await masterDb.run(
+      'UPDATE tenants SET status = $1, updated_at = NOW() WHERE id = $2',
+      [status, tenantId]
+    );
 
     if (updateResult.changes === 0) {
       return res.status(400).json({
@@ -400,10 +397,10 @@ router.put('/:tenantId/change-status', async (req, res) => {
 router.delete('/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Verificar se tenant existe
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [tenantId]);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -412,11 +409,10 @@ router.delete('/:tenantId', async (req, res) => {
     }
 
     // Marcar como excluído (soft delete)
-    const updateResult = masterDb.prepare(`
-      UPDATE tenants
-      SET status = 'cancelled', updated_at = datetime('now')
-      WHERE id = ?
-    `).run(tenantId);
+    const updateResult = await masterDb.run(
+      "UPDATE tenants SET status = 'cancelled', updated_at = NOW() WHERE id = $1",
+      [tenantId]
+    );
 
     if (updateResult.changes === 0) {
       return res.status(400).json({
@@ -452,8 +448,6 @@ router.delete('/:tenantId', async (req, res) => {
  */
 router.get('/financeiro/resumo', async (req, res) => {
   try {
-    const masterDb = multiTenantDb.getMasterDb();
-
     // Simulação de dados financeiros agregados
     const resumoFinanceiro = {
       saldoAtual: 45750.80,
@@ -488,10 +482,10 @@ router.get('/financeiro/resumo', async (req, res) => {
 router.post('/billing/invoice/:tenantId', async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Verificar se tenant existe
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [tenantId]);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -536,7 +530,6 @@ router.post('/billing/invoice/:tenantId', async (req, res) => {
 router.get('/crm/relatorios', async (req, res) => {
   try {
     const { tipo = 'geral' } = req.query;
-    const masterDb = multiTenantDb.getMasterDb();
 
     let dados = {};
 
@@ -883,10 +876,13 @@ router.post('/create', async (req, res) => {
       });
     }
 
+    const masterDb = mgr.getMasterDb();
+
     // Verificar se email já existe
-    const existingTenant = multiTenantDb.getMasterDb().prepare(`
-      SELECT id FROM tenants WHERE email = ?
-    `).get(email);
+    const existingTenant = await masterDb.get(
+      'SELECT id FROM tenants WHERE email = $1',
+      [email]
+    );
 
     if (existingTenant) {
       return res.status(409).json({
@@ -908,9 +904,7 @@ router.post('/create', async (req, res) => {
     let counter = 1;
 
     // Garantir que o slug é único
-    while (multiTenantDb.getMasterDb().prepare(`
-      SELECT id FROM tenants WHERE slug = ?
-    `).get(slug)) {
+    while (await masterDb.get('SELECT id FROM tenants WHERE slug = $1', [slug])) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
@@ -951,37 +945,42 @@ router.post('/create', async (req, res) => {
     const tenantId = crypto.randomUUID();
     const databaseName = `tenant_${slug}_${Date.now()}`;
 
-    const masterDb = multiTenantDb.getMasterDb();
-
     // Inserir tenant
-    masterDb.prepare(`
-      INSERT INTO tenants (
+    await masterDb.run(
+      `INSERT INTO tenants (
         id, slug, nome, email, telefone, plano, status,
         trial_expire_at, database_name, config, billing, theme,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tenantId,
-      slug,
-      clinica,
-      email,
-      telefone || '',
-      plano,
-      plano === 'trial' ? 'trial' : 'active',
-      trialExpireAt ? trialExpireAt.toISOString() : null,
-      databaseName,
-      JSON.stringify(defaultConfig),
-      JSON.stringify(defaultBilling),
-      JSON.stringify(defaultTheme),
-      new Date().toISOString(),
-      new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (id) DO UPDATE SET
+        slug = EXCLUDED.slug, nome = EXCLUDED.nome, email = EXCLUDED.email,
+        telefone = EXCLUDED.telefone, plano = EXCLUDED.plano, status = EXCLUDED.status,
+        trial_expire_at = EXCLUDED.trial_expire_at, database_name = EXCLUDED.database_name,
+        config = EXCLUDED.config, billing = EXCLUDED.billing, theme = EXCLUDED.theme,
+        updated_at = EXCLUDED.updated_at`,
+      [
+        tenantId,
+        slug,
+        clinica,
+        email,
+        telefone || '',
+        plano,
+        plano === 'trial' ? 'trial' : 'active',
+        trialExpireAt ? trialExpireAt.toISOString() : null,
+        databaseName,
+        JSON.stringify(defaultConfig),
+        JSON.stringify(defaultBilling),
+        JSON.stringify(defaultTheme),
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]
     );
 
-    // Criar database do tenant
-    await multiTenantDb.createTenantDatabase(tenantId);
+    // Criar schema do tenant
+    await mgr.createTenantSchema(tenantId, slug);
 
     // Criar usuário admin para o tenant
-    const tenantDb = multiTenantDb.getTenantDb(tenantId);
+    const tenantDb = mgr.getTenantDb(tenantId, slug);
     const bcrypt = require('bcryptjs');
 
     // Gerar senha
@@ -994,20 +993,21 @@ router.post('/create', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-    tenantDb.prepare(`
-      INSERT INTO usuarios (
+    await tenantDb.run(
+      `INSERT INTO usuarios (
         tenant_id, nome, email, senha_hash, role, status,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tenantId,
-      nome,
-      email,
-      hashedPassword,
-      'owner',
-      'active',
-      new Date().toISOString(),
-      new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        tenantId,
+        nome,
+        email,
+        hashedPassword,
+        'owner',
+        'active',
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]
     );
 
     // Enviar email com senha se solicitado
@@ -1077,12 +1077,13 @@ router.post('/:tenantId/send-temp-password', async (req, res) => {
     const { tenantId } = req.params;
     const { customPassword = null } = req.body;
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Buscar tenant
-    const tenant = masterDb.prepare(`
-      SELECT * FROM tenants WHERE id = ?
-    `).get(tenantId);
+    const tenant = await masterDb.get(
+      'SELECT * FROM tenants WHERE id = $1',
+      [tenantId]
+    );
 
     if (!tenant) {
       return res.status(404).json({
@@ -1092,12 +1093,13 @@ router.post('/:tenantId/send-temp-password', async (req, res) => {
     }
 
     // Buscar usuário owner
-    const tenantDb = multiTenantDb.getTenantDb(tenantId);
-    const owner = tenantDb.prepare(`
-      SELECT nome, email FROM usuarios
-      WHERE tenant_id = ? AND role = 'owner' AND status = 'active'
-      LIMIT 1
-    `).get(tenantId);
+    const tenantDb = mgr.getTenantDb(tenantId, tenant.slug);
+    const owner = await tenantDb.get(
+      `SELECT nome, email FROM usuarios
+       WHERE tenant_id = $1 AND role = 'owner' AND status = 'active'
+       LIMIT 1`,
+      [tenantId]
+    );
 
     if (!owner) {
       return res.status(404).json({
@@ -1112,11 +1114,10 @@ router.post('/:tenantId/send-temp-password', async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Atualizar senha no banco
-    tenantDb.prepare(`
-      UPDATE usuarios
-      SET senha_hash = ?, updated_at = ?
-      WHERE tenant_id = ? AND role = 'owner'
-    `).run(hashedPassword, new Date().toISOString(), tenantId);
+    await tenantDb.run(
+      'UPDATE usuarios SET senha_hash = $1, updated_at = $2 WHERE tenant_id = $3 AND role = $4',
+      [hashedPassword, new Date().toISOString(), tenantId, 'owner']
+    );
 
     // Enviar email
     try {
