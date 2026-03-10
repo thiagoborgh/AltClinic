@@ -2,12 +2,37 @@ const express = require('express');
 const router = express.Router();
 const firestoreService = require('../services/firestoreService');
 const admin = require('firebase-admin');
+const { isFirestoreAvailable, markFirestoreUnavailable } = require('../utils/firestoreHealth');
 
-// Obter referência do Firestore
-const db = admin.firestore();
+// Obter referência do Firestore (safe — admin já inicializado pelo firestoreService)
+let db;
+try { db = admin.firestore(); } catch (_) { db = null; }
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function isAuthError(_err) {
+  // Sempre usa PostgreSQL fallback quando Firestore falha por qualquer motivo
+  // (credenciais inválidas, PERMISSION_DENIED, TypeError de db=null, etc.)
+  return true;
+}
+
+function shouldUsePostgres() {
+  return !isFirestoreAvailable() || !db;
+}
+
+function buildSchedulesByDay(schedules) {
+  const schedulesByDay = {};
+  const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  schedules.forEach(s => {
+    const dayName = daysOfWeek[s.day_of_week] || 'Desconhecido';
+    if (!schedulesByDay[dayName]) schedulesByDay[dayName] = [];
+    schedulesByDay[dayName].push(s);
+  });
+  return schedulesByDay;
+}
 
 /**
- * ✅ ROTAS DE PROFISSIONAIS MÉDICOS - FIRESTORE
+ * ✅ ROTAS DE PROFISSIONAIS MÉDICOS - FIRESTORE (com fallback PostgreSQL)
  */
 
 // GET /api/professional/medicos - Buscar todos os médicos
@@ -17,62 +42,50 @@ router.get('/medicos', async (req, res) => {
     const { nome, especialidade, crm, status } = req.query;
 
     if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+      return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
     }
 
-    console.log('🔍 Firestore GET medicos: tenantId:', tenantId, 'filtros:', { nome, especialidade, crm, status });
-
-    let query = db.collection('tenants').doc(tenantId).collection('medicos');
-
-    // Aplicar filtros
-    if (status) {
-      query = query.where('status', '==', status);
-    }
-
-    const snapshot = await query.get();
-    const medicos = [];
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      // Filtros adicionais (nome, crm, especialidade) - fazer no cliente pois Firestore tem limitações
-      let incluir = true;
-      
-      if (nome && !data.nome?.toLowerCase().includes(nome.toLowerCase())) {
-        incluir = false;
-      }
-      if (crm && !data.crm?.toLowerCase().includes(crm.toLowerCase())) {
-        incluir = false;
-      }
-      if (especialidade && data.especialidade !== especialidade) {
-        incluir = false;
-      }
-
-      if (incluir) {
-        medicos.push({
-          id: doc.id,
-          ...data
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        let query = db.collection('tenants').doc(tenantId).collection('medicos');
+        if (status) query = query.where('status', '==', status);
+        const snapshot = await query.get();
+        const medicos = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          let incluir = true;
+          if (nome && !data.nome?.toLowerCase().includes(nome.toLowerCase())) incluir = false;
+          if (crm && !data.crm?.toLowerCase().includes(crm.toLowerCase())) incluir = false;
+          if (especialidade && data.especialidade !== especialidade) incluir = false;
+          if (incluir) medicos.push({ id: doc.id, ...data });
         });
+        return res.json({ success: true, data: medicos, message: medicos.length > 0 ? 'Médicos encontrados' : 'Nenhum médico cadastrado' });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) {
+          markFirestoreUnavailable();
+          console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback');
+        } else { throw fsErr; }
       }
-    });
+    }
 
-    console.log(`✅ Firestore: ${medicos.length} médicos encontrados`);
-
-    res.json({
-      success: true,
-      data: medicos,
-      message: medicos.length > 0 ? 'Médicos encontrados' : 'Nenhum médico cadastrado'
-    });
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    console.log('📋 PostgreSQL GET medicos: tenantId:', tenantId);
+    const pgDb = req.db;
+    let sql = 'SELECT * FROM medicos WHERE tenant_id = $1';
+    const params = [tenantId];
+    let paramIndex = 2;
+    if (status) { sql += ` AND status = $${paramIndex++}`; params.push(status); }
+    sql += ' ORDER BY nome ASC';
+    let rows = await pgDb.all(sql, params);
+    if (nome) rows = rows.filter(r => r.nome?.toLowerCase().includes(nome.toLowerCase()));
+    if (crm) rows = rows.filter(r => r.crm?.toLowerCase().includes(crm.toLowerCase()));
+    if (especialidade) rows = rows.filter(r => r.especialidade === especialidade);
+    return res.json({ success: true, data: rows, message: rows.length > 0 ? 'Médicos encontrados' : 'Nenhum médico cadastrado' });
 
   } catch (error) {
     console.error(`❌ Erro ao buscar médicos:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -81,40 +94,26 @@ router.get('/medicos/:id', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    console.log('🔍 Firestore GET medico by ID:', id, 'tenantId:', tenantId);
-
-    const doc = await db.collection('tenants').doc(tenantId).collection('medicos').doc(id).get();
-
-    if (!doc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Médico não encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        id: doc.id,
-        ...doc.data()
+    if (!shouldUsePostgres()) {
+      try {
+        const doc = await db.collection('tenants').doc(tenantId).collection('medicos').doc(id).get();
+        if (!doc.exists) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+        return res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
       }
-    });
+    }
+
+    const row = await req.db.get('SELECT * FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!row) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+    return res.json({ success: true, data: row });
 
   } catch (error) {
     console.error(`❌ Erro ao buscar médico:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -124,67 +123,44 @@ router.post('/medicos', async (req, res) => {
     const tenantId = req.tenantId;
     const { nome, crm, especialidade, telefone, email, observacoes } = req.body;
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    // Validações
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
     if (!nome || !crm || !especialidade || !telefone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Campos obrigatórios: nome, crm, especialidade, telefone'
-      });
+      return res.status(400).json({ success: false, message: 'Campos obrigatórios: nome, crm, especialidade, telefone' });
     }
 
-    console.log('➕ Firestore POST medico:', { nome, crm, especialidade, telefone });
-
-    // Verificar se CRM já existe
-    const crmQuery = await db.collection('tenants').doc(tenantId).collection('medicos')
-      .where('crm', '==', crm)
-      .get();
-
-    if (!crmQuery.empty) {
-      return res.status(409).json({
-        success: false,
-        message: 'CRM já cadastrado no sistema'
-      });
-    }
-
-    const medicoData = {
-      nome,
-      crm,
-      especialidade,
-      telefone,
-      email: email || null,
-      observacoes: observacoes || null,
-      status: 'ativo',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    const docRef = await db.collection('tenants').doc(tenantId).collection('medicos').add(medicoData);
-
-    console.log('✅ Médico criado com ID:', docRef.id);
-
-    res.status(201).json({
-      success: true,
-      message: 'Médico cadastrado com sucesso',
-      data: {
-        id: docRef.id,
-        ...medicoData
+    if (!shouldUsePostgres()) {
+      try {
+        const crmQuery = await db.collection('tenants').doc(tenantId).collection('medicos').where('crm', '==', crm).get();
+        if (!crmQuery.empty) return res.status(409).json({ success: false, message: 'CRM já cadastrado no sistema' });
+        const medicoData = {
+          nome, crm, especialidade, telefone,
+          email: email || null, observacoes: observacoes || null,
+          status: 'ativo',
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+        };
+        const docRef = await db.collection('tenants').doc(tenantId).collection('medicos').add(medicoData);
+        return res.status(201).json({ success: true, message: 'Médico cadastrado com sucesso', data: { id: docRef.id, ...medicoData } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
       }
-    });
+    }
+
+    console.log('📋 PostgreSQL POST medico:', { nome, crm, especialidade, telefone });
+    const existing = await req.db.get('SELECT id FROM medicos WHERE tenant_id = $1 AND crm = $2', [tenantId, crm]);
+    if (existing) return res.status(409).json({ success: false, message: 'CRM já cadastrado no sistema' });
+    const result = await req.db.run(
+      `INSERT INTO medicos (tenant_id, nome, crm, especialidade, telefone, email, observacoes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'ativo')
+       RETURNING id`,
+      [tenantId, nome, crm, especialidade, telefone, email || null, observacoes || null]
+    );
+    const row = await req.db.get('SELECT * FROM medicos WHERE id = $1', [result.lastID]);
+    return res.status(201).json({ success: true, message: 'Médico cadastrado com sucesso', data: row });
 
   } catch (error) {
     console.error(`❌ Erro ao criar médico:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -194,72 +170,54 @@ router.put('/medicos/:id', async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
     const { nome, crm, especialidade, telefone, email, observacoes } = req.body;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    console.log('✏️ Firestore PUT medico:', id, { nome, crm, especialidade, telefone });
-
-    // Verificar se médico existe
-    const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Médico não encontrado'
-      });
-    }
-
-    // Se CRM foi alterado, verificar duplicatas
-    if (crm && crm !== doc.data().crm) {
-      const crmQuery = await db.collection('tenants').doc(tenantId).collection('medicos')
-        .where('crm', '==', crm)
-        .get();
-
-      if (!crmQuery.empty && crmQuery.docs[0].id !== id) {
-        return res.status(409).json({
-          success: false,
-          message: 'CRM já cadastrado para outro médico'
-        });
+    if (!shouldUsePostgres()) {
+      try {
+        const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+        if (crm && crm !== doc.data().crm) {
+          const crmQ = await db.collection('tenants').doc(tenantId).collection('medicos').where('crm', '==', crm).get();
+          if (!crmQ.empty && crmQ.docs[0].id !== id) return res.status(409).json({ success: false, message: 'CRM já cadastrado para outro médico' });
+        }
+        const updateData = {
+          ...(nome && { nome }), ...(crm && { crm }), ...(especialidade && { especialidade }),
+          ...(telefone && { telefone }), ...(email !== undefined && { email: email || null }),
+          ...(observacoes !== undefined && { observacoes: observacoes || null }),
+          updated_at: new Date().toISOString()
+        };
+        await docRef.update(updateData);
+        return res.json({ success: true, message: 'Médico atualizado com sucesso', data: { id, ...doc.data(), ...updateData } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
       }
     }
 
-    const updateData = {
-      ...(nome && { nome }),
-      ...(crm && { crm }),
-      ...(especialidade && { especialidade }),
-      ...(telefone && { telefone }),
-      ...(email !== undefined && { email: email || null }),
-      ...(observacoes !== undefined && { observacoes: observacoes || null }),
-      updated_at: new Date().toISOString()
-    };
-
-    await docRef.update(updateData);
-
-    console.log('✅ Médico atualizado:', id);
-
-    res.json({
-      success: true,
-      message: 'Médico atualizado com sucesso',
-      data: {
-        id,
-        ...doc.data(),
-        ...updateData
-      }
-    });
+    const existing = await req.db.get('SELECT * FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+    if (crm && crm !== existing.crm) {
+      const conflict = await req.db.get('SELECT id FROM medicos WHERE tenant_id = $1 AND crm = $2 AND id != $3', [tenantId, crm, id]);
+      if (conflict) return res.status(409).json({ success: false, message: 'CRM já cadastrado para outro médico' });
+    }
+    const updates = []; const params = [];
+    let paramIndex = 1;
+    if (nome) { updates.push(`nome = $${paramIndex++}`); params.push(nome); }
+    if (crm) { updates.push(`crm = $${paramIndex++}`); params.push(crm); }
+    if (especialidade) { updates.push(`especialidade = $${paramIndex++}`); params.push(especialidade); }
+    if (telefone) { updates.push(`telefone = $${paramIndex++}`); params.push(telefone); }
+    if (email !== undefined) { updates.push(`email = $${paramIndex++}`); params.push(email || null); }
+    if (observacoes !== undefined) { updates.push(`observacoes = $${paramIndex++}`); params.push(observacoes || null); }
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(id, tenantId);
+    await req.db.run(`UPDATE medicos SET ${updates.join(', ')} WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex}`, params);
+    const updated = await req.db.get('SELECT * FROM medicos WHERE id = $1', [id]);
+    return res.json({ success: true, message: 'Médico atualizado com sucesso', data: updated });
 
   } catch (error) {
     console.error(`❌ Erro ao atualizar médico:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -269,49 +227,30 @@ router.patch('/medico/:id/status', async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
     const { ativo } = req.body;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+    const novoStatus = ativo ? 'ativo' : 'inativo';
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    console.log('🔄 Firestore PATCH medico status:', id, 'ativo:', ativo);
-
-    const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Médico não encontrado'
-      });
-    }
-
-    await docRef.update({
-      status: ativo ? 'ativo' : 'inativo',
-      updated_at: new Date().toISOString()
-    });
-
-    console.log('✅ Status do médico alterado:', id, 'para', ativo ? 'ativo' : 'inativo');
-
-    res.json({
-      success: true,
-      message: `Médico ${ativo ? 'ativado' : 'inativado'} com sucesso`,
-      data: {
-        id,
-        status: ativo ? 'ativo' : 'inativo'
+    if (!shouldUsePostgres()) {
+      try {
+        const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+        await docRef.update({ status: novoStatus, updated_at: new Date().toISOString() });
+        return res.json({ success: true, message: `Médico ${novoStatus} com sucesso`, data: { id, status: novoStatus } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
       }
-    });
+    }
+
+    const existing = await req.db.get('SELECT id FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+    await req.db.run('UPDATE medicos SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3', [novoStatus, id, tenantId]);
+    return res.json({ success: true, message: `Médico ${novoStatus} com sucesso`, data: { id, status: novoStatus } });
 
   } catch (error) {
-    console.error(`❌ Erro ao alterar status do médico:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    console.error(`❌ Erro ao alterar status:`, error);
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -320,42 +259,29 @@ router.delete('/medicos/:id', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+    if (!shouldUsePostgres()) {
+      try {
+        const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
+        const doc = await docRef.get();
+        if (!doc.exists) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+        await docRef.delete();
+        return res.json({ success: true, message: 'Médico deletado com sucesso' });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
+      }
     }
 
-    console.log('🗑️ Firestore DELETE medico:', id);
-
-    const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Médico não encontrado'
-      });
-    }
-
-    await docRef.delete();
-
-    console.log('✅ Médico deletado:', id);
-
-    res.json({
-      success: true,
-      message: 'Médico deletado com sucesso'
-    });
+    const existing = await req.db.get('SELECT id FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+    await req.db.run('DELETE FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    return res.json({ success: true, message: 'Médico deletado com sucesso' });
 
   } catch (error) {
     console.error(`❌ Erro ao deletar médico:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -367,93 +293,77 @@ router.post('/medicos/:id/enviar-convite', async (req, res) => {
     const { email } = req.body;
 
     if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+      return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
     }
-
     if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email é obrigatório'
-      });
+      return res.status(400).json({ success: false, message: 'Email é obrigatório' });
     }
 
     console.log('📧 Enviando convite de acesso para:', email, 'medicoId:', id);
 
-    // Buscar dados do médico
-    const docRef = db.collection('tenants').doc(tenantId).collection('medicos').doc(id);
-    const doc = await docRef.get();
+    // Buscar dados do médico (Firestore ou PostgreSQL)
+    let medicoNome = 'Profissional';
+    let medicoFound = false;
 
-    if (!doc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: 'Médico não encontrado'
-      });
+    if (!shouldUsePostgres()) {
+      try {
+        const doc = await db.collection('tenants').doc(tenantId).collection('medicos').doc(id).get();
+        if (!doc.exists) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+        medicoNome = doc.data().nome;
+        medicoFound = true;
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL'); }
+        else { throw fsErr; }
+      }
     }
 
-    const medico = doc.data();
+    if (!medicoFound) {
+      const row = await req.db.get('SELECT * FROM medicos WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+      if (!row) return res.status(404).json({ success: false, message: 'Médico não encontrado' });
+      medicoNome = row.nome;
+    }
 
     // Gerar token de convite (válido por 7 dias)
     const jwt = require('jsonwebtoken');
-    const crypto = require('crypto');
     const token = jwt.sign(
-      {
-        medicoId: id,
-        tenantId: tenantId,
-        email: email,
-        tipo: 'convite_profissional'
-      },
+      { medicoId: id, tenantId, email, tipo: 'convite_profissional' },
       process.env.JWT_SECRET || 'secret-key-default',
       { expiresIn: '7d' }
     );
 
-    // Salvar token no Firestore
-    await db.collection('tenants').doc(tenantId).collection('convites_profissionais').add({
-      medicoId: id,
-      email: email,
-      token: token,
-      status: 'pendente',
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    });
+    // Salvar token (Firestore se disponível, senão só logar)
+    if (!shouldUsePostgres()) {
+      try {
+        await db.collection('tenants').doc(tenantId).collection('convites_profissionais').add({
+          medicoId: id, email, token,
+          status: 'pendente',
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — convite salvo apenas localmente'); }
+        else { throw fsErr; }
+      }
+    }
 
-    // Enviar email (aqui você integraria com seu serviço de email)
     const linkConvite = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/aceitar-convite?token=${token}`;
-    
     console.log('📧 Link do convite gerado:', linkConvite);
     console.log('📧 TODO: Implementar envio de email com o link');
 
-    // TODO: Integrar com serviço de email (SendGrid, AWS SES, etc)
-    // await emailService.enviarConviteProfissional({
-    //   to: email,
-    //   nome: medico.nome,
-    //   link: linkConvite
-    // });
-
     res.json({
       success: true,
-      message: 'Convite enviado com sucesso',
-      data: {
-        email: email,
-        linkConvite: linkConvite, // Remover em produção
-        expiresIn: '7 dias'
-      }
+      message: 'Convite gerado com sucesso',
+      data: { email, linkConvite, expiresIn: '7 dias' }
     });
 
   } catch (error) {
     console.error(`❌ Erro ao enviar convite:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
 /**
- * ✅ ROTAS DE GRADES DE HORÁRIOS PROFISSIONAIS - FIRESTORE
+ * ✅ ROTAS DE GRADES DE HORÁRIOS PROFISSIONAIS - FIRESTORE (com fallback PostgreSQL)
  */
 
 // GET /api/professional/schedule - Buscar horários
@@ -461,46 +371,43 @@ router.get('/schedule', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { professionalId } = req.query;
-    
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-    
-    console.log('🔍 Firestore GET schedule: professionalId:', professionalId, 'tenantId:', tenantId);
-    
-    const schedules = await firestoreService.getProfessionalSchedules(tenantId, professionalId);
-    
-    console.log(`✅ Firestore: ${schedules.length} horários encontrados`);
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    // Organizar por dia da semana
-    const schedulesByDay = {};
-    const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    
-    schedules.forEach(schedule => {
-      const dayName = daysOfWeek[schedule.day_of_week] || 'Desconhecido';
-      if (!schedulesByDay[dayName]) {
-        schedulesByDay[dayName] = [];
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        console.log('🔍 Firestore GET schedule: professionalId:', professionalId, 'tenantId:', tenantId);
+        const schedules = await firestoreService.getProfessionalSchedules(tenantId, professionalId);
+        console.log(`✅ Firestore: ${schedules.length} horários encontrados`);
+        return res.json({
+          success: true,
+          message: schedules.length > 0 ? 'Horários encontrados com sucesso!' : 'Nenhum horário cadastrado',
+          data: schedules,
+          schedulesByDay: buildSchedulesByDay(schedules)
+        });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
       }
-      schedulesByDay[dayName].push(schedule);
-    });
+    }
 
-    res.json({
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    let sql = 'SELECT * FROM professional_schedules WHERE tenant_id = $1';
+    const params = [tenantId];
+    let paramIndex = 2;
+    if (professionalId) { sql += ` AND professional_id = $${paramIndex++}`; params.push(parseInt(professionalId)); }
+    sql += ' ORDER BY day_of_week ASC, start_time ASC';
+    const rows = await req.db.all(sql, params);
+    return res.json({
       success: true,
-      message: schedules.length > 0 ? 'Horários encontrados com sucesso!' : 'Nenhum horário cadastrado',
-      data: schedules,
-      schedulesByDay
+      message: rows.length > 0 ? 'Horários encontrados com sucesso!' : 'Nenhum horário cadastrado',
+      data: rows,
+      schedulesByDay: buildSchedulesByDay(rows)
     });
 
   } catch (error) {
     console.error(`❌ Erro ao buscar horários:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -517,19 +424,9 @@ router.post('/schedule', async (req, res) => {
       is_available = true
     } = req.body;
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    // Validações básicas
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
     if (day_of_week === undefined || !start_time || !end_time) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dados obrigatórios: day_of_week, start_time, end_time'
-      });
+      return res.status(400).json({ success: false, message: 'Dados obrigatórios: day_of_week, start_time, end_time' });
     }
 
     const scheduleData = {
@@ -541,24 +438,30 @@ router.post('/schedule', async (req, res) => {
       is_available
     };
 
-    const scheduleId = await firestoreService.createProfessionalSchedule(tenantId, scheduleData);
-
-    res.json({
-      success: true,
-      message: 'Horário criado com sucesso',
-      data: {
-        id: scheduleId,
-        ...scheduleData
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        const scheduleId = await firestoreService.createProfessionalSchedule(tenantId, scheduleData);
+        return res.json({ success: true, message: 'Horário criado com sucesso', data: { id: scheduleId, ...scheduleData } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
       }
-    });
+    }
+
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    const result = await req.db.run(
+      `INSERT INTO professional_schedules (tenant_id, professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [tenantId, scheduleData.professional_id, scheduleData.professional_name, scheduleData.day_of_week, scheduleData.start_time, scheduleData.end_time, is_available ? true : false]
+    );
+    const row = await req.db.get('SELECT * FROM professional_schedules WHERE id = $1', [result.lastID]);
+    return res.json({ success: true, message: 'Horário criado com sucesso', data: row });
 
   } catch (error) {
     console.error(`❌ Erro ao criar horário:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -568,41 +471,44 @@ router.put('/schedule/:id', async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
     const updateData = req.body;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    // Remover campos que não devem ser atualizados
     delete updateData.id;
     delete updateData.created_at;
+    if (updateData.professional_id) updateData.professional_id = parseInt(updateData.professional_id);
+    if (updateData.day_of_week !== undefined) updateData.day_of_week = parseInt(updateData.day_of_week);
 
-    // Converter tipos se necessário
-    if (updateData.professional_id) {
-      updateData.professional_id = parseInt(updateData.professional_id);
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        await firestoreService.updateProfessionalSchedule(tenantId, id, updateData);
+        return res.json({ success: true, message: 'Horário atualizado com sucesso', data: { id, ...updateData } });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
+      }
     }
-    if (updateData.day_of_week !== undefined) {
-      updateData.day_of_week = parseInt(updateData.day_of_week);
-    }
 
-    await firestoreService.updateProfessionalSchedule(tenantId, id, updateData);
-
-    res.json({
-      success: true,
-      message: 'Horário atualizado com sucesso',
-      data: { id, ...updateData }
-    });
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    const existing = await req.db.get('SELECT id FROM professional_schedules WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Horário não encontrado' });
+    const updates = []; const params = [];
+    let paramIndex = 1;
+    if (updateData.professional_id !== undefined) { updates.push(`professional_id = $${paramIndex++}`); params.push(updateData.professional_id); }
+    if (updateData.professional_name !== undefined) { updates.push(`professional_name = $${paramIndex++}`); params.push(updateData.professional_name); }
+    if (updateData.day_of_week !== undefined) { updates.push(`day_of_week = $${paramIndex++}`); params.push(updateData.day_of_week); }
+    if (updateData.start_time !== undefined) { updates.push(`start_time = $${paramIndex++}`); params.push(updateData.start_time); }
+    if (updateData.end_time !== undefined) { updates.push(`end_time = $${paramIndex++}`); params.push(updateData.end_time); }
+    if (updateData.is_available !== undefined) { updates.push(`is_available = $${paramIndex++}`); params.push(updateData.is_available ? true : false); }
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(id, tenantId);
+    await req.db.run(`UPDATE professional_schedules SET ${updates.join(', ')} WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex}`, params);
+    const updated = await req.db.get('SELECT * FROM professional_schedules WHERE id = $1', [id]);
+    return res.json({ success: true, message: 'Horário atualizado com sucesso', data: updated });
 
   } catch (error) {
     console.error(`❌ Erro ao atualizar horário:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -611,28 +517,28 @@ router.delete('/schedule/:id', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        await firestoreService.deleteProfessionalSchedule(tenantId, id);
+        return res.json({ success: true, message: 'Horário removido com sucesso' });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
+      }
     }
 
-    await firestoreService.deleteProfessionalSchedule(tenantId, id);
-
-    res.json({
-      success: true,
-      message: 'Horário removido com sucesso'
-    });
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    const existing = await req.db.get('SELECT id FROM professional_schedules WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!existing) return res.status(404).json({ success: false, message: 'Horário não encontrado' });
+    await req.db.run('DELETE FROM professional_schedules WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    return res.json({ success: true, message: 'Horário removido com sucesso' });
 
   } catch (error) {
     console.error(`❌ Erro ao deletar horário:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -641,28 +547,11 @@ router.post('/schedule/bulk-update', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { schedules = [] } = req.body;
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+    if (!Array.isArray(schedules)) return res.status(400).json({ success: false, message: 'schedules deve ser um array' });
 
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
-    }
-
-    if (!Array.isArray(schedules)) {
-      return res.status(400).json({
-        success: false,
-        message: 'schedules deve ser um array'
-      });
-    }
-
-    console.log('🔄 Firestore bulk-update: processando', schedules.length, 'horários');
-
-    // Processar cada horário
     const processedSchedules = schedules.map(schedule => {
-      // Normalizar dados
       const data = schedule.data || schedule;
-      
       return {
         ...(schedule.id && { id: schedule.id }),
         professional_id: parseInt(data.professional_id || 1),
@@ -674,21 +563,48 @@ router.post('/schedule/bulk-update', async (req, res) => {
       };
     });
 
-    await firestoreService.bulkUpdateProfessionalSchedules(tenantId, processedSchedules);
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        console.log('🔄 Firestore bulk-update: processando', schedules.length, 'horários');
+        await firestoreService.bulkUpdateProfessionalSchedules(tenantId, processedSchedules);
+        return res.json({ success: true, message: `Processados ${schedules.length} horários`, data: processedSchedules.length });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
+      }
+    }
 
-    res.json({
-      success: true,
-      message: `Processados ${schedules.length} horários`,
-      data: processedSchedules.length
-    });
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    console.log('📋 PostgreSQL bulk-update: processando', processedSchedules.length, 'horários');
+    for (const s of processedSchedules) {
+      if (s.id) {
+        await req.db.run(
+          `INSERT INTO professional_schedules (id, tenant_id, professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET
+             professional_id = EXCLUDED.professional_id,
+             professional_name = EXCLUDED.professional_name,
+             day_of_week = EXCLUDED.day_of_week,
+             start_time = EXCLUDED.start_time,
+             end_time = EXCLUDED.end_time,
+             is_available = EXCLUDED.is_available,
+             updated_at = CURRENT_TIMESTAMP`,
+          [s.id, tenantId, s.professional_id, s.professional_name, s.day_of_week, s.start_time, s.end_time, s.is_available ? true : false]
+        );
+      } else {
+        await req.db.run(
+          `INSERT INTO professional_schedules (tenant_id, professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [tenantId, s.professional_id, s.professional_name, s.day_of_week, s.start_time, s.end_time, s.is_available ? true : false]
+        );
+      }
+    }
+    return res.json({ success: true, message: `Processados ${processedSchedules.length} horários`, data: processedSchedules.length });
 
   } catch (error) {
     console.error(`❌ Erro no bulk-update:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 
@@ -697,38 +613,28 @@ router.delete('/schedules/all', async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { professionalId } = req.query;
-    
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+    if (!professionalId) return res.status(400).json({ success: false, message: 'professionalId é obrigatório' });
+
+    // ── Tentar Firestore ──────────────────────────────────────────────────────
+    if (!shouldUsePostgres()) {
+      try {
+        console.log('🗑️ Firestore: Deletando horários do profissional:', professionalId);
+        const deletedCount = await firestoreService.deleteAllProfessionalSchedules(tenantId, professionalId);
+        return res.json({ success: true, message: `${deletedCount} horários deletados com sucesso`, deletedCount });
+      } catch (fsErr) {
+        if (isAuthError(fsErr)) { markFirestoreUnavailable(); console.warn('📋 Firestore UNAUTHENTICATED — usando PostgreSQL fallback'); }
+        else { throw fsErr; }
+      }
     }
-    
-    if (!professionalId) {
-      return res.status(400).json({
-        success: false,
-        message: 'professionalId é obrigatório'
-      });
-    }
-    
-    console.log('🗑️ Firestore: Deletando horários do profissional:', professionalId);
-    
-    const deletedCount = await firestoreService.deleteAllProfessionalSchedules(tenantId, professionalId);
-    
-    res.json({
-      success: true,
-      message: `${deletedCount} horários deletados com sucesso`,
-      deletedCount
-    });
-    
+
+    // ── PostgreSQL fallback ───────────────────────────────────────────────────
+    const result = await req.db.run('DELETE FROM professional_schedules WHERE tenant_id = $1 AND professional_id = $2', [tenantId, parseInt(professionalId)]);
+    return res.json({ success: true, message: `${result.changes} horários deletados com sucesso`, deletedCount: result.changes });
+
   } catch (error) {
     console.error(`❌ Erro ao deletar todos os horários:`, error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 

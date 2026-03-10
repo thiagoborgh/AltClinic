@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 
 // GET /api/professional/schedule - Buscar horários
-router.get('/schedule', (req, res) => {
+router.get('/schedule', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { professionalId } = req.query;
-    
+
     console.log('🔍 DEBUG GET schedule: professionalId recebido:', professionalId);
-    
+
     // Query simples usando apenas colunas que existem
     let query = `
-      SELECT 
+      SELECT
         id,
         professional_id,
         professional_name,
@@ -21,39 +21,40 @@ router.get('/schedule', (req, res) => {
         is_available,
         created_at,
         updated_at
-      FROM professional_schedules 
+      FROM professional_schedules
       WHERE 1=1
     `;
-    
+
     let params = [];
-    
+    let paramIndex = 1;
+
     if (professionalId) {
       // Buscar por professional_id (numérico)
       if (!isNaN(professionalId)) {
-        query += ' AND professional_id = ?';
+        query += ` AND professional_id = $${paramIndex++}`;
         params.push(parseInt(professionalId));
         console.log('🔍 DEBUG: Buscando por professional_id:', professionalId);
       } else {
         // Se não for numérico, buscar por nome
-        query += ' AND professional_name = ?';
+        query += ` AND professional_name = $${paramIndex++}`;
         params.push(professionalId);
         console.log('🔍 DEBUG: Buscando por nome:', professionalId);
       }
     }
-    
+
     query += ' ORDER BY day_of_week, start_time';
-    
+
     console.log('🔍 DEBUG: Query final:', query);
     console.log('🔍 DEBUG: Params:', params);
-    
-    const schedules = db.prepare(query).all(...params);
+
+    const schedules = await db.all(query, params);
     console.log('🔍 DEBUG: Resultado schedules:', schedules.length, 'horários encontrados');
     console.log('🔍 DEBUG: Primeiros 3 horários:', JSON.stringify(schedules.slice(0, 3), null, 2));
 
     // Organizar por dia da semana
     const schedulesByDay = {};
     const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    
+
     schedules.forEach(schedule => {
       const dayName = daysOfWeek[schedule.day_of_week];
       if (!schedulesByDay[dayName]) {
@@ -87,7 +88,7 @@ router.get('/schedule', (req, res) => {
 });
 
 // POST /api/professional/schedule - Criar horário
-router.post('/schedule', (req, res) => {
+router.post('/schedule', async (req, res) => {
   try {
     const { tenant, db } = req;
     const {
@@ -107,29 +108,30 @@ router.post('/schedule', (req, res) => {
     }
 
     // Inserir novo horário
-    const result = db.prepare(`
-      INSERT INTO professional_schedules 
-      (professional_id, professional_name, day_of_week, start_time, end_time, is_available) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      professional_id || 1, // padrão para Dr. João Silva
+    const result = await db.run(`
+      INSERT INTO professional_schedules
+      (professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+    `, [
+      professional_id || 1,
       professional_name,
       parseInt(day_of_week),
       start_time,
       end_time,
-      1 // is_available padrão true
-    );
+      true // is_available padrão true
+    ]);
 
     res.json({
       success: true,
       message: 'Horário criado com sucesso',
       data: {
-        id: result.lastInsertRowid,
+        id: result.lastID,
         professional_name,
         day_of_week: parseInt(day_of_week),
         start_time,
         end_time,
-        is_available: 1
+        is_available: true
       }
     });
 
@@ -144,7 +146,7 @@ router.post('/schedule', (req, res) => {
 });
 
 // PUT /api/professional/schedule/:id - Atualizar horário
-router.put('/schedule/:id', (req, res) => {
+router.put('/schedule/:id', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { id } = req.params;
@@ -159,35 +161,36 @@ router.put('/schedule/:id', (req, res) => {
 
     const updates = [];
     const values = [];
+    let paramIndex = 1;
 
     if (professional_id !== undefined) {
-      updates.push('professional_id = ?');
+      updates.push(`professional_id = $${paramIndex++}`);
       values.push(parseInt(professional_id));
     }
 
     if (professional_name !== undefined) {
-      updates.push('professional_name = ?');
+      updates.push(`professional_name = $${paramIndex++}`);
       values.push(professional_name);
     }
 
     if (day_of_week !== undefined) {
-      updates.push('day_of_week = ?');
+      updates.push(`day_of_week = $${paramIndex++}`);
       values.push(parseInt(day_of_week));
     }
 
     if (start_time !== undefined) {
-      updates.push('start_time = ?');
+      updates.push(`start_time = $${paramIndex++}`);
       values.push(start_time);
     }
 
     if (end_time !== undefined) {
-      updates.push('end_time = ?');
+      updates.push(`end_time = $${paramIndex++}`);
       values.push(end_time);
     }
 
     if (is_available !== undefined) {
-      updates.push('is_available = ?');
-      values.push(is_available ? 1 : 0);
+      updates.push(`is_available = $${paramIndex++}`);
+      values.push(is_available ? true : false);
     }
 
     if (updates.length === 0) {
@@ -201,17 +204,17 @@ router.put('/schedule/:id', (req, res) => {
     values.push(id);
 
     const updateQuery = `
-      UPDATE professional_schedules 
-      SET ${updates.join(', ')} 
-      WHERE id = ?
+      UPDATE professional_schedules
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
     `;
 
-    db.prepare(updateQuery).run(...values);
+    await db.run(updateQuery, values);
 
     // Buscar horário atualizado
-    const updatedSchedule = db.prepare(`
-      SELECT * FROM professional_schedules WHERE id = ?
-    `).get(id);
+    const updatedSchedule = await db.get(`
+      SELECT * FROM professional_schedules WHERE id = $1
+    `, [id]);
 
     res.json({
       success: true,
@@ -230,15 +233,15 @@ router.put('/schedule/:id', (req, res) => {
 });
 
 // DELETE /api/professional/schedule/:id - Deletar horário (soft delete)
-router.delete('/schedule/:id', (req, res) => {
+router.delete('/schedule/:id', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { id } = req.params;
 
     // Verificar se horário existe
-    const existingSchedule = db.prepare(`
-      SELECT id FROM professional_schedules WHERE id = ?
-    `).get(id);
+    const existingSchedule = await db.get(`
+      SELECT id FROM professional_schedules WHERE id = $1
+    `, [id]);
 
     if (!existingSchedule) {
       return res.status(404).json({
@@ -248,11 +251,11 @@ router.delete('/schedule/:id', (req, res) => {
     }
 
     // Soft delete: marcar como indisponível
-    db.prepare(`
-      UPDATE professional_schedules 
-      SET is_available = 0, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `).run(id);
+    await db.run(`
+      UPDATE professional_schedules
+      SET is_available = false, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [id]);
 
     res.json({
       success: true,
@@ -270,7 +273,7 @@ router.delete('/schedule/:id', (req, res) => {
 });
 
 // POST /api/professional/schedule/bulk-update - Atualização em lote
-router.post('/schedule/bulk-update', (req, res) => {
+router.post('/schedule/bulk-update', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { schedules = [] } = req.body;
@@ -289,16 +292,16 @@ router.post('/schedule/bulk-update', (req, res) => {
     // Processar cada horário
     for (const scheduleData of schedules) {
       console.log('🔍 DEBUG bulk-update: processando scheduleData:', JSON.stringify(scheduleData, null, 2));
-      
+
       // Verificar se scheduleData é válido
       if (!scheduleData || typeof scheduleData !== 'object') {
         console.error('❌ ERROR: scheduleData inválido:', scheduleData);
         continue;
       }
-      
+
       // Verificar se é formato novo (dados diretos) ou formato antigo (com action/data)
       let action, id, data;
-      
+
       if (scheduleData.action && scheduleData.data) {
         // Formato antigo: { action: 'create', data: {...} }
         action = scheduleData.action;
@@ -309,7 +312,7 @@ router.post('/schedule/bulk-update', (req, res) => {
         action = 'create'; // assumir create para todos os novos dados
         data = scheduleData; // os dados estão no próprio objeto
       }
-      
+
       console.log('🔍 DEBUG bulk-update: action:', action, 'data:', JSON.stringify(data, null, 2));
 
       // Verificar se data existe
@@ -319,67 +322,69 @@ router.post('/schedule/bulk-update', (req, res) => {
       }
 
       if (action === 'create') {
-        const result = db.prepare(`
-          INSERT INTO professional_schedules 
-          (professional_id, professional_name, day_of_week, start_time, end_time, is_available) 
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(
-          data.professional_id || 1, // padrão Dr. João Silva
+        const result = await db.run(`
+          INSERT INTO professional_schedules
+          (professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id
+        `, [
+          data.professional_id || 1,
           data.professional_name || 'Profissional Principal',
           data.day_of_week,
           data.start_time,
           data.end_time,
-          data.is_available !== false ? 1 : 0
-        );
-        results.push({ action: 'create', id: result.lastInsertRowid });
+          data.is_available !== false ? true : false
+        ]);
+        results.push({ action: 'create', id: result.lastID });
 
       } else if (action === 'update' && id) {
         const updates = [];
         const values = [];
+        let paramIndex = 1;
 
         if (data.professional_name !== undefined) {
-          updates.push('professional_name = ?');
+          updates.push(`professional_name = $${paramIndex++}`);
           values.push(data.professional_name);
         }
 
         if (data.day_of_week !== undefined) {
-          updates.push('day_of_week = ?');
+          updates.push(`day_of_week = $${paramIndex++}`);
           values.push(data.day_of_week);
         }
 
         if (data.start_time !== undefined) {
-          updates.push('start_time = ?');
+          updates.push(`start_time = $${paramIndex++}`);
           values.push(data.start_time);
         }
 
         if (data.end_time !== undefined) {
-          updates.push('end_time = ?');
+          updates.push(`end_time = $${paramIndex++}`);
           values.push(data.end_time);
         }
 
         if (data.is_available !== undefined) {
-          updates.push('is_available = ?');
-          values.push(data.is_available ? 1 : 0);
+          updates.push(`is_available = $${paramIndex++}`);
+          values.push(data.is_available ? true : false);
         }
 
         if (updates.length > 0) {
           updates.push('updated_at = CURRENT_TIMESTAMP');
           values.push(id);
 
-          db.prepare(`
-            UPDATE professional_schedules 
-            SET ${updates.join(', ')} 
-            WHERE id = ?
-          `).run(...values);
+          await db.run(`
+            UPDATE professional_schedules
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex}
+          `, values);
           results.push({ action: 'update', id });
         }
 
       } else if (action === 'delete' && id) {
-        db.prepare(`
-          UPDATE professional_schedules 
-          SET is_available = 0, updated_at = CURRENT_TIMESTAMP 
-          WHERE id = ?
-        `).run(id);
+        await db.run(`
+          UPDATE professional_schedules
+          SET is_available = false, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `, [id]);
         results.push({ action: 'delete', id });
       }
     }
@@ -401,7 +406,7 @@ router.post('/schedule/bulk-update', (req, res) => {
 });
 
 // POST /api/professional/schedule/bulk-save - Rota alternativa mais flexível
-router.post('/schedule/bulk-save', (req, res) => {
+router.post('/schedule/bulk-save', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { schedules = [], professional_name = 'Profissional Principal' } = req.body;
@@ -419,24 +424,25 @@ router.post('/schedule/bulk-save', (req, res) => {
     const results = [];
 
     // Limpar horários existentes para este profissional (se necessário)
-    // db.prepare('DELETE FROM professional_schedules WHERE professional_name = ?').run(professional_name);
+    // await db.run('DELETE FROM professional_schedules WHERE professional_name = $1', [professional_name]);
 
     // Inserir novos horários
     for (const schedule of schedules) {
       try {
-        const result = db.prepare(`
-          INSERT INTO professional_schedules 
-          (professional_id, professional_name, day_of_week, start_time, end_time, is_available) 
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(
+        const result = await db.run(`
+          INSERT INTO professional_schedules
+          (professional_id, professional_name, day_of_week, start_time, end_time, is_available)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id
+        `, [
           schedule.professional_id || 1,
           schedule.professional_name || professional_name,
           parseInt(schedule.day_of_week || schedule.dayOfWeek || 0),
           schedule.start_time || schedule.startTime || schedule.horario?.split(' - ')[0],
           schedule.end_time || schedule.endTime || schedule.horario?.split(' - ')[1],
-          schedule.is_available !== false ? 1 : 0
-        );
-        results.push({ action: 'create', id: result.lastInsertRowid });
+          schedule.is_available !== false ? true : false
+        ]);
+        results.push({ action: 'create', id: result.lastID });
       } catch (insertError) {
         console.error('❌ Erro ao inserir horário:', insertError, 'dados:', schedule);
         // Continuar com outros horários
@@ -460,61 +466,58 @@ router.post('/schedule/bulk-save', (req, res) => {
 });
 
 // DELETE /api/professional/schedules/all - Deletar todos os horários de um profissional
-router.delete('/schedules/all', (req, res) => {
+router.delete('/schedules/all', async (req, res) => {
   try {
     const { tenant, db } = req;
     const { professionalId } = req.query;
-    
+
     console.log('🗑️ DEBUG delete-all: professionalId recebido:', professionalId);
-    
+
     if (!professionalId) {
       return res.status(400).json({
         success: false,
         message: 'professionalId é obrigatório'
       });
     }
-    
-    // Contar quantos registros serão deletados
-    let countQuery = `SELECT COUNT(*) as total FROM professional_schedules WHERE `;
-    let deleteQuery = `DELETE FROM professional_schedules WHERE `;
-    let params = [];
-    
+
+    let countQuery, deleteQuery, params;
+
     if (!isNaN(professionalId)) {
       // Se for numérico, buscar por professional_id
-      countQuery += 'professional_id = ?';
-      deleteQuery += 'professional_id = ?';
-      params.push(parseInt(professionalId));
+      countQuery = 'SELECT COUNT(*) as total FROM professional_schedules WHERE professional_id = $1';
+      deleteQuery = 'DELETE FROM professional_schedules WHERE professional_id = $1';
+      params = [parseInt(professionalId)];
       console.log('🗑️ DEBUG: Deletando por professional_id:', professionalId);
     } else {
       // Se não for numérico, buscar por nome
-      countQuery += 'professional_name = ?';
-      deleteQuery += 'professional_name = ?';
-      params.push(professionalId);
+      countQuery = 'SELECT COUNT(*) as total FROM professional_schedules WHERE professional_name = $1';
+      deleteQuery = 'DELETE FROM professional_schedules WHERE professional_name = $1';
+      params = [professionalId];
       console.log('🗑️ DEBUG: Deletando por nome:', professionalId);
     }
-    
+
     // Contar registros antes de deletar
-    const countResult = db.prepare(countQuery).get(...params);
+    const countResult = await db.get(countQuery, params);
     console.log('🗑️ DEBUG: Registros encontrados para deleção:', countResult.total);
-    
-    if (countResult.total === 0) {
+
+    if (parseInt(countResult.total) === 0) {
       return res.json({
         success: true,
         message: 'Nenhum horário encontrado para deletar',
         deletedCount: 0
       });
     }
-    
+
     // Executar deleção
-    const deleteResult = db.prepare(deleteQuery).run(...params);
+    const deleteResult = await db.run(deleteQuery, params);
     console.log('🗑️ DEBUG: Resultado da deleção:', deleteResult);
-    
+
     res.json({
       success: true,
       message: `${deleteResult.changes} horários deletados com sucesso`,
       deletedCount: deleteResult.changes
     });
-    
+
   } catch (error) {
     console.error(`❌ Erro ao deletar todos os horários:`, error);
     res.status(500).json({
