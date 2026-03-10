@@ -1,7 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
-const db = admin.firestore();
+let db;
+try { db = admin.firestore(); } catch (_) { db = null; }
+
+// ── SQLite helpers (fallback quando Firestore indisponível) ───────────────────
+
+function getSQLiteDb(req) {
+  return req.db || null;
+}
+
+function getMonthRange(offsetMonths) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + (offsetMonths || 0));
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return { start: y + '-' + m + '-01', end: y + '-' + m + '-31' };
+}
+
+async function safeGet(sqliteDb, sql, params) {
+  try { return await sqliteDb.get(sql, params); } catch { return null; }
+}
+
+async function safeAll(sqliteDb, sql, params) {
+  try { return await sqliteDb.all(sql, params); } catch { return []; }
+}
 
 /**
  * ROTAS FINANCEIRAS - FIRESTORE
@@ -12,80 +35,83 @@ const db = admin.firestore();
 router.get('/resumo', async (req, res) => {
   try {
     const { tenantId } = req;
-    
     if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
+      return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+    }
+
+    const sqliteDb = getSQLiteDb(req);
+
+    // ── SQLite (fonte primária) ──────────────────────────────────────────────
+    if (sqliteDb) {
+      const month = getMonthRange(0);
+      const prevMonth = getMonthRange(-1);
+
+      const recRow = await safeGet(sqliteDb,
+        "SELECT COALESCE(SUM(valor),0) as total FROM agendamentos_lite WHERE tenant_id=$1 AND data BETWEEN $2 AND $3 AND valor>0",
+        [tenantId, month.start, month.end]
+      );
+      const prevRow = await safeGet(sqliteDb,
+        "SELECT COALESCE(SUM(valor),0) as total FROM agendamentos_lite WHERE tenant_id=$1 AND data BETWEEN $2 AND $3 AND valor>0",
+        [tenantId, prevMonth.start, prevMonth.end]
+      );
+      const fatReceberRow = await safeGet(sqliteDb,
+        "SELECT COALESCE(SUM(valor),0) as total FROM faturas WHERE tenant_id=$1 AND (status='pendente' OR status='aberta')",
+        [tenantId]
+      );
+
+      const receitaMensal = recRow ? parseFloat(recRow.total) : 0;
+      const prevReceita = prevRow ? parseFloat(prevRow.total) : 0;
+      const contasReceberTotal = fatReceberRow ? parseFloat(fatReceberRow.total) : 0;
+      const metaMensal = 10000;
+
+      return res.json({
+        success: true,
+        data: {
+          saldoAtual: receitaMensal,
+          receitaMensal,
+          despesaMensal: 0,
+          lucroMensal: receitaMensal,
+          variacao: prevReceita > 0 ? parseFloat(((receitaMensal - prevReceita) / prevReceita * 100).toFixed(1)) : 0,
+          contasReceber: contasReceberTotal,
+          contasPagar: 0,
+          metaMensal,
+          percentualMeta: metaMensal > 0 ? parseFloat((receitaMensal / metaMensal * 100).toFixed(1)) : 0
+        }
       });
     }
 
-    console.log(`📊 Firestore: Buscando resumo financeiro do tenant ${tenantId}`);
+    // ── Firestore fallback ───────────────────────────────────────────────────
+    if (!db) {
+      return res.json({ success: true, data: { saldoAtual: 0, receitaMensal: 0, despesaMensal: 0, lucroMensal: 0, contasReceber: 0, contasPagar: 0, metaMensal: 10000, percentualMeta: 0 } });
+    }
 
-    // Buscar contas a receber
-    const contasReceberSnapshot = await db
-      .collection('tenants')
-      .doc(tenantId)
-      .collection('contas_receber')
-      .get();
+    const [contasReceberSnapshot, contasPagarSnapshot] = await Promise.all([
+      db.collection('tenants').doc(tenantId).collection('contas_receber').get(),
+      db.collection('tenants').doc(tenantId).collection('contas_pagar').get()
+    ]);
 
-    // Buscar contas a pagar
-    const contasPagarSnapshot = await db
-      .collection('tenants')
-      .doc(tenantId)
-      .collection('contas_pagar')
-      .get();
-
-    let receitaMensal = 0;
-    let contasReceberTotal = 0;
-    
+    let receitaMensal = 0, contasReceberTotal = 0, despesaMensal = 0, contasPagarTotal = 0;
     contasReceberSnapshot.forEach(doc => {
       const conta = doc.data();
-      if (conta.status === 'pago') {
-        receitaMensal += conta.valor || 0;
-      } else {
-        contasReceberTotal += conta.valor || 0;
-      }
+      if (conta.status === 'pago') receitaMensal += conta.valor || 0;
+      else contasReceberTotal += conta.valor || 0;
     });
-
-    let despesaMensal = 0;
-    let contasPagarTotal = 0;
-    
     contasPagarSnapshot.forEach(doc => {
       const conta = doc.data();
-      if (conta.status === 'pago') {
-        despesaMensal += conta.valor || 0;
-      } else {
-        contasPagarTotal += conta.valor || 0;
-      }
+      if (conta.status === 'pago') despesaMensal += conta.valor || 0;
+      else contasPagarTotal += conta.valor || 0;
     });
 
-    const lucroMensal = receitaMensal - despesaMensal;
-    const saldoAtual = lucroMensal;
-
-    const resumo = {
-      saldoAtual,
-      receitaMensal,
-      despesaMensal,
-      lucroMensal,
-      contasReceber: contasReceberTotal,
-      contasPagar: contasPagarTotal,
-      metaMensal: 35000.00,
-      percentualMeta: (receitaMensal / 35000.00) * 100
-    };
-
-    res.json({
-      success: true,
-      data: resumo
-    });
+    res.json({ success: true, data: {
+      saldoAtual: receitaMensal - despesaMensal, receitaMensal, despesaMensal,
+      lucroMensal: receitaMensal - despesaMensal,
+      contasReceber: contasReceberTotal, contasPagar: contasPagarTotal,
+      metaMensal: 35000, percentualMeta: (receitaMensal / 35000) * 100
+    }});
 
   } catch (error) {
-    console.error('❌ Erro ao buscar resumo financeiro:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar resumo financeiro',
-      error: error.message
-    });
+    console.error('Erro ao buscar resumo financeiro:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar resumo financeiro', error: error.message });
   }
 });
 
@@ -93,43 +119,36 @@ router.get('/resumo', async (req, res) => {
 router.get('/contas-receber', async (req, res) => {
   try {
     const { tenantId } = req;
-    
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+    if (!tenantId) return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
+
+    const sqliteDb = getSQLiteDb(req);
+    if (sqliteDb) {
+      // Tenta buscar da tabela faturas
+      const rows = await safeAll(sqliteDb,
+        "SELECT id, descricao, valor, vencimento as dataVencimento, status, data_pagamento as dataPagamento, created_at as dataEmissao FROM faturas WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 50",
+        [tenantId]
+      );
+      // Se faturas vazia, derivar de agendamentos com valor pendente
+      if (!rows.length) {
+        const appts = await safeAll(sqliteDb,
+          "SELECT id, paciente as cliente, procedimento as descricao, valor, data as dataVencimento, status FROM agendamentos_lite WHERE tenant_id=$1 AND valor>0 AND status NOT IN ('cancelado','realizado') ORDER BY data DESC LIMIT 20",
+          [tenantId]
+        );
+        return res.json({ success: true, data: appts.map(a => ({ ...a, status: 'pendente' })) });
+      }
+      return res.json({ success: true, data: rows });
     }
 
-    console.log(`💰 Firestore: Buscando contas a receber do tenant ${tenantId}`);
+    if (!db) return res.json({ success: true, data: [] });
 
-    const snapshot = await db
-      .collection('tenants')
-      .doc(tenantId)
-      .collection('contas_receber')
-      .orderBy('dataVencimento', 'desc')
-      .get();
-
+    const snapshot = await db.collection('tenants').doc(tenantId).collection('contas_receber').orderBy('dataVencimento', 'desc').get();
     const contas = [];
-    snapshot.forEach(doc => {
-      contas.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-
-    res.json({
-      success: true,
-      data: contas
-    });
+    snapshot.forEach(doc => contas.push({ id: doc.id, ...doc.data() }));
+    res.json({ success: true, data: contas });
 
   } catch (error) {
-    console.error('❌ Erro ao buscar contas a receber:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar contas a receber',
-      error: error.message
-    });
+    console.error('Erro ao buscar contas a receber:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar contas a receber', error: error.message });
   }
 });
 
@@ -490,82 +509,63 @@ router.post('/proposta', async (req, res) => {
 router.get('/fluxo-caixa', async (req, res) => {
   try {
     const { tenantId } = req;
-    
     if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'TenantId não encontrado'
-      });
+      return res.status(400).json({ success: false, message: 'TenantId não encontrado' });
     }
 
-    console.log(`📈 Firestore: Buscando fluxo de caixa do tenant ${tenantId}`);
+    const sqliteDb = getSQLiteDb(req);
 
-    // Buscar transações do último mês
-    const dataInicio = new Date();
-    dataInicio.setMonth(dataInicio.getMonth() - 1);
+    // ── SQLite (fonte primária) ──────────────────────────────────────────────
+    if (sqliteDb) {
+      // Agrupamento por data dos últimos 30 dias
+      const rows = await safeAll(sqliteDb,
+        "SELECT data, COALESCE(SUM(CASE WHEN valor>0 THEN valor ELSE 0 END),0) as receitas FROM agendamentos_lite WHERE tenant_id=$1 AND data >= (NOW() - INTERVAL '30 days')::date GROUP BY data ORDER BY data ASC",
+        [tenantId]
+      );
 
-    const [receberSnapshot, pagarSnapshot] = await Promise.all([
-      db.collection('tenants').doc(tenantId).collection('contas_receber')
-        .where('status', '==', 'pago')
-        .get(),
-      db.collection('tenants').doc(tenantId).collection('contas_pagar')
-        .where('status', '==', 'pago')
-        .get()
-    ]);
-
-    const fluxo = [];
-    const diasMap = new Map();
-
-    // Processar receitas
-    receberSnapshot.forEach(doc => {
-      const conta = doc.data();
-      const data = conta.dataPagamento?.split('T')[0] || new Date().toISOString().split('T')[0];
-      
-      if (!diasMap.has(data)) {
-        diasMap.set(data, { data, receitas: 0, despesas: 0 });
-      }
-      
-      const dia = diasMap.get(data);
-      dia.receitas += conta.valor || 0;
-    });
-
-    // Processar despesas
-    pagarSnapshot.forEach(doc => {
-      const conta = doc.data();
-      const data = conta.dataPagamento?.split('T')[0] || new Date().toISOString().split('T')[0];
-      
-      if (!diasMap.has(data)) {
-        diasMap.set(data, { data, receitas: 0, despesas: 0 });
-      }
-      
-      const dia = diasMap.get(data);
-      dia.despesas += conta.valor || 0;
-    });
-
-    // Converter para array e calcular saldo
-    let saldoAcumulado = 0;
-    Array.from(diasMap.values())
-      .sort((a, b) => a.data.localeCompare(b.data))
-      .forEach(dia => {
-        saldoAcumulado += dia.receitas - dia.despesas;
-        fluxo.push({
-          ...dia,
-          saldo: saldoAcumulado
-        });
+      let saldoAcumulado = 0;
+      const fluxo = rows.map(r => {
+        saldoAcumulado += r.receitas;
+        return { data: r.data, receitas: r.receitas, despesas: 0, saldo: saldoAcumulado };
       });
 
-    res.json({
-      success: true,
-      data: fluxo
+      return res.json({ success: true, data: fluxo });
+    }
+
+    // ── Firestore fallback ───────────────────────────────────────────────────
+    if (!db) return res.json({ success: true, data: [] });
+
+    const [receberSnapshot, pagarSnapshot] = await Promise.all([
+      db.collection('tenants').doc(tenantId).collection('contas_receber').where('status', '==', 'pago').get(),
+      db.collection('tenants').doc(tenantId).collection('contas_pagar').where('status', '==', 'pago').get()
+    ]);
+
+    const diasMap = new Map();
+    receberSnapshot.forEach(doc => {
+      const conta = doc.data();
+      const data = (conta.dataPagamento || '').split('T')[0] || new Date().toISOString().split('T')[0];
+      if (!diasMap.has(data)) diasMap.set(data, { data, receitas: 0, despesas: 0 });
+      diasMap.get(data).receitas += conta.valor || 0;
+    });
+    pagarSnapshot.forEach(doc => {
+      const conta = doc.data();
+      const data = (conta.dataPagamento || '').split('T')[0] || new Date().toISOString().split('T')[0];
+      if (!diasMap.has(data)) diasMap.set(data, { data, receitas: 0, despesas: 0 });
+      diasMap.get(data).despesas += conta.valor || 0;
     });
 
-  } catch (error) {
-    console.error('❌ Erro ao buscar fluxo de caixa:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar fluxo de caixa',
-      error: error.message
+    let saldoAcumulado = 0;
+    const fluxo = [];
+    Array.from(diasMap.values()).sort((a, b) => a.data.localeCompare(b.data)).forEach(dia => {
+      saldoAcumulado += dia.receitas - dia.despesas;
+      fluxo.push({ ...dia, saldo: saldoAcumulado });
     });
+
+    res.json({ success: true, data: fluxo });
+
+  } catch (error) {
+    console.error('Erro ao buscar fluxo de caixa:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar fluxo de caixa', error: error.message });
   }
 });
 
