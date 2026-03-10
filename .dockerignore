@@ -1,16 +1,44 @@
-node_modules
-npm-debug.log
-frontend
-functions
+# Git
 .git
-.env
-.env.local
-.env.production
-*.md
 .gitignore
-Dockerfile
-.dockerignore
-docker-compose*.yml
-.firebase
-.firebaserc
-firebase.json
+
+# Dev/local
+.env
+.env.*
+node_modules
+
+# Bancos SQLite (não vão para produção)
+*.db
+*.db-shm
+*.db-wal
+data/
+databases/
+backups/
+
+# Logs e temporários
+logs/
+*.log
+tmp*
+tmpclaude*
+
+# Frontend (buildado separado no Vercel)
+frontend/
+frontend-lite/
+
+# Testes
+tests/
+test-results/
+playwright-report/
+coverage/
+
+# Docs e scripts locais
+docs/
+scripts/
+*.md
+*.sh
+*.ps1
+*.bat
+
+# Admin frontend (buildado separado)
+admin/frontend/node_modules/
+admin/frontend/build/

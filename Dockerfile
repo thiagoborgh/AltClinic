@@ -1,33 +1,23 @@
-# Dockerfile para Backend - Cloud Run
-FROM node:18-alpine
+# Dockerfile — AltClinic Backend (Fly.io / Node.js 20)
 
-# Criar diretório da aplicação
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Instalar dependências do sistema para better-sqlite3 e sharp
-RUN apk add --no-cache python3 make g++ sqlite
-
-# Copiar arquivos de dependências
+RUN apk add --no-cache python3 make g++ sqlite-dev
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Instalar TODAS as dependências (não usar --only=production para evitar problemas)
-RUN npm install --production
-
-# Copiar código da aplicação
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN apk add --no-cache sqlite-libs dumb-init
+COPY --from=deps /app/node_modules ./node_modules
 COPY src ./src
 COPY admin ./admin
-COPY data ./data
-
-# Criar diretórios necessários
-RUN mkdir -p /app/data && chmod 777 /app/data && mkdir -p /app/uploads
-
-# Expor porta (Cloud Run usa porta 8080)
-EXPOSE 8080
-
-# Variável de ambiente para produção
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 ENV NODE_ENV=production
 ENV PORT=8080
-
-# Iniciar aplicação
-CMD ["node", "src/app.js"]
-
+ENV TZ=America/Sao_Paulo
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "src/server.js"]
