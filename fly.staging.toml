@@ -1,0 +1,38 @@
+# fly.staging.toml — AltClinic Staging
+app = "altclinic-api-staging"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV    = "staging"
+  PORT        = "8080"
+  TZ          = "America/Sao_Paulo"
+
+[http_service]
+  internal_port       = 8080
+  force_https         = true
+  auto_stop_machines  = "stop"
+  auto_start_machines = true
+  min_machines_running = 0   # staging pode dormir
+
+  [http_service.concurrency]
+    type       = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[vm]]
+  memory   = "256mb"   # menor que prod — economia
+  cpu_kind = "shared"
+  cpus     = 1
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval     = "60s"
+    method       = "GET"
+    path         = "/health"
+    port         = 8080
+    timeout      = "10s"
+    type         = "http"

@@ -1,0 +1,90 @@
+name: CI/CD — AltClinic
+
+on:
+  push:
+    branches: [main, sistema-completo, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  # ── Testes ──────────────────────────────────────────────────────────────────
+  test:
+    name: Testes & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint || echo "Lint warnings — não bloqueia"
+
+      - name: Testes
+        run: npm test -- --forceExit --passWithNoTests
+        env:
+          JWT_SECRET: test-secret-min-32-chars-for-testing-only
+          ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+          NODE_ENV: test
+          DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'postgresql://localhost/test' }}
+
+  # ── Deploy Staging (PRs e branches feature) ──────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging (São Paulo)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy no Fly.io Staging
+        run: flyctl deploy --app altclinic-api-staging --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Comentar URL do Staging no PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 **Deploy no Staging concluído!**\n\n**URL:** https://altclinic-api-staging.fly.dev\n\nTeste e aprove para fazer o merge → produção.'
+            })
+
+  # ── Deploy Produção (merge na main) ──────────────────────────────────────
+  deploy-production:
+    name: Deploy → Produção (São Paulo)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy no Fly.io Produção
+        run: flyctl deploy --app altclinic-api --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Notificar deploy bem-sucedido
+        run: |
+          echo "✅ Deploy em produção concluído!"
+          echo "🌐 URL: https://altclinic-api.fly.dev"
+          echo "❤️  Health: $(curl -s https://altclinic-api.fly.dev/health | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d["status"])')"
