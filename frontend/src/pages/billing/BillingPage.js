@@ -4,438 +4,317 @@ import {
   Paper,
   Typography,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
   Button,
   Box,
   Chip,
   Alert,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
   CircularProgress,
-  Skeleton
+  Stack
 } from '@mui/material';
 import {
   CheckCircle,
-  Settings
+  Person,
+  Add,
+  Email,
+  CreditCard,
+  OpenInNew
 } from '@mui/icons-material';
 import api from '../../services/api';
 
-const BillingPage = () => {
-  const [billingInfo, setBillingInfo] = useState(null);
-  const [usage, setUsage] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [upgradeDialog, setUpgradeDialog] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('');
+const PLANOS = {
+  starter:    { nome: 'Starter',    preco: 149, maxMedicos: 1,  maxPacientes: 500  },
+  pro:        { nome: 'Pro',        preco: 349, maxMedicos: 5,  maxPacientes: 2000 },
+  enterprise: { nome: 'Enterprise', preco: 799, maxMedicos: -1, maxPacientes: -1   },
+};
 
-  const plans = {
-    starter: {
-      nome: 'Starter',
-      preco: 'R$ 199,00',
-      periodo: '/mês',
-      features: [
-        '3 usuários',
-        '500 pacientes',
-        'WhatsApp Business',
-        'Relatórios básicos',
-        'Suporte por email'
-      ],
-      color: 'primary'
-    },
-    professional: {
-      nome: 'Professional',
-      preco: 'R$ 399,00',
-      periodo: '/mês',
-      features: [
-        '10 usuários',
-        '2.000 pacientes',
-        'WhatsApp Business',
-        'Telemedicina',
-        'Relatórios avançados',
-        'API Access',
-        'Suporte prioritário'
-      ],
-      color: 'secondary',
-      popular: true
-    },
-    enterprise: {
-      nome: 'Enterprise',
-      preco: 'R$ 799,00',
-      periodo: '/mês',
-      features: [
-        'Usuários ilimitados',
-        'Pacientes ilimitados',
-        'WhatsApp Business',
-        'Telemedicina',
-        'Relatórios personalizados',
-        'API completa',
-        'White-label',
-        'Suporte dedicado'
-      ],
-      color: 'warning'
-    }
-  };
+function formatarReais(valor) {
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+const BillingPage = () => {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [billingStatus, setBillingStatus] = useState('trial');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutStatus, setCheckoutStatus] = useState(null); // 'success' | 'canceled' | null
 
   useEffect(() => {
-    loadBillingInfo();
-    loadUsage();
+    // Detectar retorno do checkout pelo query param
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    if (status === 'success' || status === 'canceled') {
+      setCheckoutStatus(status);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    loadSummary();
   }, []);
 
-  const loadBillingInfo = async () => {
+  const loadSummary = async () => {
     try {
-      const response = await api.get('/billing/info');
-      setBillingInfo(response.data.billing);
+      const response = await api.get('/billing/summary');
+      if (response.data.success) {
+        setSummary(response.data.summary);
+      }
+      const infoResponse = await api.get('/billing/info');
+      if (infoResponse.data.success) {
+        setBillingStatus(infoResponse.data.billing?.status || 'trial');
+      }
     } catch (error) {
-      console.error('Erro ao carregar informações de cobrança:', error);
-      setError('Erro ao carregar informações de cobrança');
-    }
-  };
-
-  const loadUsage = async () => {
-    try {
-      const response = await api.get('/billing/usage');
-      setUsage(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar uso:', error);
+      // fallback: exibe com 1 profissional
+      setSummary({
+        qtdProfissionais: 1,
+        valorTotal: PRECO_BASE,
+        valorBase: PRECO_BASE,
+        profissionaisAdicionais: 0,
+        valorAdicionais: 0,
+        precoPorProfissionalAdicional: PRECO_POR_PROFISSIONAL
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpgrade = async (plano) => {
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
     try {
-      const response = await api.post('/billing/checkout', { plano });
-      window.location.href = response.data.checkoutUrl;
+      const response = await api.post('/billing/checkout');
+      if (response.data.success && response.data.checkoutUrl) {
+        window.location.href = response.data.checkoutUrl;
+      }
     } catch (error) {
-      console.error('Erro no upgrade:', error);
-      setError('Erro ao processar upgrade');
+      console.error('Erro ao iniciar checkout:', error);
+      alert('Erro ao iniciar o pagamento. Tente novamente ou entre em contato com o suporte.');
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
-  const handleBillingPortal = async () => {
+  const handlePortal = async () => {
+    setCheckoutLoading(true);
     try {
-      const response = await fetch('/api/billing/portal', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        window.open(data.portalUrl, '_blank');
+      const response = await api.post('/billing/portal');
+      if (response.data.success && response.data.portalUrl) {
+        window.location.href = response.data.portalUrl;
       }
     } catch (error) {
-      console.error('Erro ao acessar portal:', error);
-      setError('Erro ao acessar portal de cobrança');
+      console.error('Erro ao abrir portal:', error);
+      alert('Erro ao abrir portal de assinatura. Tente novamente.');
+    } finally {
+      setCheckoutLoading(false);
     }
+  };
+
+  const getStatusLabel = (status) => {
+    const map = { trial: 'Trial', active: 'Ativo', past_due: 'Pendente', canceled: 'Cancelado' };
+    return map[status] || status;
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'trial': return 'info';
-      case 'past_due': return 'warning';
-      case 'canceled': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'active': return 'Ativo';
-      case 'trial': return 'Trial';
-      case 'past_due': return 'Pendente';
-      case 'canceled': return 'Cancelado';
-      default: return 'Desconhecido';
-    }
+    const map = { trial: 'info', active: 'success', past_due: 'warning', canceled: 'error' };
+    return map[status] || 'default';
   };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <CircularProgress size={24} sx={{ mr: 2 }} />
-          <Typography variant="h6">
-            Carregando informações de cobrança...
-          </Typography>
-        </Box>
-
-        {/* Skeleton para informações de cobrança */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 3 }}>
-              <Skeleton variant="text" width="60%" height={40} sx={{ mb: 2 }} />
-              <Skeleton variant="rectangular" width="100%" height={100} sx={{ mb: 2 }} />
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Skeleton variant="rectangular" width={120} height={36} />
-                <Skeleton variant="rectangular" width={120} height={36} />
-              </Box>
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3 }}>
-              <Skeleton variant="text" width="80%" height={30} sx={{ mb: 2 }} />
-              <Skeleton variant="rectangular" width="100%" height={60} />
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* Skeleton para planos */}
-        <Box sx={{ mt: 4 }}>
-          <Skeleton variant="text" width="40%" height={40} sx={{ mb: 3 }} />
-          <Grid container spacing={3}>
-            {[1, 2, 3].map((i) => (
-              <Grid item xs={12} md={4} key={i}>
-                <Paper sx={{ p: 3 }}>
-                  <Skeleton variant="text" width="60%" height={30} sx={{ mb: 2 }} />
-                  <Skeleton variant="text" width="40%" height={40} sx={{ mb: 2 }} />
-                  <Skeleton variant="rectangular" width="100%" height={80} sx={{ mb: 2 }} />
-                  <Skeleton variant="rectangular" width="100%" height={40} />
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+      <Container maxWidth="md" sx={{ mt: 6, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
       </Container>
     );
   }
 
+  const qtd = summary?.qtdProfissionais || 1;
+  const valorTotal = calcularValor(qtd);
+  const adicionais = Math.max(0, qtd - 1);
+
+  // Exemplos de preço para o simulador
+  const simulador = [1, 2, 3, 4, 5].map(n => ({
+    qtd: n,
+    valor: calcularValor(n),
+    atual: n === qtd
+  }));
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Cabeçalho */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Cobrança e Planos
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Settings />}
-          onClick={handleBillingPortal}
-          disabled={!billingInfo?.subscription}
-        >
-          Portal de Cobrança
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert 
-          severity="error" 
-          sx={{ mb: 3 }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={() => {
-                setError('');
-                loadBillingInfo();
-                loadUsage();
-              }}
-            >
-              Tentar Novamente
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
-      )}
-
-      {/* Status Atual */}
-      {usage && (
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Plano Atual
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h5">
-                  {plans[usage.plano]?.nome || usage.plano}
-                </Typography>
-                <Chip 
-                  label={getStatusText(billingInfo?.status)} 
-                  color={getStatusColor(billingInfo?.status)}
-                />
-              </Box>
-              <Typography variant="body1" color="textSecondary">
-                {plans[usage.plano]?.preco} {plans[usage.plano]?.periodo}
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1" gutterBottom>
-                Uso de Recursos
-              </Typography>
-              
-              <Box mb={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">Usuários</Typography>
-                  <Typography variant="body2">
-                    {usage.usage.usuarios.atual} / {usage.usage.usuarios.limite === -1 ? '∞' : usage.usage.usuarios.limite}
-                  </Typography>
-                </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={usage.usage.usuarios.percentual} 
-                  color={usage.usage.usuarios.percentual > 80 ? 'warning' : 'primary'}
-                />
-              </Box>
-              
-              <Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography variant="body2">Pacientes</Typography>
-                  <Typography variant="body2">
-                    {usage.usage.pacientes.atual} / {usage.usage.pacientes.limite === -1 ? '∞' : usage.usage.pacientes.limite}
-                  </Typography>
-                </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={usage.usage.pacientes.percentual}
-                  color={usage.usage.pacientes.percentual > 80 ? 'warning' : 'primary'}
-                />
-              </Box>
-            </Grid>
-          </Grid>
-        </Paper>
-      )}
-
-      {/* Alertas */}
-      {usage?.plano === 'trial' && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Período Trial
-          </Typography>
-          <Typography variant="body2">
-            Você está no período trial. Escolha um plano para continuar usando todos os recursos.
-          </Typography>
-        </Alert>
-      )}
-
-      {billingInfo?.billingStatus === 'past_due' && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Pagamento Pendente
-          </Typography>
-          <Typography variant="body2">
-            Há um pagamento pendente. Atualize sua forma de pagamento para evitar interrupções.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Planos Disponíveis */}
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Planos Disponíveis
+    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        Assinatura
       </Typography>
-      
-      <Grid container spacing={3}>
-        {Object.entries(plans).map(([key, plan]) => (
-          <Grid item xs={12} md={4} key={key}>
-            <Card 
-              sx={{ 
-                height: '100%', 
-                display: 'flex', 
-                flexDirection: 'column',
-                position: 'relative',
-                border: plan.popular ? 2 : 1,
-                borderColor: plan.popular ? 'secondary.main' : 'divider'
-              }}
-            >
-              {plan.popular && (
-                <Chip
-                  label="Mais Popular"
-                  color="secondary"
-                  sx={{
-                    position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    zIndex: 1
-                  }}
-                />
-              )}
-              
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h5" gutterBottom color={`${plan.color}.main`}>
-                  {plan.nome}
-                </Typography>
-                
-                <Box display="flex" alignItems="baseline" mb={2}>
-                  <Typography variant="h4" color="text.primary">
-                    {plan.preco}
-                  </Typography>
-                  <Typography variant="subtitle1" color="text.secondary">
-                    {plan.periodo}
-                  </Typography>
-                </Box>
-                
-                <List dense>
-                  {plan.features.map((feature, index) => (
-                    <ListItem key={index} sx={{ px: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <CheckCircle color="success" fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary={feature} />
-                    </ListItem>
-                  ))}
-                </List>
-              </CardContent>
-              
-              <CardActions sx={{ p: 2 }}>
-                <Button
-                  fullWidth
-                  variant={plan.popular ? "contained" : "outlined"}
-                  color={plan.color}
-                  disabled={usage?.plano === key}
-                  onClick={() => {
-                    setSelectedPlan(key);
-                    setUpgradeDialog(true);
-                  }}
-                >
-                  {usage?.plano === key ? 'Plano Atual' : 'Escolher Plano'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        Plano AltClinic · Modelo por profissional
+      </Typography>
 
-      {/* Dialog de Confirmação de Upgrade */}
-      <Dialog open={upgradeDialog} onClose={() => setUpgradeDialog(false)}>
-        <DialogTitle>
-          Confirmar Upgrade
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Você está prestes a fazer upgrade para o plano <strong>{plans[selectedPlan]?.nome}</strong>.
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Você será redirecionado para o checkout seguro do Stripe para finalizar o pagamento.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUpgradeDialog(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => {
-              setUpgradeDialog(false);
-              handleUpgrade(selectedPlan);
-            }}
+      {checkoutStatus === 'success' && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setCheckoutStatus(null)}>
+          Pagamento realizado com sucesso! Sua assinatura está ativa.
+        </Alert>
+      )}
+      {checkoutStatus === 'canceled' && (
+        <Alert severity="info" sx={{ mb: 3 }} onClose={() => setCheckoutStatus(null)}>
+          O pagamento foi cancelado. Você ainda está no período de trial.
+        </Alert>
+      )}
+
+      {/* Status atual */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Plano Atual</Typography>
+          <Chip label={getStatusLabel(billingStatus)} color={getStatusColor(billingStatus)} />
+        </Box>
+
+        {billingStatus === 'trial' && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Você está no período de teste (14 dias grátis). Nenhum cartão de crédito necessário ainda.
+          </Alert>
+        )}
+
+        {/* Cálculo do valor */}
+        <Table size="small">
+          <TableBody>
+            <TableRow>
+              <TableCell>Plano base (1 profissional incluído)</TableCell>
+              <TableCell align="right">{formatarReais(PRECO_BASE)}/mês</TableCell>
+            </TableRow>
+            {adicionais > 0 && (
+              <TableRow>
+                <TableCell>
+                  {adicionais} profissional{adicionais > 1 ? 'is' : ''} adicional{adicionais > 1 ? 'is' : ''}
+                  {' '}({formatarReais(PRECO_POR_PROFISSIONAL)} × {adicionais})
+                </TableCell>
+                <TableCell align="right">{formatarReais(summary?.valorAdicionais || adicionais * PRECO_POR_PROFISSIONAL)}/mês</TableCell>
+              </TableRow>
+            )}
+            <TableRow sx={{ '& td': { borderTop: '2px solid', borderColor: 'divider', fontWeight: 'bold' } }}>
+              <TableCell>
+                <strong>Total mensal</strong>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  {qtd} profissional{qtd > 1 ? 'is' : ''} cadastrado{qtd > 1 ? 's' : ''}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography variant="h5" fontWeight="bold" color="primary">
+                  {formatarReais(valorTotal)}/mês
+                </Typography>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+
+        <Stack direction="row" spacing={2} sx={{ mt: 3 }} flexWrap="wrap">
+          {(billingStatus === 'trial' || billingStatus === 'suspended') && (
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              startIcon={checkoutLoading ? <CircularProgress size={18} color="inherit" /> : <CreditCard />}
+              onClick={handleCheckout}
+              disabled={checkoutLoading}
+            >
+              Assinar Agora
+            </Button>
+          )}
+          {billingStatus === 'active' && (
+            <Button
+              variant="outlined"
+              startIcon={<OpenInNew />}
+              onClick={handlePortal}
+              disabled={checkoutLoading}
+            >
+              Gerenciar Assinatura
+            </Button>
+          )}
+          <Button
+            variant={billingStatus === 'active' ? 'contained' : 'outlined'}
+            startIcon={<Add />}
+            onClick={() => { window.location.href = '/profissionais'; }}
           >
-            Continuar
+            Gerenciar Profissionais
           </Button>
-        </DialogActions>
-      </Dialog>
+          <Button
+            variant="text"
+            startIcon={<Email />}
+            href="mailto:contato@altclinic.com.br"
+          >
+            Falar com suporte
+          </Button>
+        </Stack>
+      </Paper>
+
+      {/* O que está incluído */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>O que está incluído</Typography>
+        <Grid container spacing={1} sx={{ mt: 1 }}>
+          {[
+            'Agenda ilimitada',
+            'Pacientes ilimitados',
+            'WhatsApp Business',
+            'CRM e segmentação',
+            'Relatórios',
+            'Prontuários digitais',
+            'Suporte por e-mail',
+            'Atualizações incluídas'
+          ].map(feature => (
+            <Grid item xs={12} sm={6} key={feature}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle color="success" fontSize="small" />
+                <Typography variant="body2">{feature}</Typography>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+
+      {/* Simulador de preço */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>Simulador de preço</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          O valor da assinatura cresce conforme você adiciona profissionais.
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Grid container spacing={1}>
+          {simulador.map(({ qtd: n, valor, atual }) => (
+            <Grid item xs={6} sm={4} md key={n}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  borderColor: atual ? 'primary.main' : 'divider',
+                  borderWidth: atual ? 2 : 1,
+                  bgcolor: atual ? 'primary.50' : 'background.paper'
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0.5 }}>
+                  {Array.from({ length: Math.min(n, 3) }).map((_, i) => (
+                    <Person key={i} fontSize="small" color={atual ? 'primary' : 'disabled'} />
+                  ))}
+                  {n > 3 && <Typography variant="caption" color="text.secondary">+{n - 3}</Typography>}
+                </Box>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  {n} profissional{n > 1 ? 'is' : ''}
+                </Typography>
+                <Typography variant="body1" fontWeight="bold" color={atual ? 'primary.main' : 'text.primary'}>
+                  {formatarReais(valor)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">/mês</Typography>
+                {atual && (
+                  <Chip label="atual" size="small" color="primary" sx={{ mt: 0.5, display: 'block' }} />
+                )}
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+        <Alert severity="info" sx={{ mt: 2 }} icon={false}>
+          <Typography variant="caption">
+            <strong>Como funciona:</strong> R$ 79,90/mês base inclui 1 profissional.
+            Cada profissional adicional acrescenta R$ 19,90/mês.
+            O valor é ajustado automaticamente ao cadastrar ou remover profissionais.
+          </Typography>
+        </Alert>
+      </Paper>
     </Container>
   );
 };

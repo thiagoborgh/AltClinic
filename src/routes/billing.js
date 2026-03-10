@@ -17,28 +17,35 @@ router.get('/plans', async (req, res) => {
     const plans = {
       starter: {
         nome: 'Starter',
-        preco: 'R$ 199,00',
+        preco: 'R$ 149,00',
+        precoNumerico: 149,
         periodo: '/mês',
+        maxMedicos: 1,
+        maxPacientes: 500,
         features: [
-          '3 usuários',
-          '500 pacientes',
+          '1 médico',
+          'Até 500 pacientes',
+          'Agenda completa',
           'WhatsApp Business',
           'Relatórios básicos',
           'Suporte por email'
         ],
         popular: false
       },
-      professional: {
-        nome: 'Professional',
-        preco: 'R$ 399,00',
+      pro: {
+        nome: 'Pro',
+        preco: 'R$ 349,00',
+        precoNumerico: 349,
         periodo: '/mês',
+        maxMedicos: 5,
+        maxPacientes: 2000,
         features: [
-          '10 usuários',
-          '2.000 pacientes',
+          'Até 5 médicos',
+          'Até 2.000 pacientes',
+          'Agenda multi-profissional',
           'WhatsApp Business',
-          'Telemedicina',
+          'CRM de pacientes',
           'Relatórios avançados',
-          'API Access',
           'Suporte prioritário'
         ],
         popular: true
@@ -46,15 +53,18 @@ router.get('/plans', async (req, res) => {
       enterprise: {
         nome: 'Enterprise',
         preco: 'R$ 799,00',
+        precoNumerico: 799,
         periodo: '/mês',
+        maxMedicos: -1,
+        maxPacientes: -1,
         features: [
-          'Usuários ilimitados',
+          'Médicos ilimitados',
           'Pacientes ilimitados',
+          'Multi-unidades',
           'WhatsApp Business',
-          'Telemedicina',
+          'CRM avançado',
           'Relatórios personalizados',
           'API completa',
-          'White-label',
           'Suporte dedicado'
         ],
         popular: false
@@ -120,28 +130,28 @@ router.get('/usage', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Tenant não encontrado' });
     }
 
-    // Mock de dados de uso - em produção, calcular baseado no banco
+    const limites = {
+      trial:      { maxMedicos: 1,  maxPacientes: 100  },
+      starter:    { maxMedicos: 1,  maxPacientes: 500  },
+      pro:        { maxMedicos: 5,  maxPacientes: 2000 },
+      enterprise: { maxMedicos: -1, maxPacientes: -1   }
+    };
+    const plano = tenant.plano || 'starter';
+    const lim = limites[plano] || limites.starter;
+
+    const [medRow, pacRow] = await Promise.all([
+      req.db.get('SELECT COUNT(*) AS total FROM usuarios WHERE tenant_id = $1 AND status = $2', [tenantId, 'active']),
+      req.db.get('SELECT COUNT(*) AS total FROM pacientes WHERE tenant_id = $1 AND status = $2', [tenantId, 'ativo'])
+    ]);
+
+    const qtdMedicos   = parseInt(medRow?.total ?? 0);
+    const qtdPacientes = parseInt(pacRow?.total ?? 0);
+
+    const pct = (cur, lim) => lim === -1 ? 0 : Math.round((cur / lim) * 100);
+
     const usage = {
-      users: {
-        current: 2,
-        limit: tenant.plano === 'starter' ? 3 : tenant.plano === 'professional' ? 10 : 999,
-        percentage: tenant.plano === 'starter' ? 67 : tenant.plano === 'professional' ? 20 : 1
-      },
-      patients: {
-        current: 45,
-        limit: tenant.plano === 'starter' ? 500 : tenant.plano === 'professional' ? 2000 : 99999,
-        percentage: tenant.plano === 'starter' ? 9 : tenant.plano === 'professional' ? 2 : 0
-      },
-      messages: {
-        current: 1250,
-        limit: tenant.plano === 'starter' ? 1000 : tenant.plano === 'professional' ? 5000 : 99999,
-        percentage: tenant.plano === 'starter' ? 125 : tenant.plano === 'professional' ? 25 : 1
-      },
-      storage: {
-        current: 2.1,
-        limit: tenant.plano === 'starter' ? 5 : tenant.plano === 'professional' ? 25 : 100,
-        percentage: tenant.plano === 'starter' ? 42 : tenant.plano === 'professional' ? 8 : 2
-      }
+      medicos:   { current: qtdMedicos,   limit: lim.maxMedicos,   percentage: pct(qtdMedicos,   lim.maxMedicos)   },
+      pacientes: { current: qtdPacientes, limit: lim.maxPacientes, percentage: pct(qtdPacientes, lim.maxPacientes) }
     };
 
     res.json({ success: true, usage });

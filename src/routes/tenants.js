@@ -119,12 +119,12 @@ router.post('/register', async (req, res) => {
     const databaseName = `tenant_${slug}_${Date.now()}`;
     
     // Configurar trial
-    const trialExpireAt = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 dias
+    const trialExpireAt = new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)); // 14 dias
 
     // Configurações padrão
     const defaultConfig = {
-      maxUsuarios: plano === 'trial' ? 3 : getPlansConfig()[plano]?.maxUsuarios || 3,
-      maxPacientes: plano === 'trial' ? 500 : getPlansConfig()[plano]?.maxPacientes || 500,
+      maxUsuarios: getPlansConfig()[plano]?.maxUsuarios ?? getPlansConfig().starter.maxUsuarios,
+      maxPacientes: getPlansConfig()[plano]?.maxPacientes ?? getPlansConfig().starter.maxPacientes,
       whatsappEnabled: true,
       telemedicina: false,
       customBranding: false,
@@ -579,27 +579,36 @@ router.put('/:id', async (req, res) => {
  */
 function getPlansConfig() {
   return {
+    trial: {
+      maxUsuarios: 1,
+      maxPacientes: 100,
+      whatsappEnabled: true,
+      telemedicina: false,
+      customBranding: false,
+      apiAccess: false,
+      valor: 0
+    },
     starter: {
-      maxUsuarios: 3,
+      maxUsuarios: 1,
       maxPacientes: 500,
       whatsappEnabled: true,
       telemedicina: false,
       customBranding: false,
       apiAccess: false,
-      valor: 199
+      valor: 149
     },
-    professional: {
-      maxUsuarios: 10,
+    pro: {
+      maxUsuarios: 5,
       maxPacientes: 2000,
       whatsappEnabled: true,
       telemedicina: true,
-      customBranding: true,
+      customBranding: false,
       apiAccess: true,
-      valor: 399
+      valor: 349
     },
     enterprise: {
-      maxUsuarios: -1, // ilimitado
-      maxPacientes: -1, // ilimitado
+      maxUsuarios: -1,
+      maxPacientes: -1,
       whatsappEnabled: true,
       telemedicina: true,
       customBranding: true,

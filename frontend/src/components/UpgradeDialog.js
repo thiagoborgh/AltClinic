@@ -37,7 +37,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
   const { user } = useAuth();
-  const [selectedPlan, setSelectedPlan] = useState('professional');
+  const [selectedPlan, setSelectedPlan] = useState('pro');
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Select Plan, 2: Payment
@@ -46,72 +46,64 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'starter',
       nome: 'Starter',
-      preco: 199,
-      precoDesconto: 139, // 30% off primeiros 30 dias
-      descricao: 'Perfeito para começar',
+      preco: 149,
+      descricao: 'Clínica solo / autônomo',
       recursos: [
-        'Até 3 usuários',
-        'Agendamentos ilimitados',
-        'WhatsApp integrado (500 msg/mês)',
+        '1 médico',
+        'Até 500 pacientes',
+        'Agenda completa',
+        'WhatsApp Business',
+        'Confirmação automática (D-2/D-1)',
         'Relatórios básicos',
-        'Suporte por email',
-        'Backup automático'
+        'Suporte por email'
       ],
       limitacoes: [
-        'Sem integração avançada',
-        'Relatórios limitados'
+        'Apenas 1 médico',
+        'Sem CRM avançado'
       ],
       popular: false
     },
     {
-      id: 'professional',
-      nome: 'Professional',
-      preco: 399,
-      precoDesconto: 279, // 30% off primeiros 30 dias
-      descricao: 'Ideal para clínicas em crescimento',
+      id: 'pro',
+      nome: 'Pro',
+      preco: 349,
+      descricao: 'Clínica pequena em crescimento',
       recursos: [
-        'Até 10 usuários',
-        'Agendamentos ilimitados',
-        'WhatsApp + Email + SMS (2500 msg/mês)',
+        'Até 5 médicos',
+        'Até 2.000 pacientes',
+        'Agenda multi-profissional',
+        'WhatsApp Business',
+        'CRM de pacientes (funil Kanban)',
+        'Confirmação + NPS automático',
         'Relatórios avançados',
-        'Suporte prioritário',
-        'Backup automático',
-        'Integração com laboratórios',
-        'Dashboard executivo',
-        'Automação de cobrança'
+        'Suporte prioritário'
       ],
-      limitacoes: [
-        'Customizações limitadas'
-      ],
+      limitacoes: [],
       popular: true
-    },
-    {
-      id: 'business',
-      nome: 'Business',
-      preco: 599,
-      precoDesconto: 419, // 30% off primeiros 30 dias
-      descricao: 'Para clínicas em expansão',
-      recursos: [
-        'Até 25 usuários',
-        'Agendamentos ilimitados',
-        'Todos os canais de comunicação (5000 msg/mês)',
-        'Relatórios personalizados',
-        'Suporte prioritário',
-        'Backup em tempo real',
-        'API personalizada',
-        'Integrações avançadas',
-        'Multi-especialidades'
-      ],
-      limitacoes: [
-        'Sem white-label'
-      ],
-      popular: false
     },
     {
       id: 'enterprise',
       nome: 'Enterprise',
       preco: 799,
-      precoDesconto: 559, // 30% off primeiros 30 dias
+      descricao: 'Redes e multi-unidades',
+      recursos: [
+        'Médicos ilimitados',
+        'Pacientes ilimitados',
+        'Multi-unidades',
+        'WhatsApp Business',
+        'CRM completo + inbox multiagente',
+        'Relatórios personalizados',
+        'API completa',
+        'Suporte dedicado 24/7'
+      ],
+      limitacoes: [],
+      popular: false
+    },
+    {
+      // placeholder para manter compatibilidade com código que referencia 'enterprise'
+      id: 'enterprise_old',
+      nome: 'Enterprise',
+      preco: 799,
       descricao: 'Solução completa para grandes clínicas',
       recursos: [
         'Usuários ilimitados',
