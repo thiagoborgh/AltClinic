@@ -1,18 +1,37 @@
+// ⚠️  ROTA DEPRECADA — use /api/agenda/agendamentos (Firestore)
+// Controlada pela variável de ambiente: FEATURE_DEPRECATED_AGENDAMENTOS_ROUTE=true
+// Quando false (padrão), retorna HTTP 410 Gone
+
 const express = require('express');
 const router = express.Router();
+
+// Feature toggle — desabilitar rota legada
+if (process.env.FEATURE_DEPRECATED_AGENDAMENTOS_ROUTE !== 'true') {
+  router.use((req, res) => {
+    res.status(410).json({
+      success: false,
+      message: 'Esta rota foi descontinuada. Use /api/agenda/agendamentos',
+      newEndpoint: '/api/agenda/agendamentos'
+    });
+  });
+  module.exports = router;
+  // Stop here — remaining code is legacy
+} else {
+// ↓↓↓ LEGACY CODE — only active when FEATURE_DEPRECATED_AGENDAMENTOS_ROUTE=true ↓↓↓
+
 const AgendamentoModel = require('../models/Agendamento');
 const PacienteModel = require('../models/Paciente');
 const authUtil = require('../utils/auth');
 const { sendWhatsAppMessage } = require('../utils/bot');
 const aiService = require('../utils/ai');
+const { getMasterDb } = require('../database/MultiTenantPostgres');
 
 /**
  * Função para validar se agendamento está dentro dos horários do profissional
  */
 async function validateProfessionalSchedule(clinica_id, appointment_datetime, duration_minutes = 60) {
   try {
-    const dbManager = require('../models/database');
-    const db = dbManager.getDb();
+    const db = getMasterDb();
 
     const appointmentDate = new Date(appointment_datetime);
     const dayOfWeek = appointmentDate.getDay();
@@ -20,13 +39,13 @@ async function validateProfessionalSchedule(clinica_id, appointment_datetime, du
     const dateString = appointmentDate.toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Verificar se há exceções para a data específica
-    const exceptions = db.prepare(`
-      SELECT * FROM professional_schedules 
-      WHERE clinica_id = ? 
-        AND is_exception_day = 1 
-        AND exception_date = ?
+    const exceptions = await db.all(`
+      SELECT * FROM professional_schedules
+      WHERE clinica_id = $1
+        AND is_exception_day = 1
+        AND exception_date = $2
         AND is_active = 1
-    `).all(clinica_id, dateString);
+    `, [clinica_id, dateString]);
 
     let availableSchedules = [];
 
@@ -35,13 +54,13 @@ async function validateProfessionalSchedule(clinica_id, appointment_datetime, du
       availableSchedules = exceptions;
     } else {
       // Buscar horários regulares para o dia da semana
-      availableSchedules = db.prepare(`
-        SELECT * FROM professional_schedules 
-        WHERE clinica_id = ? 
-          AND day_of_week = ? 
+      availableSchedules = await db.all(`
+        SELECT * FROM professional_schedules
+        WHERE clinica_id = $1
+          AND day_of_week = $2
           AND is_exception_day = 0
           AND is_active = 1
-      `).all(clinica_id, dayOfWeek);
+      `, [clinica_id, dayOfWeek]);
     }
 
     if (availableSchedules.length === 0) {
@@ -150,11 +169,10 @@ router.post('/', authUtil.authenticate, async (req, res) => {
     }
 
     // Buscar duração do procedimento para verificar disponibilidade
-    const dbManager = require('../models/database');
-    const db = dbManager.getDb();
-    
-    const procedimento = db.prepare('SELECT duracao_minutos FROM procedimento WHERE id = ?').get(procedimento_id);
-    
+    const db = getMasterDb();
+
+    const procedimento = await db.get('SELECT duracao_minutos FROM procedimento WHERE id = $1', [procedimento_id]);
+
     if (!procedimento) {
       return res.status(404).json({
         success: false,
@@ -204,7 +222,7 @@ router.post('/', authUtil.authenticate, async (req, res) => {
     // Atualizar último atendimento do paciente se for no futuro
     const dataAgendamento = new Date(data_hora);
     const agora = new Date();
-    
+
     if (dataAgendamento >= agora) {
       PacienteModel.updateUltimoAtendimento(paciente_id, data_hora);
     }
@@ -213,7 +231,7 @@ router.post('/', authUtil.authenticate, async (req, res) => {
     try {
       const paciente = PacienteModel.findById(paciente_id);
       const dataFormatada = dataAgendamento.toLocaleString('pt-BR');
-      
+
       const mensagem = `🎉 *Agendamento Confirmado!*\n\n` +
                       `Olá ${paciente.nome}!\n\n` +
                       `Seu agendamento foi realizado com sucesso:\n` +
@@ -223,13 +241,13 @@ router.post('/', authUtil.authenticate, async (req, res) => {
                       `Nos vemos em breve! 😊`;
 
       await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
-      
+
       // Registrar mensagem no CRM
-      db.prepare(`
-        INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-        VALUES (?, 'marcada', ?, 'enviada')
-      `).run(paciente_id, mensagem);
-      
+      await db.run(
+        `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status) VALUES ($1, 'marcada', $2, 'enviada')`,
+        [paciente_id, mensagem]
+      );
+
     } catch (error) {
       console.error('Erro ao enviar mensagem de confirmação:', error.message);
     }
@@ -374,15 +392,14 @@ router.put('/:id', authUtil.authenticate, async (req, res) => {
     }
 
     // Se mudando data/hora ou equipamento, verificar disponibilidade
-    if ((data_hora && data_hora !== agendamento.data_hora) || 
+    if ((data_hora && data_hora !== agendamento.data_hora) ||
         (equipamento_id && equipamento_id !== agendamento.equipamento_id)) {
-      
-      const dbManager = require('../models/database');
-      const db = dbManager.getDb();
-      
+
+      const db = getMasterDb();
+
       const proc_id = procedimento_id || agendamento.procedimento_id;
-      const procedimento = db.prepare('SELECT duracao_minutos FROM procedimento WHERE id = ?').get(proc_id);
-      
+      const procedimento = await db.get('SELECT duracao_minutos FROM procedimento WHERE id = $1', [proc_id]);
+
       const disponibilidade = AgendamentoModel.verificarDisponibilidade(
         equipamento_id || agendamento.equipamento_id,
         data_hora || agendamento.data_hora,
@@ -410,7 +427,7 @@ router.put('/:id', authUtil.authenticate, async (req, res) => {
       try {
         const paciente = PacienteModel.findById(agendamento.paciente_id);
         const novaDataFormatada = new Date(data_hora).toLocaleString('pt-BR');
-        
+
         const mensagem = `📅 *Agendamento Remarcado*\n\n` +
                         `Olá ${paciente.nome}!\n\n` +
                         `Seu agendamento foi remarcado:\n` +
@@ -419,16 +436,14 @@ router.put('/:id', authUtil.authenticate, async (req, res) => {
                         `Nos vemos na nova data! 😊`;
 
         await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
-        
+
         // Registrar mensagem no CRM
-        const dbManager = require('../models/database');
-        const db = dbManager.getDb();
-        
-        db.prepare(`
-          INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-          VALUES (?, 'remarcada', ?, 'enviada')
-        `).run(agendamento.paciente_id, mensagem);
-        
+        const db = getMasterDb();
+        await db.run(
+          `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status) VALUES ($1, 'remarcada', $2, 'enviada')`,
+          [agendamento.paciente_id, mensagem]
+        );
+
       } catch (error) {
         console.error('Erro ao enviar mensagem de remarcação:', error.message);
       }
@@ -505,17 +520,15 @@ router.put('/:id/status', authUtil.authenticate, async (req, res) => {
 
       if (mensagem) {
         await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
-        
+
         // Registrar mensagem no CRM
-        const dbManager = require('../models/database');
-        const db = dbManager.getDb();
-        
-        db.prepare(`
-          INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-          VALUES (?, ?, ?, 'enviada')
-        `).run(agendamento.paciente_id, status, mensagem);
+        const db = getMasterDb();
+        await db.run(
+          `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status) VALUES ($1, $2, $3, 'enviada')`,
+          [agendamento.paciente_id, status, mensagem]
+        );
       }
-      
+
     } catch (error) {
       console.error('Erro ao enviar mensagem de status:', error.message);
     }
@@ -623,11 +636,10 @@ router.get('/disponibilidade', authUtil.authenticate, async (req, res) => {
     }
 
     // Buscar duração do procedimento
-    const dbManager = require('../models/database');
-    const db = dbManager.getDb();
-    
-    const procedimento = db.prepare('SELECT duracao_minutos FROM procedimento WHERE id = ?').get(procedimento_id);
-    
+    const db = getMasterDb();
+
+    const procedimento = await db.get('SELECT duracao_minutos FROM procedimento WHERE id = $1', [procedimento_id]);
+
     if (!procedimento) {
       return res.status(404).json({
         success: false,
@@ -712,12 +724,11 @@ router.post('/:id/lembrete', authUtil.authenticate, async (req, res) => {
     const sucesso = await sendWhatsAppMessage(paciente.telefone, mensagem, req.user.clinica_id);
 
     // Registrar mensagem no CRM
-    const dbManager = require('../models/database');
-    const db = dbManager.getDb();
-    db.prepare(`
-      INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-      VALUES (?, ?, ?, ?)
-    `).run(paciente.id, 'lembrete', mensagem, sucesso ? 'enviada' : 'erro');
+    const db = getMasterDb();
+    await db.run(
+      `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status) VALUES ($1, 'lembrete', $2, $3)`,
+      [paciente.id, mensagem, sucesso ? 'enviada' : 'erro']
+    );
 
     res.json({
       success: true,
@@ -737,5 +748,8 @@ router.post('/:id/lembrete', authUtil.authenticate, async (req, res) => {
     });
   }
 });
+
+
+} // end FEATURE_DEPRECATED_AGENDAMENTOS_ROUTE check
 
 module.exports = router;
