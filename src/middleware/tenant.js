@@ -1,379 +1,263 @@
-const multiTenantDb = require('../models/MultiTenantDatabase');
-const crypto = require('crypto');
-
 /**
- * Middleware para extrair e validar tenant
+ * Middleware de tenant — PostgreSQL (schema por tenant)
+ *
+ * Extrai o tenant da requisição (JWT → header → subdomínio → query)
+ * e popula req.tenant, req.tenantId e req.db (TenantDb).
  */
+const multiTenantDb = require('../database/MultiTenantPostgres');
+
+// ─── extractTenant ────────────────────────────────────────────────────────────
+
 const extractTenant = async (req, res, next) => {
   try {
-    console.log('🏥 MIDDLEWARE TENANT: Iniciando extração de tenant');
-    console.log('🏥 MIDDLEWARE TENANT: Headers:', req.headers);
-    console.log('🏥 MIDDLEWARE TENANT: URL:', req.url);
-    
-    // Extrair tenant do subdomínio ou header
     let tenantSlug = null;
-    
-    // Opção 0: JWT Token (prioridade máxima para APIs autenticadas)
     let isFromJwt = false;
-    if (!tenantSlug && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+
+    // Prioridade 0: JWT token
+    if (req.headers.authorization?.startsWith('Bearer ')) {
       try {
         const jwt = require('jsonwebtoken');
         const token = req.headers.authorization.substring(7);
         const decoded = jwt.decode(token);
-        if (decoded && decoded.tenantId) {
+        if (decoded?.tenantId) {
           tenantSlug = decoded.tenantId;
           isFromJwt = true;
-          console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no JWT token:', tenantSlug);
         }
-      } catch (error) {
-        console.log('🏥 MIDDLEWARE TENANT: Erro ao decodificar JWT:', error.message);
+      } catch (_) {}
+    }
+
+    // Prioridade 1: subdomínio (clinica-abc.altclinic.com)
+    if (!tenantSlug) {
+      const host = (req.get('host') || '').toLowerCase();
+      const isLocal = host.includes('localhost') || /^\d+\.\d+\.\d+\.\d+/.test(host);
+      if (!isLocal && host.split('.').length >= 3) {
+        const sub = host.split('.')[0];
+        if (sub && !['www', 'app'].includes(sub)) tenantSlug = sub;
       }
     }
-    
-    // Opção 1: Subdomínio (clinica-abc.altclinic.com) — ignorar em hosts locais/IP
-    const host = (req.get('host') || '').toLowerCase();
-    const isLocalHost = host.includes('localhost') || host.startsWith('127.0.0.1') || host.startsWith('::1');
-    const looksLikeIp = /^\d+\.\d+\.\d+\.\d+(?::\d+)?$/.test(host);
-    if (!isLocalHost && !looksLikeIp && host.split('.').length >= 3) {
-      const subdomain = host.split('.')[0];
-      if (subdomain && subdomain !== 'www' && subdomain !== 'app') {
-        tenantSlug = subdomain;
-      }
-    }
-    
-    // Opção 2: Header personalizado (para desenvolvimento/API)
+
+    // Prioridade 2: header X-Tenant-Slug
     if (!tenantSlug && req.headers['x-tenant-slug']) {
       tenantSlug = req.headers['x-tenant-slug'];
-      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no header:', tenantSlug);
     }
-    
-  // Opção 3: Parâmetro na URL (/api/tenant/:slug/...)
-    if (!tenantSlug && req.params.tenantSlug) {
+
+    // Prioridade 3: parâmetro de URL
+    if (!tenantSlug && req.params?.tenantSlug) {
       tenantSlug = req.params.tenantSlug;
-      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado nos params:', tenantSlug);
     }
-    
-    // Opção 4: Query parameter (?tenant=clinica-abc)
-    if (!tenantSlug && req.query.tenant) {
+
+    // Prioridade 4: query string
+    if (!tenantSlug && req.query?.tenant) {
       tenantSlug = req.query.tenant;
-      console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado na query:', tenantSlug);
     }
-    
-    console.log('🏥 MIDDLEWARE TENANT: Tenant final:', tenantSlug);
-    
+
     if (!tenantSlug) {
       return res.status(400).json({
         error: 'Tenant não especificado',
-        message: 'Use subdomínio, header X-Tenant-Slug ou parâmetro tenant'
+        message: 'Use subdomínio, header X-Tenant-Slug ou parâmetro tenant',
       });
     }
-    
-    // Buscar tenant no database master
+
+    // Busca tenant no PostgreSQL (schema public)
     const masterDb = multiTenantDb.getMasterDb();
-    console.log('🏥 MIDDLEWARE TENANT: Master DB obtido');
-    console.log('🏥 MIDDLEWARE TENANT: Procurando tenant:', tenantSlug, 'isFromJwt:', isFromJwt);
-    
-    const tenant = masterDb.prepare(`
-      SELECT id, slug, nome, plano, status, config, billing, theme, trial_expire_at
-      FROM tenants 
-      WHERE ${isFromJwt ? 'id' : 'slug'} = ? AND status IN ('active', 'trial')
-    `).get(tenantSlug);
-    
-    console.log('🏥 MIDDLEWARE TENANT: Query executada para slug:', tenantSlug);
-    
-    console.log('🏥 MIDDLEWARE TENANT: Tenant encontrado no DB:', !!tenant);
-    
+    const column = isFromJwt ? 'id' : 'slug';
+    const tenant = await masterDb.get(
+      `SELECT id, slug, nome, plano, status, config, billing, theme, trial_expire_at
+       FROM tenants
+       WHERE ${column} = $1 AND status IN ('active', 'trial')`,
+      [tenantSlug]
+    );
+
     if (!tenant) {
-      console.log('🏥 MIDDLEWARE TENANT: Tenant não encontrado:', tenantSlug);
       return res.status(404).json({
         error: 'Clínica não encontrada',
-        message: `Tenant '${tenantSlug}' não existe ou está inativo`
+        message: `Tenant '${tenantSlug}' não existe ou está inativo`,
       });
     }
-    
-    // Parsear JSON fields
-    tenant.config = JSON.parse(tenant.config || '{}');
-    tenant.billing = JSON.parse(tenant.billing || '{}');
-    tenant.theme = JSON.parse(tenant.theme || '{}');
-    
-    // Verificar se trial expirou
+
+    // JSONB já vem parseado pelo driver pg
+    tenant.config  = tenant.config  ?? {};
+    tenant.billing = tenant.billing ?? {};
+    tenant.theme   = tenant.theme   ?? {};
+
+    // Verifica trial expirado
     if (tenant.status === 'trial' && tenant.trial_expire_at) {
-      const trialExpire = new Date(tenant.trial_expire_at);
-      if (new Date() > trialExpire) {
+      if (new Date() > new Date(tenant.trial_expire_at)) {
         return res.status(402).json({
           error: 'Trial expirado',
           message: 'O período de teste expirou. Faça upgrade do seu plano.',
-          upgradeUrl: `/upgrade?tenant=${tenantSlug}`
+          upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
         });
       }
     }
-    
-    // Adicionar tenant ao request
-    req.tenant = tenant;
+
+    req.tenant   = tenant;
     req.tenantId = tenant.id;
-    
-    // Obter conexão do database do tenant
-    req.db = multiTenantDb.getTenantDb(tenant.id);
-    
-    console.log('🏥 MIDDLEWARE TENANT: Tenant ID definido:', req.tenantId);
-    console.log('🔗 Conexão com database do tenant estabelecida');
-    
-    // Log da requisição (opcional)
-    console.log(`🏥 Request para tenant: ${tenant.nome} (${tenantSlug})`);
-    
+    req.db       = multiTenantDb.getTenantDb(tenant.id, tenant.slug);
+
     next();
-    
   } catch (error) {
     console.error('❌ Erro no middleware de tenant:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: 'Falha ao processar tenant'
-    });
+    res.status(500).json({ error: 'Erro interno do servidor', message: 'Falha ao processar tenant' });
   }
 };
 
-/**
- * Middleware para verificar limites do tenant
- */
-const checkTenantLimits = (resourceType) => {
-  return async (req, res, next) => {
-    try {
-      const { tenant } = req;
-      
-      if (!tenant) {
-        return res.status(400).json({ error: 'Tenant não encontrado' });
-      }
-      
-      // Verificar limites baseado no tipo de recurso
-      switch (resourceType) {
-        case 'usuarios':
-          if (tenant.config.maxUsuarios !== -1) {
-            const tenantDb = multiTenantDb.getTenantDb(tenant.id);
-            const count = tenantDb.prepare(`
-              SELECT COUNT(*) as total 
-              FROM usuarios 
-              WHERE tenant_id = ? AND status = 'active'
-            `).get(tenant.id);
-            
-            if (count.total >= tenant.config.maxUsuarios) {
-              return res.status(402).json({
-                error: 'Limite de usuários atingido',
-                message: `Seu plano permite até ${tenant.config.maxUsuarios} usuários`,
-                current: count.total,
-                limit: tenant.config.maxUsuarios,
-                upgradeUrl: `/upgrade?tenant=${tenant.slug}`
-              });
-            }
-          }
-          break;
-          
-        case 'pacientes':
-          if (tenant.config.maxPacientes !== -1) {
-            const tenantDb = multiTenantDb.getTenantDb(tenant.id);
-            const count = tenantDb.prepare(`
-              SELECT COUNT(*) as total 
-              FROM pacientes 
-              WHERE tenant_id = ? AND status = 'ativo'
-            `).get(tenant.id);
-            
-            if (count.total >= tenant.config.maxPacientes) {
-              return res.status(402).json({
-                error: 'Limite de pacientes atingido',
-                message: `Seu plano permite até ${tenant.config.maxPacientes} pacientes`,
-                current: count.total,
-                limit: tenant.config.maxPacientes,
-                upgradeUrl: `/upgrade?tenant=${tenant.slug}`
-              });
-            }
-          }
-          break;
-          
-        case 'whatsapp':
-          if (!tenant.config.whatsappEnabled) {
-            return res.status(403).json({
-              error: 'WhatsApp não habilitado',
-              message: 'Seu plano não inclui integração com WhatsApp',
-              upgradeUrl: `/upgrade?tenant=${tenant.slug}`
+// ─── checkTenantLimits ────────────────────────────────────────────────────────
+
+const checkTenantLimits = (resourceType) => async (req, res, next) => {
+  try {
+    const { tenant } = req;
+    if (!tenant) return res.status(400).json({ error: 'Tenant não encontrado' });
+
+    switch (resourceType) {
+      case 'usuarios': {
+        if (tenant.config.maxUsuarios !== -1) {
+          const row = await req.db.get(
+            `SELECT COUNT(*) AS total FROM usuarios WHERE tenant_id = $1 AND status = 'active'`,
+            [tenant.id]
+          );
+          if (parseInt(row.total) >= tenant.config.maxUsuarios) {
+            return res.status(402).json({
+              error: 'Limite de usuários atingido',
+              message: `Seu plano permite até ${tenant.config.maxUsuarios} usuários`,
+              current: parseInt(row.total),
+              limit: tenant.config.maxUsuarios,
+              upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
             });
           }
-          break;
-          
-        case 'telemedicina':
-          if (!tenant.config.telemedicina) {
-            return res.status(403).json({
-              error: 'Telemedicina não habilitada',
-              message: 'Seu plano não inclui telemedicina',
-              upgradeUrl: `/upgrade?tenant=${tenant.slug}`
+        }
+        break;
+      }
+      case 'pacientes': {
+        if (tenant.config.maxPacientes !== -1) {
+          const row = await req.db.get(
+            `SELECT COUNT(*) AS total FROM pacientes WHERE tenant_id = $1 AND status = 'ativo'`,
+            [tenant.id]
+          );
+          if (parseInt(row.total) >= tenant.config.maxPacientes) {
+            return res.status(402).json({
+              error: 'Limite de pacientes atingido',
+              message: `Seu plano permite até ${tenant.config.maxPacientes} pacientes`,
+              current: parseInt(row.total),
+              limit: tenant.config.maxPacientes,
+              upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
             });
           }
-          break;
+        }
+        break;
       }
-      
-      next();
-      
-    } catch (error) {
-      console.error('❌ Erro ao verificar limites do tenant:', error);
-      res.status(500).json({ error: 'Erro interno do servidor' });
+      case 'whatsapp':
+        if (!tenant.config.whatsappEnabled) {
+          return res.status(403).json({
+            error: 'WhatsApp não habilitado',
+            message: 'Seu plano não inclui integração com WhatsApp',
+            upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
+          });
+        }
+        break;
+      case 'telemedicina':
+        if (!tenant.config.telemedicina) {
+          return res.status(403).json({
+            error: 'Telemedicina não habilitada',
+            message: 'Seu plano não inclui telemedicina',
+            upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
+          });
+        }
+        break;
     }
-  };
+
+    next();
+  } catch (error) {
+    console.error('❌ Erro ao verificar limites do tenant:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 };
 
-/**
- * Middleware de rate limiting por tenant
- */
+// ─── tenantRateLimit ──────────────────────────────────────────────────────────
+
 const tenantRateLimit = (options = {}) => {
-  const {
-    windowMs = 15 * 60 * 1000, // 15 minutos
-    maxRequests = 1000,
-    message = 'Muitas requisições. Tente novamente em alguns minutos.'
-  } = options;
-  
+  const { windowMs = 15 * 60 * 1000, maxRequests = 1000, message = 'Muitas requisições.' } = options;
   const requestCounts = new Map();
-  
+
   return (req, res, next) => {
     const { tenant } = req;
-    
-    if (!tenant) {
-      return next();
-    }
-    
+    if (!tenant) return next();
+
     const key = `${tenant.id}:${req.ip}`;
     const now = Date.now();
     const windowStart = now - windowMs;
-    
-    // Limpar contadores antigos
-    if (requestCounts.has(key)) {
-      const requests = requestCounts.get(key);
-      requestCounts.set(key, requests.filter(time => time > windowStart));
-    }
-    
-    // Adicionar request atual
-    if (!requestCounts.has(key)) {
-      requestCounts.set(key, []);
-    }
-    
-    const requests = requestCounts.get(key);
+
+    const requests = (requestCounts.get(key) ?? []).filter(t => t > windowStart);
     requests.push(now);
-    
-    // Verificar limite
+    requestCounts.set(key, requests);
+
     if (requests.length > maxRequests) {
-      return res.status(429).json({
-        error: 'Rate limit excedido',
-        message,
-        retryAfter: Math.ceil(windowMs / 1000)
-      });
+      return res.status(429).json({ error: 'Rate limit excedido', message, retryAfter: Math.ceil(windowMs / 1000) });
     }
-    
-    // Adicionar headers informativos
+
     res.set({
       'X-RateLimit-Limit': maxRequests,
       'X-RateLimit-Remaining': Math.max(0, maxRequests - requests.length),
-      'X-RateLimit-Reset': new Date(now + windowMs).toISOString()
+      'X-RateLimit-Reset': new Date(now + windowMs).toISOString(),
     });
-    
+
     next();
   };
 };
 
-/**
- * Middleware para log de atividades
- */
-const logActivity = (acao, entidade = null) => {
-  return async (req, res, next) => {
-    // Executar a ação primeiro
-    const originalSend = res.send;
-    
-    res.send = function(data) {
-      // Log apenas em caso de sucesso (status 2xx)
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        logTenantActivity(req, acao, entidade);
-      }
-      
-      return originalSend.call(this, data);
-    };
-    
-    next();
+// ─── logActivity ──────────────────────────────────────────────────────────────
+
+const logActivity = (acao, entidade = null) => async (req, res, next) => {
+  const originalSend = res.send.bind(res);
+  res.send = function (data) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      logTenantActivity(req, acao, entidade).catch(() => {});
+    }
+    return originalSend(data);
   };
+  next();
 };
 
-/**
- * Função auxiliar para logar atividade
- */
 async function logTenantActivity(req, acao, entidade) {
-  try {
-    const { tenant, user } = req;
-    
-    if (!tenant) return;
-    
-    const tenantDb = multiTenantDb.getTenantDb(tenant.id);
-    
-    tenantDb.prepare(`
-      INSERT INTO activity_logs (
-        tenant_id, usuario_id, acao, entidade, entidade_id, 
-        detalhes, ip_address, user_agent
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+  const { tenant, user } = req;
+  if (!tenant) return;
+  await req.db.run(
+    `INSERT INTO activity_logs
+       (tenant_id, usuario_id, acao, entidade, entidade_id, detalhes, ip_address, user_agent)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
       tenant.id,
-      user ? user.id : null,
+      user?.id ?? null,
       acao,
       entidade,
-      req.params.id || null,
-      JSON.stringify({
-        method: req.method,
-        url: req.url,
-        body: req.method === 'POST' || req.method === 'PUT' ? req.body : null
-      }),
+      req.params?.id ?? null,
+      JSON.stringify({ method: req.method, url: req.url, body: ['POST', 'PUT'].includes(req.method) ? req.body : null }),
       req.ip,
-      req.get('User-Agent')
-    );
-    
-  } catch (error) {
-    console.error('❌ Erro ao logar atividade:', error);
-  }
+      req.get('User-Agent'),
+    ]
+  );
 }
 
-/**
- * Middleware para verificar features habilitadas
- */
-const requireFeature = (feature) => {
-  return (req, res, next) => {
-    const { tenant } = req;
-    
-    if (!tenant) {
-      return res.status(400).json({ error: 'Tenant não encontrado' });
-    }
-    
-    if (!tenant.config[feature]) {
-      return res.status(403).json({
-        error: `Feature '${feature}' não habilitada`,
-        message: `Seu plano não inclui ${feature}`,
-        upgradeUrl: `/upgrade?tenant=${tenant.slug}`
-      });
-    }
-    
-    next();
-  };
-};
+// ─── requireFeature / validateTenantToken ────────────────────────────────────
 
-/**
- * Middleware para validar tenant no token JWT
- */
-const validateTenantToken = (req, res, next) => {
-  // Este middleware deve ser usado após a autenticação JWT
-  const { user, tenant } = req;
-  
-  if (!user || !tenant) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
-  
-  // Verificar se o usuário pertence ao tenant
-  if (user.tenantId !== tenant.id) {
+const requireFeature = (feature) => (req, res, next) => {
+  if (!req.tenant) return res.status(400).json({ error: 'Tenant não encontrado' });
+  if (!req.tenant.config[feature]) {
     return res.status(403).json({
-      error: 'Acesso negado',
-      message: 'Usuário não pertence a esta clínica'
+      error: `Feature '${feature}' não habilitada`,
+      message: `Seu plano não inclui ${feature}`,
+      upgradeUrl: `/upgrade?tenant=${req.tenant.slug}`,
     });
   }
-  
+  next();
+};
+
+const validateTenantToken = (req, res, next) => {
+  const { user, tenant } = req;
+  if (!user || !tenant) return res.status(401).json({ error: 'Não autorizado' });
+  if (user.tenantId !== tenant.id) {
+    return res.status(403).json({ error: 'Acesso negado', message: 'Usuário não pertence a esta clínica' });
+  }
   next();
 };
 
@@ -383,5 +267,5 @@ module.exports = {
   tenantRateLimit,
   logActivity,
   requireFeature,
-  validateTenantToken
+  validateTenantToken,
 };
