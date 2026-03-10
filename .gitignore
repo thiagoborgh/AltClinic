@@ -46,3 +46,4 @@ create-*.js
 tools/notebook-server/config.ps1
 tools/notebook-server/ngrok.yml
 tools/notebook-server/runtime/
+frontend-lite/
