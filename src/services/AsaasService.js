@@ -166,6 +166,32 @@ class AsaasService {
   }
 
   /**
+   * Busca os pagamentos (faturas) de uma assinatura.
+   * @param {string} subscriptionId
+   * @returns {Promise<Array>}
+   */
+  async getSubscriptionPayments(subscriptionId) {
+    if (!this.isEnabled) {
+      console.log('[AsaasService] [mock] getSubscriptionPayments:', subscriptionId);
+      return [
+        {
+          id: `mock_pay_${Date.now()}`,
+          subscription: subscriptionId,
+          status: 'CONFIRMED',
+          value: 149,
+          dueDate: new Date().toISOString().slice(0, 10),
+          paymentDate: new Date().toISOString().slice(0, 10),
+          invoiceUrl: 'https://sandbox.asaas.com/mock-invoice',
+          _mock: true,
+        },
+      ];
+    }
+
+    const result = await this._request('get', `/payments?subscription=${subscriptionId}`);
+    return result.data || [];
+  }
+
+  /**
    * Busca dados de um customer pelo ID.
    * @param {string} customerId
    */

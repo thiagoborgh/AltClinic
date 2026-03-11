@@ -8,10 +8,14 @@ const asaasService = require('../services/AsaasService');
 
 // ─── Tabela de planos Asaas ───────────────────────────────────────────────────
 const PLANOS = {
-  starter:    { nome: 'Starter',    value: 149 },
-  pro:        { nome: 'Pro',        value: 349 },
-  enterprise: { nome: 'Enterprise', value: 799 },
+  trial:      { nome: 'Trial',      value: 0,   maxMedicos: 1,  maxPacientes: 100  },
+  starter:    { nome: 'Starter',    value: 149,  maxMedicos: 1,  maxPacientes: 500  },
+  pro:        { nome: 'Pro',        value: 349,  maxMedicos: 5,  maxPacientes: 2000 },
+  enterprise: { nome: 'Enterprise', value: 799,  maxMedicos: -1, maxPacientes: -1   },
 };
+
+// Ordem de hierarquia para validar upgrade
+const PLANOS_ORDER = ['trial', 'starter', 'pro', 'enterprise'];
 
 /**
  * Rotas para Sistema de Cobrança
@@ -194,29 +198,66 @@ router.post('/portal', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/billing/cancel
- * Cancelar assinatura
+ * Cancela assinatura no Asaas e agenda suspensão ao fim do período pago.
+ *
+ * Body: { motivo?: string }
  */
 router.post('/cancel', authenticateToken, async (req, res) => {
   try {
-    const { immediate = false } = req.body;
+    const { motivo } = req.body;
     const tenantId = req.user.tenantId;
-    
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
+    const masterDb = multiTenantDb.getMasterDb();
+
+    const row = await masterDb.get(
+      'SELECT id, plano, billing FROM tenants WHERE id=$1',
+      [tenantId]
+    );
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
     }
 
-    await billingManager.cancelSubscription(tenant, immediate);
+    const billing = typeof row.billing === 'string'
+      ? JSON.parse(row.billing)
+      : (row.billing || {});
 
-    res.json({ 
-      success: true, 
-      message: immediate 
-        ? 'Assinatura cancelada imediatamente'
-        : 'Assinatura será cancelada no final do período atual'
+    // 1. Cancelar assinatura no Asaas se existir
+    if (billing.asaas_subscription_id) {
+      await asaasService.cancelSubscription(billing.asaas_subscription_id);
+      console.log(`[billing/cancel] Assinatura Asaas cancelada: ${billing.asaas_subscription_id} (tenant ${tenantId})`);
+    }
+
+    // 2. Estimar data de suspensão — fim do ciclo atual (30 dias a partir de hoje)
+    const suspensionDate = new Date();
+    suspensionDate.setDate(suspensionDate.getDate() + 30);
+
+    // 3. Atualizar billing do tenant
+    const updatedBilling = {
+      ...billing,
+      status: 'pending_cancel',
+      cancel_requested_at: new Date().toISOString(),
+      cancel_motivo: motivo || null,
+      estimated_suspension_at: suspensionDate.toISOString(),
+    };
+
+    await masterDb.run(
+      'UPDATE tenants SET billing=$1, updated_at=NOW() WHERE id=$2',
+      [JSON.stringify(updatedBilling), tenantId]
+    );
+
+    console.log(`[billing/cancel] Tenant ${tenantId} agendou cancelamento para ${suspensionDate.toISOString()}`);
+
+    return res.json({
+      success: true,
+      message: 'Cancelamento registrado. O acesso permanece ativo até o fim do período pago.',
+      data: {
+        status: 'pending_cancel',
+        estimated_suspension_at: suspensionDate.toISOString(),
+      },
     });
   } catch (error) {
-    console.error('Erro ao cancelar assinatura:', error);
-    res.status(500).json({ error: 'Erro ao cancelar assinatura' });
+    console.error('[billing/cancel] Erro ao cancelar assinatura:', error.message, error.stack);
+    res.status(500).json({ success: false, error: 'Erro ao cancelar assinatura', message: error.message });
   }
 });
 
@@ -414,6 +455,235 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
       error: 'Erro ao processar assinatura',
       message: error.message,
     });
+  }
+});
+
+/**
+ * GET /api/billing/invoices
+ * Retorna histórico de faturas do tenant via Asaas.
+ */
+router.get('/invoices', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+    const masterDb = multiTenantDb.getMasterDb();
+
+    const row = await masterDb.get(
+      'SELECT billing FROM tenants WHERE id=$1',
+      [tenantId]
+    );
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
+    }
+
+    const billing = typeof row.billing === 'string'
+      ? JSON.parse(row.billing)
+      : (row.billing || {});
+
+    if (!billing.asaas_subscription_id) {
+      return res.json({
+        success: true,
+        invoices: [],
+        message: 'Sem assinatura ativa. Use POST /api/billing/subscribe para contratar um plano.',
+      });
+    }
+
+    const invoices = await asaasService.getSubscriptionPayments(billing.asaas_subscription_id);
+
+    return res.json({ success: true, invoices });
+  } catch (error) {
+    console.error('[billing/invoices] Erro ao buscar faturas:', error.message, error.stack);
+    res.status(500).json({ success: false, error: 'Erro ao buscar faturas', message: error.message });
+  }
+});
+
+/**
+ * POST /api/billing/upgrade
+ * Faz upgrade de plano (não permite downgrade).
+ *
+ * Body: { plano: 'pro' | 'enterprise' }
+ *
+ * Fluxo:
+ *  1. Valida que o novo plano é superior ao atual
+ *  2. Se tiver assinatura Asaas: cancela atual + cria nova com novo valor
+ *  3. Atualiza tenant.plano e tenant.billing no PostgreSQL master
+ *  4. Retorna novo paymentLink
+ */
+router.post('/upgrade', authenticateToken, async (req, res) => {
+  try {
+    const { plano: novoPlano } = req.body;
+    const tenantId = req.user.tenantId;
+
+    // 1. Validar plano
+    if (!novoPlano || !PLANOS[novoPlano]) {
+      return res.status(400).json({
+        success: false,
+        error: 'Plano inválido',
+        message: `Plano deve ser um dos: ${Object.keys(PLANOS).join(', ')}`,
+      });
+    }
+
+    const masterDb = multiTenantDb.getMasterDb();
+    const row = await masterDb.get(
+      'SELECT id, nome, email, telefone, cnpj_cpf, plano, billing FROM tenants WHERE id=$1',
+      [tenantId]
+    );
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
+    }
+
+    const planoAtual = row.plano || 'trial';
+    const billing = typeof row.billing === 'string'
+      ? JSON.parse(row.billing)
+      : (row.billing || {});
+
+    // 2. Verificar hierarquia — não permite downgrade
+    const idxAtual = PLANOS_ORDER.indexOf(planoAtual);
+    const idxNovo  = PLANOS_ORDER.indexOf(novoPlano);
+
+    if (idxNovo <= idxAtual) {
+      return res.status(400).json({
+        success: false,
+        error: 'Downgrade não permitido',
+        message: `Seu plano atual é "${planoAtual}". Para downgrade, cancele e reasine.`,
+      });
+    }
+
+    const novoPlanConfig = PLANOS[novoPlano];
+
+    // 3a. Cancelar assinatura existente no Asaas
+    if (billing.asaas_subscription_id) {
+      await asaasService.cancelSubscription(billing.asaas_subscription_id);
+      console.log(`[billing/upgrade] Assinatura anterior cancelada: ${billing.asaas_subscription_id}`);
+    }
+
+    // 3b. Garantir customer Asaas
+    let asaasCustomerId = billing.asaas_customer_id || null;
+    if (!asaasCustomerId) {
+      const customer = await asaasService.createCustomer({
+        name: row.nome,
+        email: row.email,
+        cpfCnpj: row.cnpj_cpf || undefined,
+        phone: row.telefone || undefined,
+      });
+      asaasCustomerId = customer.id;
+      console.log(`[billing/upgrade] Novo customer Asaas: ${asaasCustomerId}`);
+    }
+
+    // 3c. Criar nova assinatura com o novo valor
+    const subscription = await asaasService.createSubscription({
+      customerId: asaasCustomerId,
+      planName: novoPlanConfig.nome,
+      value: novoPlanConfig.value,
+      description: `AltClinic — Plano ${novoPlanConfig.nome} (R$${novoPlanConfig.value}/mês)`,
+      externalReference: tenantId,
+    });
+
+    // 4. Atualizar tenant no banco master
+    const updatedBilling = {
+      ...billing,
+      asaas_customer_id: asaasCustomerId,
+      asaas_subscription_id: subscription.id,
+      status: 'pending',
+      plano: novoPlano,
+      upgraded_at: new Date().toISOString(),
+      // limpar flags de cancelamento se houver
+      cancel_requested_at: null,
+      estimated_suspension_at: null,
+    };
+
+    await masterDb.run(
+      'UPDATE tenants SET plano=$1, billing=$2, updated_at=NOW() WHERE id=$3',
+      [novoPlano, JSON.stringify(updatedBilling), tenantId]
+    );
+
+    console.log(`[billing/upgrade] Tenant ${tenantId}: "${planoAtual}" → "${novoPlano}" (sub: ${subscription.id})`);
+
+    return res.status(201).json({
+      success: true,
+      message: `Upgrade para o plano ${novoPlanConfig.nome} realizado com sucesso`,
+      data: {
+        planoAnterior: planoAtual,
+        plano: novoPlano,
+        valor: `R$${novoPlanConfig.value}/mês`,
+        subscriptionId: subscription.id,
+        paymentLink: subscription.paymentLink || subscription.invoiceUrl || null,
+        status: subscription.status,
+        nextDueDate: subscription.nextDueDate || null,
+        mock: subscription._mock || false,
+      },
+    });
+  } catch (error) {
+    console.error('[billing/upgrade] Erro ao fazer upgrade:', error.message, error.stack);
+    res.status(500).json({ success: false, error: 'Erro ao processar upgrade', message: error.message });
+  }
+});
+
+/**
+ * GET /api/billing/plan
+ * Retorna plano atual + uso real do tenant (médicos e pacientes ativos).
+ */
+router.get('/plan', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+    const masterDb = multiTenantDb.getMasterDb();
+
+    const row = await masterDb.get(
+      'SELECT plano, billing FROM tenants WHERE id=$1',
+      [tenantId]
+    );
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'Tenant não encontrado' });
+    }
+
+    const plano = row.plano || 'trial';
+    const billing = typeof row.billing === 'string'
+      ? JSON.parse(row.billing)
+      : (row.billing || {});
+
+    const limites = PLANOS[plano] || PLANOS.starter;
+
+    // Consultar uso real no banco do tenant
+    // req.db é o banco do tenant injetado pelo middleware de multi-tenancy
+    let medicos = 0;
+    let pacientes = 0;
+
+    try {
+      if (req.db) {
+        const [medRow, pacRow] = await Promise.all([
+          req.db.get(
+            'SELECT COUNT(*) AS total FROM usuarios WHERE tenant_id=$1 AND status=$2',
+            [tenantId, 'active']
+          ),
+          req.db.get(
+            'SELECT COUNT(*) AS total FROM pacientes WHERE tenant_id=$1 AND status=$2',
+            [tenantId, 'ativo']
+          ),
+        ]);
+        medicos   = parseInt(medRow?.total  ?? 0, 10);
+        pacientes = parseInt(pacRow?.total  ?? 0, 10);
+      }
+    } catch (dbErr) {
+      // Banco do tenant pode ainda não ter as tabelas — retornar 0 sem falhar
+      console.warn('[billing/plan] Não foi possível consultar uso do tenant:', dbErr.message);
+    }
+
+    return res.json({
+      success: true,
+      plano,
+      limites: {
+        maxMedicos:   limites.maxMedicos,
+        maxPacientes: limites.maxPacientes,
+        valor:        limites.value,
+      },
+      uso: { medicos, pacientes },
+      billing,
+    });
+  } catch (error) {
+    console.error('[billing/plan] Erro ao buscar plano:', error.message, error.stack);
+    res.status(500).json({ success: false, error: 'Erro ao buscar plano', message: error.message });
   }
 });
 
