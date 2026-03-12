@@ -4,7 +4,9 @@ const logger = require('./utils/logger');
 const { createApp } = require('./app');
 const cronManager = require('./cron/inactivityChecker');
 const ProductionInitializer = require('./utils/productionInitializer');
-const { startNurturingJob } = require('./jobs/trialNurturing');
+// trialNurturing — lazy load (arquivo pode não existir em todas as branches)
+let startNurturingJob = () => {};
+try { ({ startNurturingJob } = require('./jobs/trialNurturing')); } catch (e) { /* não instalado */ }
 const { testFirestore } = require('./utils/firestoreHealth');
 
 const PORT = process.env.PORT || 3000;
