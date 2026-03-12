@@ -5,10 +5,9 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const multiTenantDb = require('../database/MultiTenantPostgres');
-const AsaasService = require('../services/AsaasService');
 const { sendWelcomeEmail } = require('../services/emailService');
 
-const asaas = new AsaasService();
+const asaas = require("../services/AsaasService");
 
 // ─── Helpers para o self-service onboarding ───────────────────────────────────
 
