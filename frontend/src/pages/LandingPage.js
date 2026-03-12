@@ -6,7 +6,8 @@ import {
 } from '@mui/material';
 import {
   CheckCircle, WhatsApp, ExpandMore, Schedule,
-  NotificationsActive, TrendingUp, Login as LoginIcon
+  NotificationsActive, TrendingUp, Login as LoginIcon,
+  SentimentVeryDissatisfied, PhoneDisabled, HourglassEmpty
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -55,9 +56,9 @@ const WhatsAppDemo = () => (
 );
 
 const painPoints = [
-  { icon: '😩', title: 'Paciente marcou, mas não veio', description: 'Você só descobriu na hora. A agenda ficou vazia. A consulta, perdida.' },
-  { icon: '📱', title: 'WhatsApp virou bagunça', description: 'Mensagens de agendamento misturadas com tudo. Ninguém acha mais nada.' },
-  { icon: '⏳', title: 'Secretária liga pra confirmar um por um', description: 'Horas do dia gastas em ligações que poderiam estar em outras tarefas.' },
+  { icon: SentimentVeryDissatisfied, iconColor: '#e53935', title: 'Paciente marcou, mas não veio', description: 'Você só descobriu na hora. A agenda ficou vazia. A consulta, perdida.' },
+  { icon: PhoneDisabled, iconColor: '#e53935', title: 'WhatsApp virou bagunça', description: 'Mensagens de agendamento misturadas com tudo. Ninguém acha mais nada.' },
+  { icon: HourglassEmpty, iconColor: '#e53935', title: 'Secretária liga pra confirmar um por um', description: 'Horas do dia gastas em ligações que poderiam estar em outras tarefas.' },
 ];
 
 const howItWorks = [
@@ -105,7 +106,7 @@ const LandingPage = () => {
       </AppBar>
 
       {/* Hero */}
-      <Box sx={{ pt: { xs: 7, md: 10 }, pb: { xs: 6, md: 10 }, background: 'linear-gradient(160deg, #f0f7ff 0%, #e8f5e9 100%)' }}>
+      <Box sx={(t) => ({ pt: { xs: 7, md: 10 }, pb: { xs: 6, md: 10 }, background: `linear-gradient(160deg, ${t.palette.primary.main}12 0%, ${t.palette.secondary.main}0a 100%)`, bgcolor: '#fafafa' })}>
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -120,19 +121,31 @@ const LandingPage = () => {
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, mb: 2.5 }}>
                 <Button variant="contained" size="large" onClick={goRegister} sx={{ px: 4, py: 1.5, fontWeight: 700, fontSize: '1rem', borderRadius: 2, boxShadow: 3 }}>
-                  Testar 15 dias grátis
+                  Testar 14 dias grátis
                 </Button>
                 <Button variant="outlined" size="large" onClick={goLogin} sx={{ px: 3, py: 1.5, fontWeight: 600, borderRadius: 2 }}>
                   Já tenho conta
                 </Button>
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
                 {['Sem cartão de crédito', 'Pronto em 15 minutos', 'Cancele quando quiser'].map(t => (
                   <Box key={t} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
                     <Typography variant="caption" color="text.secondary" fontWeight={500}>{t}</Typography>
                   </Box>
                 ))}
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex' }}>
+                  {['#e91e63','#1976d2','#388e3c','#f57c00','#7b1fa2'].map((c, i) => (
+                    <Avatar key={i} sx={{ width: 28, height: 28, fontSize: 11, bgcolor: c, ml: i > 0 ? -0.8 : 0, border: '2px solid #fff', zIndex: 5 - i }}>
+                      {['D','C','F','M','R'][i]}
+                    </Avatar>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>+320 clínicas</Box> já usam o AltClinic
+                </Typography>
               </Box>
             </Grid>
             <Grid item xs={12} md={6} sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -160,13 +173,15 @@ const LandingPage = () => {
       <Container maxWidth="lg" sx={{ py: { xs: 7, md: 10 } }}>
         <Typography variant="h4" fontWeight={800} textAlign="center" gutterBottom>Você vive alguma dessas situações?</Typography>
         <Typography variant="h6" color="text.secondary" textAlign="center" sx={{ mb: 6, fontWeight: 400 }}>
-          Se sim, você está perdendo dinheiro todo dia — e tem uma solução a partir de R$79,90/mês.
+          Se sim, você está perdendo dinheiro todo dia — e tem uma solução a partir de R$149/mês.
         </Typography>
         <Grid container spacing={3}>
-          {painPoints.map(({ icon, title, description }) => (
+          {painPoints.map(({ icon: Icon, iconColor, title, description }) => (
             <Grid item xs={12} md={4} key={title}>
               <Card variant="outlined" sx={{ p: 3, height: '100%', borderColor: '#ffcdd2', borderWidth: 2, borderRadius: 3, bgcolor: '#fff9f9' }}>
-                <Typography variant="h3" gutterBottom>{icon}</Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Icon sx={{ fontSize: 40, color: iconColor }} />
+                </Box>
                 <Typography variant="h6" fontWeight={700} gutterBottom>{title}</Typography>
                 <Typography variant="body2" color="text.secondary" lineHeight={1.7}>{description}</Typography>
               </Card>
@@ -251,7 +266,7 @@ const LandingPage = () => {
               <Grid item xs={12} md={4} key={nome}>
                 <Card sx={{
                   borderRadius: 4, height: '100%', display: 'flex', flexDirection: 'column',
-                  boxShadow: destaque ? '0 8px 40px rgba(25,118,210,0.25)' : '0 4px 20px rgba(0,0,0,0.08)',
+                  boxShadow: destaque ? '0 8px 40px rgba(0,0,0,0.18)' : '0 4px 20px rgba(0,0,0,0.08)',
                   border: destaque ? '2px solid' : '1px solid',
                   borderColor: destaque ? 'primary.main' : 'divider',
                   position: 'relative', overflow: 'visible',
@@ -314,13 +329,13 @@ const LandingPage = () => {
       </Container>
 
       {/* CTA Final */}
-      <Box sx={{ background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)', py: { xs: 8, md: 12 }, textAlign: 'center' }}>
+      <Box sx={(t) => ({ background: `linear-gradient(135deg, ${t.palette.secondary.dark} 0%, ${t.palette.primary.dark} 100%)`, py: { xs: 8, md: 12 }, textAlign: 'center' })}>
         <Container maxWidth="md">
           <Typography variant={isMobile ? 'h4' : 'h3'} fontWeight={800} color="#fff" gutterBottom lineHeight={1.3}>
             Comece hoje. Veja a diferença<br />na primeira semana.
           </Typography>
           <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', mb: 4, fontWeight: 400 }}>
-            15 dias grátis. Sem cartão. Sem compromisso.
+            14 dias grátis. Sem cartão. Sem compromisso.
           </Typography>
           <Button variant="contained" size="large" onClick={goRegister}
             sx={{ bgcolor: '#fff', color: 'primary.main', px: 6, py: 2, fontWeight: 800, fontSize: '1.1rem', borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', '&:hover': { bgcolor: '#f5f5f5' } }}>

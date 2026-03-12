@@ -3,7 +3,9 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const firestoreService = require('../services/firestoreService');
-const { getMasterDb } = require('../database/MultiTenantPostgres');
+// Importar como instância para preservar o binding do 'this'
+const multiTenantPostgres = require('../database/MultiTenantPostgres');
+const getMasterDb = () => multiTenantPostgres.getMasterDb();
 const router = express.Router();
 
 // Validar JWT_SECRET no startup
@@ -60,192 +62,92 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// 📧 LOGIN COM FIREBASE FIRESTORE
+// 📧 LOGIN — PostgreSQL (Supabase) como primário, Firestore como fallback legado
 router.post('/login', async (req, res) => {
+  const { email, senha, forceLogin, sessionsToRemove } = req.body;
+
+  console.log('🔐 LOGIN: Tentativa de login:', email);
+
+  if (!email || !senha) {
+    return res.status(400).json({ success: false, message: 'Email e senha são obrigatórios' });
+  }
+
   try {
-    const { email, senha } = req.body;
+    // ── 1. Tentar PostgreSQL/Supabase primeiro ──────────────────────────────
+    const masterDb = getMasterDb();
+    const row = await masterDb.get(
+      `SELECT u.id, u.email, u.senha_hash, u.role, u.name,
+              t.id as tid, t.nome as tnome, t.slug as tslug, t.status as tstatus
+       FROM master_users u
+       JOIN tenants t ON t.id = u.tenant_id
+       WHERE u.email = $1
+       LIMIT 1`,
+      [email]
+    );
 
-    console.log('🔐 LOGIN FIRESTORE: Tentativa de login:', email);
-
-    if (!email || !senha) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email e senha são obrigatórios'
-      });
-    }
-
-    // Buscar tenant pelo slug (se fornecido no header)
-    const tenantSlug = req.headers['x-tenant-slug'];
-    
-    if (tenantSlug) {
-      console.log('🔐 LOGIN: Buscando tenant específico:', tenantSlug);
-      const tenant = await firestoreService.getTenantBySlug(tenantSlug);
-      
-      if (!tenant) {
-        return res.status(401).json({
-          success: false,
-          message: 'Tenant não encontrado ou inativo'
-        });
-      }
-
-      // Buscar usuário no tenant
-      const user = await firestoreService.getUserByEmail(tenant.id, email);
-      
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Usuário não encontrado',
-          errorType: 'USER_NOT_FOUND'
-        });
-      }
-
-      // Verificar senha
-      const senhaValida = await bcrypt.compare(senha, user.senha_hash);
-      
+    if (row) {
+      const senhaValida = await bcrypt.compare(senha, row.senha_hash);
       if (!senhaValida) {
-        return res.status(401).json({
-          success: false,
-          message: 'Senha incorreta',
-          errorType: 'INVALID_PASSWORD'
-        });
+        return res.status(401).json({ success: false, message: 'Senha incorreta', errorType: 'INVALID_PASSWORD' });
       }
 
-      // Gerar token JWT
       const token = jwt.sign(
-        { 
-          userId: user.id,
-          tenantId: tenant.id,
-          email: user.email,
-          role: user.papel || user.role
-        },
+        { userId: row.id, tenantId: row.tid, email: row.email, role: row.role },
         JWT_SECRET,
         { expiresIn: '15m' }
       );
 
+      console.log('✅ LOGIN (PostgreSQL):', email, '-> tenant', row.tslug);
       return res.json({
         success: true,
         message: 'Login realizado com sucesso',
-        user: {
-          id: user.id,
-          nome: user.nome,
-          email: user.email,
-          role: user.papel || user.role
-        },
+        user: { id: row.id, nome: row.name || row.email.split('@')[0], email: row.email, role: row.role },
         token,
-        tenant: {
-          id: tenant.id,
-          nome: tenant.nome,
-          slug: tenant.slug
-        },
-        sessionId: `session_${Date.now()}`
+        tenant: { id: row.tid, nome: row.tnome, slug: row.tslug, status: row.tstatus },
+        sessionId: 'session_' + Date.now()
       });
     }
 
-    // Buscar usuário em todos os tenants ativos
-    console.log('🔐 LOGIN: Buscando em todos os tenants ativos...');
-    const results = await firestoreService.findUserAcrossTenants(email);
-    
-    if (!results || results.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email não encontrado em nenhuma clínica',
-        errorType: 'USER_NOT_FOUND'
-      });
+    // ── 2. Usuário não encontrado no PostgreSQL — tentar Firestore (legado) ─
+    console.log('🔐 LOGIN: Não encontrado no PostgreSQL, tentando Firestore...');
+    let firestoreResults = null;
+    try {
+      firestoreResults = await firestoreService.findUserAcrossTenants(email);
+    } catch (fsErr) {
+      // Firestore indisponível — retornar 401 simples
+      console.warn('⚠️  Firestore indisponível no login:', fsErr.message);
+      return res.status(401).json({ success: false, message: 'Email não encontrado', errorType: 'USER_NOT_FOUND' });
     }
 
-    // Usar o primeiro resultado (se houver múltiplos tenants, pode expandir depois)
-    const result = results[0];
-
-    // Verificar senha
-    const senhaValida = await bcrypt.compare(senha, result.user.senha_hash);
-    
-    if (!senhaValida) {
-      return res.status(401).json({
-        success: false,
-        message: 'Senha incorreta',
-        errorType: 'INVALID_PASSWORD'
-      });
+    if (!firestoreResults || firestoreResults.length === 0) {
+      return res.status(401).json({ success: false, message: 'Email não encontrado em nenhuma clínica', errorType: 'USER_NOT_FOUND' });
     }
 
-    // Gerar token JWT
-    const token = jwt.sign(
-      {
-        userId: result.user.id,
-        tenantId: result.tenant.id,
-        email: result.user.email,
-        role: result.user.papel || result.user.role
-      },
+    const result = firestoreResults[0];
+    const senhaValidaFs = await bcrypt.compare(senha, result.user.senha_hash);
+    if (!senhaValidaFs) {
+      return res.status(401).json({ success: false, message: 'Senha incorreta', errorType: 'INVALID_PASSWORD' });
+    }
+
+    const tokenFs = jwt.sign(
+      { userId: result.user.id, tenantId: result.tenant.id, email: result.user.email, role: result.user.papel || result.user.role },
       JWT_SECRET,
       { expiresIn: '15m' }
     );
 
-    console.log('✅ LOGIN: Sucesso para', email, 'no tenant', result.tenant.slug);
-
+    console.log('✅ LOGIN (Firestore legado):', email, '-> tenant', result.tenant.slug);
     return res.json({
       success: true,
       message: 'Login realizado com sucesso',
-      user: {
-        id: result.user.id,
-        nome: result.user.nome,
-        email: result.user.email,
-        role: result.user.papel || result.user.role
-      },
-      token,
-      tenant: {
-        id: result.tenant.id,
-        nome: result.tenant.nome,
-        slug: result.tenant.slug
-      },
-      sessionId: `session_${Date.now()}`
+      user: { id: result.user.id, nome: result.user.nome, email: result.user.email, role: result.user.papel || result.user.role },
+      token: tokenFs,
+      tenant: { id: result.tenant.id, nome: result.tenant.nome, slug: result.tenant.slug },
+      sessionId: 'session_' + Date.now()
     });
 
   } catch (error) {
-    // Fallback para SQLite quando Firestore nao esta configurado (dev)
-    const isFirestoreAuthError = error.code === 16 ||
-      (error.message && (error.message.includes('UNAUTHENTICATED') || error.message.includes('authentication credentials')));
-
-    if (isFirestoreAuthError) {
-      try {
-        const { email, senha } = req.body;
-        const masterDb = getMasterDb();
-        const row = await masterDb.get(
-          'SELECT u.id, u.email, u.senha_hash, u.role, u.tenant_id, t.id as tid, t.nome as tnome, t.slug as tslug ' +
-          'FROM master_users u JOIN tenants t ON t.id = u.tenant_id WHERE u.email = $1',
-          [email]
-        );
-
-        if (!row) {
-          return res.status(401).json({ success: false, message: 'Email nao encontrado', errorType: 'USER_NOT_FOUND' });
-        }
-        const senhaValida = await bcrypt.compare(senha, row.senha_hash);
-        if (!senhaValida) {
-          return res.status(401).json({ success: false, message: 'Senha incorreta', errorType: 'INVALID_PASSWORD' });
-        }
-        const token = jwt.sign(
-          { userId: row.id, tenantId: row.tid, email: row.email, role: row.role },
-          JWT_SECRET,
-          { expiresIn: '15m' }
-        );
-        console.log('LOGIN (SQLite fallback):', email, '-> tenant', row.tslug);
-        return res.json({
-          success: true,
-          message: 'Login realizado com sucesso',
-          user: { id: row.id, email: row.email, role: row.role },
-          token,
-          tenant: { id: row.tid, nome: row.tnome, slug: row.tslug },
-          sessionId: 'session_' + Date.now()
-        });
-      } catch (fallbackErr) {
-        console.error('Erro no fallback SQLite:', fallbackErr.message);
-      }
-    }
-
     console.error('Erro no login:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      error: error.message
-    });
+    return res.status(500).json({ success: false, message: 'Erro interno do servidor', error: error.message });
   }
 });
 

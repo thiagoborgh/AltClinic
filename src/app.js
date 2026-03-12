@@ -38,7 +38,8 @@ const crmFirestoreRoutes = require('./routes/crm-firestore'); // ✅ CRM FIRESTO
 
 // Importar middlewares
 const { extractTenant } = require('./middleware/tenant');
-const { extractTenantFirestore } = require('./middleware/tenantFirestore');
+// extractTenantFirestore substituído por extractTenant (migração Firestore → PostgreSQL)
+const extractTenantFirestore = extractTenant;
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');

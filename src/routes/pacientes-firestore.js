@@ -1,357 +1,235 @@
 const express = require('express');
 const router = express.Router();
-const firestoreService = require('../services/firestoreService');
 const { authenticateToken } = require('./auth');
 
-/**
- * Middleware para extrair tenantId do JWT
- */
-function extractTenantId(req, res, next) {
-  const tenantId = req.user?.tenantId || req.tenantId;
-  
-  if (!tenantId) {
-    return res.status(400).json({
-      success: false,
-      message: 'Tenant não identificado'
-    });
-  }
-  
-  req.tenantId = tenantId;
-  next();
+// Todas as rotas usam req.db (TenantDb PostgreSQL) injetado pelo extractTenant middleware
+
+// Normaliza campos snake_case → camelCase para compatibilidade com o frontend
+function normalizePaciente(p) {
+  if (!p) return p;
+  return {
+    ...p,
+    dataNascimento: p.data_nascimento || p.dataNascimento || null,
+    nomeCompleto: p.nome,
+  };
 }
 
 /**
- * @route GET /api/pacientes
- * @desc Lista todos os pacientes com filtros opcionais usando Firestore
+ * GET /api/pacientes-v2
+ * Lista pacientes com filtros opcionais
  */
-router.get('/', authenticateToken, extractTenantId, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
+    const { db, tenantId } = req;
     const { search, status } = req.query;
 
-    const filters = {};
-    if (status) filters.status = status;
-    if (search) filters.search = search;
+    let sql = `SELECT * FROM pacientes WHERE tenant_id = $1`;
+    const params = [tenantId];
 
-    const pacientes = await firestoreService.getPacientes(tenantId, filters);
+    if (status) {
+      params.push(status);
+      sql += ` AND status = $${params.length}`;
+    }
 
-    res.json({
-      success: true,
-      data: pacientes,
-      total: pacientes.length,
-      page: 1,
-      totalPages: 1
-    });
+    if (search) {
+      params.push(`%${search}%`);
+      sql += ` AND (nome ILIKE $${params.length} OR cpf ILIKE $${params.length} OR telefone ILIKE $${params.length} OR email ILIKE $${params.length})`;
+    }
 
+    sql += ` ORDER BY nome ASC`;
+
+    const pacientes = await db.query(sql, params);
+    const rows = (pacientes.rows ?? pacientes).map(normalizePaciente);
+
+    res.json({ success: true, data: rows, total: rows.length, page: 1, totalPages: 1 });
   } catch (error) {
     console.error('❌ Erro ao listar pacientes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao listar pacientes',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao listar pacientes', error: error.message });
   }
 });
 
 /**
- * @route GET /api/pacientes-v2/buscar
- * @desc Buscar pacientes por termo
+ * GET /api/pacientes-v2/buscar
+ * Buscar pacientes por termo
  */
-router.get('/buscar', authenticateToken, extractTenantId, async (req, res) => {
+router.get('/buscar', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
+    const { db, tenantId } = req;
     const { termo } = req.query;
 
-    if (!termo) {
-      return res.json({ success: true, data: [] });
-    }
+    if (!termo) return res.json({ success: true, data: [] });
 
-    const pacientes = await firestoreService.getPacientes(tenantId, { search: termo });
+    const t = `%${termo}%`;
+    const pacientes = await db.query(
+      `SELECT * FROM pacientes WHERE tenant_id = $1
+       AND (nome ILIKE $2 OR cpf ILIKE $2 OR telefone ILIKE $2 OR email ILIKE $2)
+       ORDER BY nome ASC LIMIT 20`,
+      [tenantId, t]
+    );
+    const rows = (pacientes.rows ?? pacientes).map(normalizePaciente);
 
-    res.json({
-      success: true,
-      data: pacientes
-    });
-
+    res.json({ success: true, data: rows });
   } catch (error) {
-    console.error('❌ Erro ao buscar pacientes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar pacientes',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao buscar pacientes', error: error.message });
   }
 });
 
 /**
- * @route GET /api/pacientes-v2/verificar-duplicatas
- * @desc Verificar se já existe paciente com CPF ou telefone
+ * GET /api/pacientes-v2/verificar-duplicatas
+ * Verificar se CPF ou telefone já existe
  */
-router.get('/verificar-duplicatas', authenticateToken, extractTenantId, async (req, res) => {
+router.get('/verificar-duplicatas', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
+    const { db, tenantId } = req;
     const { cpf, telefone } = req.query;
 
-    const pacientes = await firestoreService.getPacientes(tenantId);
-    
-    const cpfDuplicado = cpf ? pacientes.some(p => p.cpf === cpf) : false;
-    const telefoneDuplicado = telefone ? pacientes.some(p => p.telefone === telefone) : false;
+    let cpfDuplicado = false;
+    let telefoneDuplicado = false;
 
-    res.json({
-      success: true,
-      cpfDuplicado,
-      telefoneDuplicado,
-      exists: cpfDuplicado || telefoneDuplicado
-    });
+    if (cpf) {
+      const r = await db.get(`SELECT id FROM pacientes WHERE tenant_id = $1 AND cpf = $2 LIMIT 1`, [tenantId, cpf]);
+      cpfDuplicado = !!r;
+    }
+    if (telefone) {
+      const r = await db.get(`SELECT id FROM pacientes WHERE tenant_id = $1 AND telefone = $2 LIMIT 1`, [tenantId, telefone]);
+      telefoneDuplicado = !!r;
+    }
 
+    res.json({ success: true, cpfDuplicado, telefoneDuplicado, exists: cpfDuplicado || telefoneDuplicado });
   } catch (error) {
-    console.error('❌ Erro ao verificar duplicatas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao verificar duplicatas',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao verificar duplicatas', error: error.message });
   }
 });
 
 /**
- * @route GET /api/pacientes/:id
- * @desc Buscar paciente por ID
+ * GET /api/pacientes-v2/:id
+ * Buscar paciente por ID
  */
-router.get('/:id', authenticateToken, extractTenantId, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
-    const { id } = req.params;
-
-    const paciente = await firestoreService.getPacienteById(tenantId, id);
+    const { db, tenantId } = req;
+    const paciente = await db.get(
+      `SELECT * FROM pacientes WHERE id = $1 AND tenant_id = $2`,
+      [req.params.id, tenantId]
+    );
 
     if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
-    res.json({
-      success: true,
-      data: paciente,
-      paciente: paciente
-    });
-
+    const p = normalizePaciente(paciente);
+    res.json({ success: true, data: p, paciente: p });
   } catch (error) {
-    console.error('❌ Erro ao buscar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar paciente',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao buscar paciente', error: error.message });
   }
 });
 
 /**
- * @route POST /api/pacientes
- * @desc Criar novo paciente
+ * POST /api/pacientes-v2
+ * Criar novo paciente
  */
-router.post('/', authenticateToken, extractTenantId, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
-    const pacienteData = {
-      ...req.body,
-      status: req.body.status || 'ativo',
-      tenant_id: tenantId
-    };
+    const { db, tenantId } = req;
+    const {
+      nome, nomeCompleto, email, telefone, cpf,
+      dataNascimento, data_nascimento,   // aceita ambos os formatos
+      sexo, endereco, numero, complemento, bairro, cidade, estado, cep,
+      observacoes
+    } = req.body;
 
-    // Validações básicas
-    if (!pacienteData.nome && !pacienteData.nomeCompleto) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nome é obrigatório'
-      });
-    }
+    const nomeFinal = nome || nomeCompleto;
+    if (!nomeFinal) return res.status(400).json({ success: false, message: 'Nome é obrigatório' });
+    if (!telefone) return res.status(400).json({ success: false, message: 'Telefone é obrigatório' });
 
-    if (!pacienteData.telefone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Telefone é obrigatório'
-      });
-    }
+    const nascimento = dataNascimento || data_nascimento || null;
 
-    const paciente = await firestoreService.createPaciente(tenantId, pacienteData);
+    const paciente = await db.get(
+      `INSERT INTO pacientes
+         (tenant_id, nome, email, telefone, cpf, data_nascimento, sexo,
+          endereco, numero, complemento, bairro, cidade, estado, cep, observacoes, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'ativo')
+       RETURNING *`,
+      [tenantId, nomeFinal, email || null, telefone, cpf || null, nascimento,
+       sexo || null, endereco || null, numero || null, complemento || null,
+       bairro || null, cidade || null, estado || null, cep || null, observacoes || null]
+    );
 
-    res.status(201).json({
-      success: true,
-      message: 'Paciente criado com sucesso',
-      data: paciente,
-      paciente: paciente
-    });
-
+    const p = normalizePaciente(paciente);
+    res.status(201).json({ success: true, message: 'Paciente criado com sucesso', data: p, paciente: p });
   } catch (error) {
     console.error('❌ Erro ao criar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao criar paciente',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao criar paciente', error: error.message });
   }
 });
 
 /**
- * @route PUT /api/pacientes/:id
- * @desc Atualizar paciente
+ * PUT /api/pacientes-v2/:id
+ * Atualizar paciente
  */
-router.put('/:id', authenticateToken, extractTenantId, async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
+    const { db, tenantId } = req;
     const { id } = req.params;
-    const updates = req.body;
+    const {
+      nome, nomeCompleto, email, telefone, cpf,
+      dataNascimento, data_nascimento,
+      sexo, endereco, numero, complemento, bairro, cidade, estado, cep,
+      observacoes, status
+    } = req.body;
 
-    // Verificar se paciente existe
-    const paciente = await firestoreService.getPacienteById(tenantId, id);
-    
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
-    }
+    const nomeFinal = nome || nomeCompleto || null;
+    const nascimento = dataNascimento || data_nascimento || null;
 
-    await firestoreService.updatePaciente(tenantId, id, updates);
+    const paciente = await db.get(
+      `UPDATE pacientes SET
+         nome            = COALESCE($3,  nome),
+         email           = COALESCE($4,  email),
+         telefone        = COALESCE($5,  telefone),
+         cpf             = COALESCE($6,  cpf),
+         data_nascimento = COALESCE($7,  data_nascimento),
+         sexo            = COALESCE($8,  sexo),
+         endereco        = COALESCE($9,  endereco),
+         numero          = COALESCE($10, numero),
+         complemento     = COALESCE($11, complemento),
+         bairro          = COALESCE($12, bairro),
+         cidade          = COALESCE($13, cidade),
+         estado          = COALESCE($14, estado),
+         cep             = COALESCE($15, cep),
+         observacoes     = COALESCE($16, observacoes),
+         status          = COALESCE($17, status),
+         updated_at      = NOW()
+       WHERE id = $1 AND tenant_id = $2
+       RETURNING *`,
+      [id, tenantId, nomeFinal, email || null, telefone || null, cpf || null,
+       nascimento, sexo || null, endereco || null, numero || null,
+       complemento || null, bairro || null, cidade || null, estado || null,
+       cep || null, observacoes || null, status || null]
+    );
 
-    // Buscar dados atualizados
-    const pacienteAtualizado = await firestoreService.getPacienteById(tenantId, id);
+    if (!paciente) return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
 
-    res.json({
-      success: true,
-      message: 'Paciente atualizado com sucesso',
-      data: pacienteAtualizado,
-      paciente: pacienteAtualizado
-    });
-
+    const p = normalizePaciente(paciente);
+    res.json({ success: true, message: 'Paciente atualizado com sucesso', data: p, paciente: p });
   } catch (error) {
-    console.error('❌ Erro ao atualizar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao atualizar paciente',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao atualizar paciente', error: error.message });
   }
 });
 
 /**
- * @route DELETE /api/pacientes/:id
- * @desc Deletar paciente
+ * DELETE /api/pacientes-v2/:id
+ * Remover paciente (soft delete)
  */
-router.delete('/:id', authenticateToken, extractTenantId, async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const { tenantId } = req;
-    const { id } = req.params;
-
-    // Verificar se paciente existe
-    const paciente = await firestoreService.getPacienteById(tenantId, id);
-    
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
-    }
-
-    await firestoreService.deletePaciente(tenantId, id);
-
-    res.json({
-      success: true,
-      message: 'Paciente deletado com sucesso'
-    });
-
+    const { db, tenantId } = req;
+    await db.run(
+      `UPDATE pacientes SET status = 'inativo', updated_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+      [req.params.id, tenantId]
+    );
+    res.json({ success: true, message: 'Paciente removido com sucesso' });
   } catch (error) {
-    console.error('❌ Erro ao deletar paciente:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao deletar paciente',
-      error: error.message
-    });
-  }
-});
-
-/**
- * @route PATCH /api/pacientes/:id/status
- * @desc Alterar status do paciente
- */
-router.patch('/:id/status', authenticateToken, extractTenantId, async (req, res) => {
-  try {
-    const { tenantId } = req;
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!['ativo', 'inativo', 'bloqueado'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status inválido. Use: ativo, inativo ou bloqueado'
-      });
-    }
-
-    // Verificar se paciente existe
-    const paciente = await firestoreService.getPacienteById(tenantId, id);
-    
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
-    }
-
-    await firestoreService.updatePaciente(tenantId, id, { status });
-
-    res.json({
-      success: true,
-      message: 'Status atualizado com sucesso'
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao atualizar status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao atualizar status',
-      error: error.message
-    });
-  }
-});
-
-/**
- * @route GET /api/pacientes/:id/historico
- * @desc Buscar histórico de atendimentos do paciente
- */
-router.get('/:id/historico', authenticateToken, extractTenantId, async (req, res) => {
-  try {
-    const { tenantId } = req;
-    const { id } = req.params;
-
-    // Verificar se paciente existe
-    const paciente = await firestoreService.getPacienteById(tenantId, id);
-    
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paciente não encontrado'
-      });
-    }
-
-    // Buscar agendamentos do paciente (implementar quando converter agendamentos)
-    // Por enquanto retorna array vazio
-    const historico = [];
-
-    res.json({
-      success: true,
-      data: historico
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao buscar histórico:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar histórico',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao remover paciente', error: error.message });
   }
 });
 

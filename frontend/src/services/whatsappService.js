@@ -1,9 +1,9 @@
 import apiClient from './api';
 
 class WhatsAppService {
-  // Verificar status da conexão
+  // Verificar status da conexão (silencioso — falha não mostra toast)
   async getStatus() {
-    const response = await apiClient.get('/whatsapp/session/status');
+    const response = await apiClient.get('/whatsapp/session/status', { _silent: true });
     return response.data;
   }
 

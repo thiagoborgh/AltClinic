@@ -1,0 +1,51 @@
+module.exports = {
+  apps: [
+    {
+      name: 'altclinic-backend',
+      script: 'src/server.js',
+      node_args: '--max-http-header-size=65536',
+      cwd: 'C:/Users/thiag/Projects/AltClinic',
+      watch: false,
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3000,
+      },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/pm2-backend-error.log',
+      out_file: 'logs/pm2-backend-out.log',
+      max_restarts: 10,
+      restart_delay: 2000,
+    },
+    {
+      name: 'altclinic-admin-backend',
+      script: 'server.js',
+      cwd: 'C:/Users/thiag/Projects/AltClinic/admin/backend',
+      watch: false,
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3001,
+      },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/pm2-admin-backend-error.log',
+      out_file: 'logs/pm2-admin-backend-out.log',
+      max_restarts: 10,
+      restart_delay: 2000,
+    },
+    {
+      name: 'altclinic-admin-frontend',
+      script: 'node_modules/react-scripts/bin/react-scripts.js',
+      args: 'start',
+      cwd: 'C:/Users/thiag/Projects/AltClinic/admin/frontend',
+      watch: false,
+      env: {
+        PORT: 3002,
+        BROWSER: 'none',
+      },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/pm2-admin-frontend-error.log',
+      out_file: 'logs/pm2-admin-frontend-out.log',
+      max_restarts: 5,
+      restart_delay: 3000,
+    },
+  ],
+};

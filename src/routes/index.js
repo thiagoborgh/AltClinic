@@ -2,7 +2,8 @@ const path = require('path');
 const logger = require('../utils/logger');
 
 const { extractTenant } = require('../middleware/tenant');
-const { extractTenantFirestore } = require('../middleware/tenantFirestore');
+// extractTenantFirestore substituído por extractTenant (migração Firestore → PostgreSQL)
+const extractTenantFirestore = extractTenant;
 
 // Route modules
 const authRoutes              = require('./auth');

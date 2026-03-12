@@ -30,12 +30,23 @@ const api = axios.create({
   },
 });
 
+// Rotas que nunca devem enviar Authorization header
+const AUTH_ROUTES = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
+const isAuthRoute = (url = '') => AUTH_ROUTES.some(r => url.includes(r));
+
 // Interceptor para requisições
 api.interceptors.request.use(
   (config) => {
     console.log('🌐 API REQUEST:', config.method?.toUpperCase(), config.baseURL + config.url);
     console.log('🌐 API REQUEST DATA:', config.data);
-    
+
+    // Rotas de autenticação nunca devem carregar token (evita 431)
+    if (isAuthRoute(config.url)) {
+      delete config.headers.Authorization;
+      delete config.headers.common?.Authorization;
+      return config;
+    }
+
     // Verificar se já existe Authorization header (definido pelo useAuth)
     if (!config.headers.Authorization) {
       // Adicionar token de autenticação se existir (fallback)
@@ -60,8 +71,14 @@ api.interceptors.request.use(
       }
     }
 
-    // Nota: X-Tenant-Slug removido - o backend detecta automaticamente pelo email do usuário
-    // Isso simplifica o sistema e permite que um usuário acesse múltiplos tenants
+    // Verificar tamanho total do header Authorization antes de enviar
+    const authHeader = config.headers.Authorization;
+    if (authHeader && authHeader.length > 4000) {
+      console.warn('Header Authorization muito grande, removendo e limpando localStorage');
+      delete config.headers.Authorization;
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('saee-auth');
+    }
 
     return config;
   },
@@ -69,6 +86,10 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Rotas públicas onde erros de auth devem ser silenciosos
+const PUBLIC_ROUTES = ['/landing', '/login', '/register', '/reset-password'];
+const isPublicRoute = () => PUBLIC_ROUTES.some(r => window.location.pathname.startsWith(r));
 
 // Interceptor para respostas
 api.interceptors.response.use(
@@ -81,26 +102,34 @@ api.interceptors.response.use(
     console.log('🌐 API ERROR:', error.response?.status, error.config?.method?.toUpperCase(), error.config?.url);
     console.log('🌐 API ERROR DATA:', error.response?.data);
     const { response } = error;
-    
+
+    // Requisições marcadas como silenciosas não exibem toast (ex: /auth/me no boot)
+    if (error.config?._silent) {
+      return Promise.reject(error);
+    }
+
     // Tratamento de erros globais
     if (response) {
       switch (response.status) {
         case 401:
-          // Token inválido ou expirado
+          // Token inválido ou expirado — só redireciona se não estiver em rota pública
           localStorage.removeItem('saee-auth');
-          window.location.href = '/login';
-          toast.error('Sessão expirada. Faça login novamente.');
+          localStorage.removeItem('authToken');
+          if (!isPublicRoute()) {
+            toast.error('Sessão expirada. Faça login novamente.');
+            window.location.href = '/login';
+          }
           break;
-          
+
         case 403:
           toast.error('Você não tem permissão para esta ação.');
           break;
-          
+
         case 404:
           toast.error('Recurso não encontrado.');
           break;
-          
-        case 422:
+
+        case 422: {
           // Erro de validação
           const errors = response.data.errors;
           if (errors && Array.isArray(errors)) {
@@ -109,11 +138,12 @@ api.interceptors.response.use(
             toast.error(response.data.error);
           }
           break;
-          
+        }
+
         case 500:
           toast.error('Erro interno do servidor. Tente novamente.');
           break;
-          
+
         default:
           if (response.data?.error) {
             toast.error(response.data.error);
@@ -122,11 +152,13 @@ api.interceptors.response.use(
           }
       }
     } else if (error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
-      toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
-    } else {
+      if (!isPublicRoute()) {
+        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+    } else if (!isPublicRoute()) {
       toast.error('Erro de rede. Tente novamente.');
     }
-    
+
     return Promise.reject(error);
   }
 );

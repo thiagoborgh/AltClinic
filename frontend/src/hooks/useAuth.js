@@ -23,6 +23,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false); // Iniciar como false
   const [loginLoading, setLoginLoading] = useState(false);
 
+  // Limpa cookies grandes que causam erro 431 (Request Header Fields Too Large)
+  const cleanupCookies = useCallback(() => {
+    try {
+      const totalCookieSize = document.cookie.length;
+      if (totalCookieSize > 3000) {
+        console.warn(`Cookies grandes detectados (${totalCookieSize} bytes), limpando...`);
+        document.cookie.split(';').forEach(cookie => {
+          const name = cookie.split('=')[0].trim();
+          // Limpar cookie para o domínio atual e path raiz
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao limpar cookies:', error);
+    }
+  }, []);
+
   // Função para limpar dados problemáticos do localStorage
   const cleanupLocalStorage = useCallback(() => {
     try {
@@ -72,10 +90,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, logout]);
 
-  // Limpar dados problemáticos ao inicializar
+  // Limpar dados problemáticos ao inicializar (cookies + localStorage)
   useEffect(() => {
+    cleanupCookies();
     cleanupLocalStorage();
-  }, [cleanupLocalStorage]);
+  }, [cleanupCookies, cleanupLocalStorage]);
 
   // Verificar autenticação ao carregar
   useEffect(() => {
@@ -91,7 +110,7 @@ export const AuthProvider = ({ children }) => {
 
         setLoading(true);
         try {
-          const response = await api.get('/auth/me');
+          const response = await api.get('/auth/me', { _silent: true });
           if (response.data.success) {
             setUser(response.data.user);
             setTenant(response.data.tenant);
@@ -116,8 +135,11 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔐 LOGIN API: Iniciando login para:', email);
       setLoginLoading(true);
-      
-      const response = await api.post('/auth/login', { 
+
+      // Garantir que nenhum token stale vai no header de login (evita 431)
+      delete api.defaults.headers.common['Authorization'];
+
+      const response = await api.post('/auth/login', {
         email, 
         senha, 
         forceLogin, 
