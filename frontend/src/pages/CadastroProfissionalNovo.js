@@ -429,7 +429,7 @@ const CadastroProfissionalNovo = () => {
                   💰 Custo Adicional por Profissional
                 </Typography>
                 <Typography variant="body2">
-                  Cada profissional ativo com acesso ao sistema tem um custo adicional de <strong>R$ 9,90/mês</strong>.
+                  Cada profissional ativo com acesso ao sistema tem um custo adicional de <strong>consulte o plano</strong>.
                 </Typography>
               </Alert>
             </Grid>
@@ -589,7 +589,7 @@ const CadastroProfissionalNovo = () => {
                     </Typography>
                     <Alert severity="warning" sx={{ mb: 1 }}>
                       <Typography variant="body2">
-                        ⚠️ Este profissional terá acesso ao sistema e custará <strong>R$ 9,90/mês</strong> adicional.
+                        ⚠️ Este profissional terá acesso ao sistema e custará <strong>consulte o plano</strong> adicional.
                       </Typography>
                     </Alert>
                     <List dense>

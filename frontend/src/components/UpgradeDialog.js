@@ -46,8 +46,8 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'starter',
       nome: 'Starter',
-      preco: 199,
-      precoDesconto: 139, // 30% off primeiros 30 dias
+      preco: 149,
+      precoDesconto: 119, // 30% off primeiros 30 dias
       descricao: 'Perfeito para começar',
       recursos: [
         'Até 3 usuários',
@@ -66,7 +66,7 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'professional',
       nome: 'Professional',
-      preco: 399,
+      preco: 349,
       precoDesconto: 279, // 30% off primeiros 30 dias
       descricao: 'Ideal para clínicas em crescimento',
       recursos: [
@@ -88,7 +88,7 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
     {
       id: 'business',
       nome: 'Business',
-      preco: 599,
+      preco: 499,
       precoDesconto: 419, // 30% off primeiros 30 dias
       descricao: 'Para clínicas em expansão',
       recursos: [

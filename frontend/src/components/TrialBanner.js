@@ -184,7 +184,7 @@ const TrialBanner = () => {
                 </Button>
                 
                 <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-                  A partir de R$ 199/mês
+                  A partir de R$ 149/mês
                 </Typography>
               </Box>
             </Box>

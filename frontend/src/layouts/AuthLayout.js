@@ -63,7 +63,7 @@ const AuthLayout = ({ children }) => {
                 color="text.secondary"
                 sx={{ maxWidth: 300 }}
               >
-                Sistema de Agendamento Automatizado para Clínicas Estéticas
+                Gestão completa para sua clínica
               </Typography>
             </Box>
           </Stack>
@@ -79,7 +79,7 @@ const AuthLayout = ({ children }) => {
               textAlign="center"
               display="block"
             >
-              © 2025 Alt Clinic. Todos os direitos reservados.
+              © 2026 AltClinic SaaS. Todos os direitos reservados.
             </Typography>
           </Box>
         </Paper>

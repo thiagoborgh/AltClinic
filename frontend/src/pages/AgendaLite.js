@@ -837,10 +837,10 @@ const AgendaLite = () => {
                 </Alert>
                 <Alert severity="info" icon={false} sx={{ mb: 2, py: 1 }}>
                   <Typography variant="caption" display="block" fontWeight="bold" sx={{ mb: 0.5 }}>
-                    Cada profissional: +R$ 19,90/mês
+                    Cada profissional: +consulte seu plano
                   </Typography>
                   <Typography variant="caption" display="block" color="text.secondary">
-                    Plano base R$ 79,90/mês inclui 1 profissional. Confira em <strong>Assinatura</strong>.
+                    Veja os detalhes do seu plano. Confira em <strong>Assinatura</strong>.
                   </Typography>
                 </Alert>
                 <Button
@@ -985,10 +985,10 @@ const AgendaLite = () => {
               </Typography>
               <Alert severity="info" icon={false} sx={{ mb: 3, maxWidth: 420, mx: 'auto', textAlign: 'left' }}>
                 <Typography variant="caption" display="block" fontWeight="bold" sx={{ mb: 0.5 }}>
-                  Impacto na assinatura: +R$ 19,90/mês por profissional
+                  Impacto na assinatura: +consulte seu plano por profissional
                 </Typography>
                 <Typography variant="caption" display="block" color="text.secondary">
-                  Plano base R$ 79,90/mês inclui 1 profissional. Cada adicional é +R$ 19,90/mês. Veja detalhes em <strong>Assinatura</strong>.
+                  Veja os detalhes do seu plano. Cada adicional é +consulte seu plano. Veja detalhes em <strong>Assinatura</strong>.
                 </Typography>
               </Alert>
               <Stack direction="row" spacing={2} justifyContent="center">
@@ -1495,7 +1495,7 @@ const AgendaLite = () => {
             </Typography>
             <Typography variant="body2">
               Ao cadastrar um novo profissional, sua assinatura será acrescida de{' '}
-              <strong>R$ 19,90/mês</strong> a partir da próxima fatura.
+              <strong>consulte seu plano</strong> a partir da próxima fatura.
             </Typography>
           </Alert>
           <Typography variant="body2" color="text.secondary">

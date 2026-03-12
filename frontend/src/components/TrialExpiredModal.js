@@ -36,8 +36,8 @@ const TrialExpiredModal = ({ open, onClose, onUpgrade }) => {
     {
       id: 'starter',
       nome: 'Starter',
-      preco: 199,
-      precoDesconto: 139,
+      preco: 149,
+      precoDesconto: 119,
       limite: 500,
       descricao: 'Ideal para começar',
       recursos: [
@@ -52,7 +52,7 @@ const TrialExpiredModal = ({ open, onClose, onUpgrade }) => {
     {
       id: 'professional',
       nome: 'Professional',
-      preco: 399,
+      preco: 349,
       precoDesconto: 279,
       limite: 2500,
       descricao: 'Mais escolhido',
@@ -69,7 +69,7 @@ const TrialExpiredModal = ({ open, onClose, onUpgrade }) => {
     {
       id: 'business',
       nome: 'Business',
-      preco: 599,
+      preco: 349,
       precoDesconto: 419,
       limite: 5000,
       descricao: 'Para clínicas em expansão',

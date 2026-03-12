@@ -54,7 +54,7 @@ const OnboardingPage = () => {
 
   const planoUnico = {
     nome: 'Plano Mensal',
-    preco: 'R$ 19,90',
+    preco: 'R$ 149',
     descricao: 'Tudo que você precisa para gerenciar sua clínica',
     recursos: [
       'Agenda completa de agendamentos',
@@ -151,7 +151,7 @@ const OnboardingPage = () => {
         ownerEmail: formData.ownerEmail,
         ownerSenha: formData.ownerSenha,
         telefone: formData.telefone,
-        plano: 'mensal' // Plano único de R$ 19,90
+        plano: 'mensal' // Plano Starter R$ 149/mês
       });
 
       const data = response.data;
