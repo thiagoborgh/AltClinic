@@ -5,6 +5,7 @@
  * e popula req.tenant, req.tenantId e req.db (TenantDb).
  */
 const multiTenantDb = require('../database/MultiTenantPostgres');
+const { checkTrialExpiry } = require('./checkTrialExpiry');
 
 // ─── extractTenant ────────────────────────────────────────────────────────────
 
@@ -80,22 +81,12 @@ const extractTenant = async (req, res, next) => {
     tenant.billing = tenant.billing ?? {};
     tenant.theme   = tenant.theme   ?? {};
 
-    // Verifica trial expirado
-    if (tenant.status === 'trial' && tenant.trial_expire_at) {
-      if (new Date() > new Date(tenant.trial_expire_at)) {
-        return res.status(402).json({
-          error: 'Trial expirado',
-          message: 'O período de teste expirou. Faça upgrade do seu plano.',
-          upgradeUrl: `/upgrade?tenant=${tenant.slug}`,
-        });
-      }
-    }
-
     req.tenant   = tenant;
     req.tenantId = tenant.id;
     req.db       = multiTenantDb.getTenantDb(tenant.id, tenant.slug);
 
-    next();
+    // Verifica trial expirado — lógica centralizada em checkTrialExpiry.js
+    checkTrialExpiry(req, res, next);
   } catch (error) {
     console.error('❌ Erro no middleware de tenant:', error);
     res.status(500).json({ error: 'Erro interno do servidor', message: 'Falha ao processar tenant' });
@@ -268,4 +259,6 @@ module.exports = {
   logActivity,
   requireFeature,
   validateTenantToken,
+  // Re-export para compatibilidade com imports existentes
+  checkTrialExpiry,
 };

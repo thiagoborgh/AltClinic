@@ -1,5 +1,50 @@
 const express = require('express');
 const router = express.Router();
+const multiTenantDb = require('../models/MultiTenantDatabase');
+const { checkMedicoLimit } = require('../middleware/planLimits');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function ensureTables(tenantDb) {
+  tenantDb.exec(`
+    CREATE TABLE IF NOT EXISTS cadastros_procedimentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      duracao INTEGER NOT NULL DEFAULT 30,
+      valor REAL NOT NULL DEFAULT 0,
+      categoria TEXT DEFAULT '',
+      ativo INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS cadastros_convenios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      codigo TEXT DEFAULT '',
+      ativo INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS cadastros_usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL,
+      cargo TEXT DEFAULT '',
+      ativo INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
+function getDb(tenantId) {
+  const db = multiTenantDb.getTenantDb(tenantId);
+  ensureTables(db);
+  return db;
+}
 
 function requireTenant(req, res) {
   if (!req.tenantId) {
@@ -11,59 +56,54 @@ function requireTenant(req, res) {
 
 // ── PROCEDIMENTOS ──────────────────────────────────────────────────────────────
 
-router.get('/procedimentos', async (req, res) => {
+router.get('/procedimentos', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const rows = await req.db.all(
-      'SELECT * FROM cadastros_procedimentos WHERE tenant_id = $1 ORDER BY nome',
-      [req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const rows = db.prepare(
+      'SELECT * FROM cadastros_procedimentos WHERE tenant_id = ? ORDER BY nome'
+    ).all(req.tenantId);
     res.json({ success: true, data: rows });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.post('/procedimentos', async (req, res) => {
+router.post('/procedimentos', (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, duracao = 30, valor = 0, categoria = '' } = req.body;
   if (!nome) return res.status(400).json({ success: false, message: 'Nome é obrigatório' });
   try {
-    const result = await req.db.run(
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
       `INSERT INTO cadastros_procedimentos (tenant_id, nome, duracao, valor, categoria)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [req.tenantId, nome, duracao, valor, categoria]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_procedimentos WHERE id = $1',
-      [result.lastID]
-    );
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(req.tenantId, nome, duracao, valor, categoria);
+    const row = db.prepare('SELECT * FROM cadastros_procedimentos WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ success: true, data: row });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.put('/procedimentos/:id', async (req, res) => {
+router.put('/procedimentos/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, duracao, valor, categoria, ativo } = req.body;
   try {
-    await req.db.run(
+    const db = getDb(req.tenantId);
+    db.prepare(
       `UPDATE cadastros_procedimentos
-       SET nome = COALESCE($1, nome),
-           duracao = COALESCE($2, duracao),
-           valor = COALESCE($3, valor),
-           categoria = COALESCE($4, categoria),
-           ativo = COALESCE($5, ativo),
-           updated_at = NOW()
-       WHERE id = $6 AND tenant_id = $7`,
-      [nome, duracao, valor, categoria, ativo !== undefined ? ativo : null,
-       req.params.id, req.tenantId]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_procedimentos WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+       SET nome = COALESCE(?, nome),
+           duracao = COALESCE(?, duracao),
+           valor = COALESCE(?, valor),
+           categoria = COALESCE(?, categoria),
+           ativo = COALESCE(?, ativo),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND tenant_id = ?`
+    ).run(nome, duracao, valor, categoria, ativo !== undefined ? (ativo ? 1 : 0) : undefined,
+          req.params.id, req.tenantId);
+    const row = db.prepare('SELECT * FROM cadastros_procedimentos WHERE id = ? AND tenant_id = ?')
+      .get(req.params.id, req.tenantId);
     if (!row) return res.status(404).json({ success: false, message: 'Procedimento não encontrado' });
     res.json({ success: true, data: row });
   } catch (e) {
@@ -71,13 +111,13 @@ router.put('/procedimentos/:id', async (req, res) => {
   }
 });
 
-router.delete('/procedimentos/:id', async (req, res) => {
+router.delete('/procedimentos/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const result = await req.db.run(
-      'DELETE FROM cadastros_procedimentos WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
+      'DELETE FROM cadastros_procedimentos WHERE id = ? AND tenant_id = ?'
+    ).run(req.params.id, req.tenantId);
     if (result.changes === 0) return res.status(404).json({ success: false, message: 'Procedimento não encontrado' });
     res.json({ success: true });
   } catch (e) {
@@ -87,56 +127,51 @@ router.delete('/procedimentos/:id', async (req, res) => {
 
 // ── CONVÊNIOS ──────────────────────────────────────────────────────────────────
 
-router.get('/convenios', async (req, res) => {
+router.get('/convenios', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const rows = await req.db.all(
-      'SELECT * FROM cadastros_convenios WHERE tenant_id = $1 ORDER BY nome',
-      [req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const rows = db.prepare(
+      'SELECT * FROM cadastros_convenios WHERE tenant_id = ? ORDER BY nome'
+    ).all(req.tenantId);
     res.json({ success: true, data: rows });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.post('/convenios', async (req, res) => {
+router.post('/convenios', (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, codigo = '' } = req.body;
   if (!nome) return res.status(400).json({ success: false, message: 'Nome é obrigatório' });
   try {
-    const result = await req.db.run(
-      'INSERT INTO cadastros_convenios (tenant_id, nome, codigo) VALUES ($1, $2, $3) RETURNING id',
-      [req.tenantId, nome, codigo]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_convenios WHERE id = $1',
-      [result.lastID]
-    );
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
+      'INSERT INTO cadastros_convenios (tenant_id, nome, codigo) VALUES (?, ?, ?)'
+    ).run(req.tenantId, nome, codigo);
+    const row = db.prepare('SELECT * FROM cadastros_convenios WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ success: true, data: row });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.put('/convenios/:id', async (req, res) => {
+router.put('/convenios/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, codigo, ativo } = req.body;
   try {
-    await req.db.run(
+    const db = getDb(req.tenantId);
+    db.prepare(
       `UPDATE cadastros_convenios
-       SET nome = COALESCE($1, nome),
-           codigo = COALESCE($2, codigo),
-           ativo = COALESCE($3, ativo),
-           updated_at = NOW()
-       WHERE id = $4 AND tenant_id = $5`,
-      [nome, codigo, ativo !== undefined ? ativo : null,
-       req.params.id, req.tenantId]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_convenios WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+       SET nome = COALESCE(?, nome),
+           codigo = COALESCE(?, codigo),
+           ativo = COALESCE(?, ativo),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND tenant_id = ?`
+    ).run(nome, codigo, ativo !== undefined ? (ativo ? 1 : 0) : undefined,
+          req.params.id, req.tenantId);
+    const row = db.prepare('SELECT * FROM cadastros_convenios WHERE id = ? AND tenant_id = ?')
+      .get(req.params.id, req.tenantId);
     if (!row) return res.status(404).json({ success: false, message: 'Convênio não encontrado' });
     res.json({ success: true, data: row });
   } catch (e) {
@@ -144,13 +179,13 @@ router.put('/convenios/:id', async (req, res) => {
   }
 });
 
-router.delete('/convenios/:id', async (req, res) => {
+router.delete('/convenios/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const result = await req.db.run(
-      'DELETE FROM cadastros_convenios WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
+      'DELETE FROM cadastros_convenios WHERE id = ? AND tenant_id = ?'
+    ).run(req.params.id, req.tenantId);
     if (result.changes === 0) return res.status(404).json({ success: false, message: 'Convênio não encontrado' });
     res.json({ success: true });
   } catch (e) {
@@ -160,57 +195,52 @@ router.delete('/convenios/:id', async (req, res) => {
 
 // ── USUÁRIOS (funcionários) ────────────────────────────────────────────────────
 
-router.get('/usuarios', async (req, res) => {
+router.get('/usuarios', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const rows = await req.db.all(
-      'SELECT * FROM cadastros_usuarios WHERE tenant_id = $1 ORDER BY nome',
-      [req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const rows = db.prepare(
+      'SELECT * FROM cadastros_usuarios WHERE tenant_id = ? ORDER BY nome'
+    ).all(req.tenantId);
     res.json({ success: true, data: rows });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.post('/usuarios', async (req, res) => {
+router.post('/usuarios', checkMedicoLimit, (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, email, cargo = '' } = req.body;
   if (!nome || !email) return res.status(400).json({ success: false, message: 'Nome e e-mail são obrigatórios' });
   try {
-    const result = await req.db.run(
-      'INSERT INTO cadastros_usuarios (tenant_id, nome, email, cargo) VALUES ($1, $2, $3, $4) RETURNING id',
-      [req.tenantId, nome, email, cargo]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_usuarios WHERE id = $1',
-      [result.lastID]
-    );
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
+      'INSERT INTO cadastros_usuarios (tenant_id, nome, email, cargo) VALUES (?, ?, ?, ?)'
+    ).run(req.tenantId, nome, email, cargo);
+    const row = db.prepare('SELECT * FROM cadastros_usuarios WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ success: true, data: row });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
-router.put('/usuarios/:id', async (req, res) => {
+router.put('/usuarios/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   const { nome, email, cargo, ativo } = req.body;
   try {
-    await req.db.run(
+    const db = getDb(req.tenantId);
+    db.prepare(
       `UPDATE cadastros_usuarios
-       SET nome = COALESCE($1, nome),
-           email = COALESCE($2, email),
-           cargo = COALESCE($3, cargo),
-           ativo = COALESCE($4, ativo),
-           updated_at = NOW()
-       WHERE id = $5 AND tenant_id = $6`,
-      [nome, email, cargo, ativo !== undefined ? ativo : null,
-       req.params.id, req.tenantId]
-    );
-    const row = await req.db.get(
-      'SELECT * FROM cadastros_usuarios WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+       SET nome = COALESCE(?, nome),
+           email = COALESCE(?, email),
+           cargo = COALESCE(?, cargo),
+           ativo = COALESCE(?, ativo),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND tenant_id = ?`
+    ).run(nome, email, cargo, ativo !== undefined ? (ativo ? 1 : 0) : undefined,
+          req.params.id, req.tenantId);
+    const row = db.prepare('SELECT * FROM cadastros_usuarios WHERE id = ? AND tenant_id = ?')
+      .get(req.params.id, req.tenantId);
     if (!row) return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
     res.json({ success: true, data: row });
   } catch (e) {
@@ -218,13 +248,13 @@ router.put('/usuarios/:id', async (req, res) => {
   }
 });
 
-router.delete('/usuarios/:id', async (req, res) => {
+router.delete('/usuarios/:id', (req, res) => {
   if (!requireTenant(req, res)) return;
   try {
-    const result = await req.db.run(
-      'DELETE FROM cadastros_usuarios WHERE id = $1 AND tenant_id = $2',
-      [req.params.id, req.tenantId]
-    );
+    const db = getDb(req.tenantId);
+    const result = db.prepare(
+      'DELETE FROM cadastros_usuarios WHERE id = ? AND tenant_id = ?'
+    ).run(req.params.id, req.tenantId);
     if (result.changes === 0) return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
     res.json({ success: true });
   } catch (e) {

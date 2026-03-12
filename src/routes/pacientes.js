@@ -3,6 +3,7 @@ const router = express.Router();
 const multiTenantDb = require('../models/MultiTenantDatabase');
 const PacienteModel = require('../models/Paciente');
 const authUtil = require('../utils/auth');
+const { checkPacienteLimit } = require('../middleware/planLimits');
 // const encryptionUtil = require('../utils/encryption');
 
 // Dados mock para desenvolvimento
@@ -203,7 +204,7 @@ router.post('/test', async (req, res) => {
  * @route POST /api/pacientes
  * @desc Cria novo paciente
  */
-router.post('/', authUtil.authenticate, async (req, res) => {
+router.post('/', authUtil.authenticate, checkPacienteLimit, async (req, res) => {
   try {
     const tenant_id = req.tenant?.id;
     const usuario_id = req.user?.id;
