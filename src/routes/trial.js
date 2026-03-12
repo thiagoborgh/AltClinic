@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const mgr = require('../database/MultiTenantPostgres');
 const { sendEmail } = require('../services/emailService');
 
 /**
@@ -20,10 +20,13 @@ router.post('/trial', async (req, res) => {
       });
     }
 
+    const masterDb = mgr.getMasterDb();
+
     // Verificar se email já existe
-    const existingTenant = multiTenantDb.getMasterDb().prepare(`
-      SELECT id FROM tenants WHERE email = ?
-    `).get(email);
+    const existingTenant = await masterDb.get(
+      'SELECT id FROM tenants WHERE email = $1',
+      [email]
+    );
 
     if (existingTenant) {
       return res.status(409).json({
@@ -45,9 +48,7 @@ router.post('/trial', async (req, res) => {
     let counter = 1;
 
     // Garantir que o slug é único
-    while (multiTenantDb.getMasterDb().prepare(`
-      SELECT id FROM tenants WHERE slug = ?
-    `).get(slug)) {
+    while (await masterDb.get('SELECT id FROM tenants WHERE slug = $1', [slug])) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
@@ -84,74 +85,80 @@ router.post('/trial', async (req, res) => {
     const tenantId = crypto.randomUUID();
     const databaseName = `tenant_${slug}_${Date.now()}`;
 
-    const masterDb = multiTenantDb.getMasterDb();
-    
     // Inserir tenant
-    masterDb.prepare(`
-      INSERT INTO tenants (
+    await masterDb.run(
+      `INSERT INTO tenants (
         id, slug, nome, email, telefone, plano, status,
         trial_expire_at, database_name, config, billing, theme,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tenantId,
-      slug,
-      clinica,
-      email,
-      telefone || '',
-      'trial',
-      'trial',
-      trialExpireAt.toISOString(),
-      databaseName,
-      JSON.stringify(defaultConfig),
-      JSON.stringify(defaultBilling),
-      JSON.stringify(defaultTheme),
-      new Date().toISOString(),
-      new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (id) DO UPDATE SET
+        slug = EXCLUDED.slug, nome = EXCLUDED.nome, email = EXCLUDED.email,
+        telefone = EXCLUDED.telefone, plano = EXCLUDED.plano, status = EXCLUDED.status,
+        trial_expire_at = EXCLUDED.trial_expire_at, database_name = EXCLUDED.database_name,
+        config = EXCLUDED.config, billing = EXCLUDED.billing, theme = EXCLUDED.theme,
+        updated_at = EXCLUDED.updated_at`,
+      [
+        tenantId,
+        slug,
+        clinica,
+        email,
+        telefone || '',
+        'trial',
+        'trial',
+        trialExpireAt.toISOString(),
+        databaseName,
+        JSON.stringify(defaultConfig),
+        JSON.stringify(defaultBilling),
+        JSON.stringify(defaultTheme),
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]
     );
 
-    // Criar database do tenant
-    await multiTenantDb.createTenantDatabase(tenantId);
+    // Criar schema do tenant
+    await mgr.createTenantSchema(tenantId, slug);
 
     // Criar usuário admin para o tenant
-    const tenantDb = multiTenantDb.getTenantDb(tenantId);
+    const tenantDb = mgr.getTenantDb(tenantId, slug);
     const bcrypt = require('bcryptjs');
-    
+
     // Gerar senha temporária
     const tempPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-    tenantDb.prepare(`
-      INSERT INTO usuarios (
+    await tenantDb.run(
+      `INSERT INTO usuarios (
         tenant_id, nome, email, senha_hash, role, status,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tenantId,
-      nome,
-      email,
-      hashedPassword,
-      'owner',
-      'active',
-      new Date().toISOString(),
-      new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        tenantId,
+        nome,
+        email,
+        hashedPassword,
+        'owner',
+        'active',
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]
     );
 
     // Enviar email de boas-vindas com credenciais
     try {
       const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${slug}`;
-      
+
       await sendEmail({
         to: email,
         subject: 'Bem-vindo ao Alt Clinic - Sua conta trial está pronta!',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #1976d2;">🎉 Bem-vindo ao Alt Clinic!</h1>
-            
+
             <p>Olá <strong>${nome}</strong>,</p>
-            
+
             <p>Sua conta trial do Alt Clinic está pronta! Você tem <strong>15 dias grátis</strong> para explorar todas as funcionalidades.</p>
-            
+
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>📋 Dados de Acesso:</h3>
               <p><strong>URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
@@ -159,7 +166,7 @@ router.post('/trial', async (req, res) => {
               <p><strong>Senha temporária:</strong> <code style="background: #fff; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
               <p><strong>Clínica:</strong> ${clinica}</p>
             </div>
-            
+
             <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>🚀 Próximos Passos:</h3>
               <ol>
@@ -170,7 +177,7 @@ router.post('/trial', async (req, res) => {
                 <li>Explore o sistema de agendamentos</li>
               </ol>
             </div>
-            
+
             <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>💡 Dicas para Começar:</h3>
               <ul>
@@ -180,23 +187,23 @@ router.post('/trial', async (req, res) => {
                 <li><strong>Relatórios:</strong> Acompanhe o desempenho da sua clínica</li>
               </ul>
             </div>
-            
+
             <p>Precisa de ajuda? Nossa equipe está aqui para você:</p>
             <ul>
               <li>📧 Email: suporte@altclinic.com.br</li>
               <li>📱 WhatsApp: (11) 99999-9999</li>
               <li>🕒 Horário: Segunda a Sexta, 8h às 18h</li>
             </ul>
-            
+
             <div style="text-align: center; margin: 30px 0;">
               <a href="${loginUrl}" style="background: #1976d2; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 🚀 Acessar Minha Conta
               </a>
             </div>
-            
+
             <p>Sucesso e bons resultados!</p>
             <p><strong>Equipe Alt Clinic</strong></p>
-            
+
             <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
             <p style="color: #666; font-size: 12px;">
               Este é um email automático. Sua trial expira em ${trialExpireAt.toLocaleDateString('pt-BR')}.
@@ -255,12 +262,13 @@ router.post('/:tenantId/upgrade', async (req, res) => {
       });
     }
 
-    const masterDb = multiTenantDb.getMasterDb();
-    
+    const masterDb = mgr.getMasterDb();
+
     // Verificar se tenant existe e está em trial
-    const tenant = masterDb.prepare(`
-      SELECT * FROM tenants WHERE id = ? AND status = 'trial'
-    `).get(tenantId);
+    const tenant = await masterDb.get(
+      "SELECT * FROM tenants WHERE id = $1 AND status = 'trial'",
+      [tenantId]
+    );
 
     if (!tenant) {
       return res.status(404).json({
@@ -295,16 +303,15 @@ router.post('/:tenantId/upgrade', async (req, res) => {
     };
 
     // Atualizar tenant
-    masterDb.prepare(`
-      UPDATE tenants 
-      SET plano = ?, status = ?, billing = ?, updated_at = ?
-      WHERE id = ?
-    `).run(
-      plano,
-      'active',
-      JSON.stringify(newBilling),
-      new Date().toISOString(),
-      tenantId
+    await masterDb.run(
+      'UPDATE tenants SET plano = $1, status = $2, billing = $3, updated_at = $4 WHERE id = $5',
+      [
+        plano,
+        'active',
+        JSON.stringify(newBilling),
+        new Date().toISOString(),
+        tenantId
+      ]
     );
 
     // Aqui você integraria com seu gateway de pagamento
@@ -318,9 +325,9 @@ router.post('/:tenantId/upgrade', async (req, res) => {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #1976d2;">🎉 Upgrade Realizado com Sucesso!</h1>
-            
+
             <p>Parabéns! Sua clínica <strong>${tenant.nome}</strong> foi atualizada para o plano <strong>${planoInfo.nome}</strong>.</p>
-            
+
             <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>📋 Detalhes do Plano:</h3>
               <p><strong>Plano:</strong> ${planoInfo.nome}</p>
@@ -329,15 +336,15 @@ router.post('/:tenantId/upgrade', async (req, res) => {
               <p><strong>Preço promocional:</strong> R$ ${precoComDesconto}/mês (30% OFF nos primeiros 30 dias)</p>
               <p><strong>Próxima cobrança:</strong> ${new Date(newBilling.next_billing_date).toLocaleDateString('pt-BR')}</p>
             </div>
-            
+
             <p>Agora você tem acesso a todos os recursos do plano ${planoInfo.nome}!</p>
-            
+
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}/login?tenant=${tenant.slug}" style="background: #1976d2; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 🚀 Acessar Sistema
               </a>
             </div>
-            
+
             <p>Obrigado por escolher o Alt Clinic!</p>
             <p><strong>Equipe Alt Clinic</strong></p>
           </div>

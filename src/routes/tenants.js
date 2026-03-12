@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const mgr = require('../database/MultiTenantPostgres');
 const { v4: uuidv4 } = require('uuid');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -13,7 +13,7 @@ const userService = require('../services/userService');
 router.post('/register', async (req, res) => {
   console.log('🚀 REGISTRO: Rota /register chamada');
   console.log('📝 Body recebido:', req.body);
-  
+
   try {
     const {
       clinicaNome,
@@ -49,13 +49,14 @@ router.post('/register', async (req, res) => {
 
     console.log('✅ Slug válido:', slug);
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
     console.log('✅ Master DB obtido');
 
     // Verificar se slug já existe
-    const existingTenant = masterDb.prepare(`
-      SELECT id FROM tenants WHERE slug = ?
-    `).get(slug);
+    const existingTenant = await masterDb.get(
+      'SELECT id FROM tenants WHERE slug = $1',
+      [slug]
+    );
 
     console.log('🔍 Verificação de slug existente:', existingTenant ? 'EXISTE' : 'LIVRE');
 
@@ -117,7 +118,7 @@ router.post('/register', async (req, res) => {
     // Gerar IDs
     const tenantId = uuidv4();
     const databaseName = `tenant_${slug}_${Date.now()}`;
-    
+
     // Configurar trial
     const trialExpireAt = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 dias
 
@@ -145,26 +146,21 @@ router.post('/register', async (req, res) => {
       customDomain: null
     };
 
-    // Iniciar transação
-    const insertTenant = masterDb.prepare(`
-      INSERT INTO tenants (
-        id, slug, nome, email, telefone, plano, status, 
-        trial_expire_at, database_name, config, billing, theme
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertOwner = masterDb.prepare(`
-      INSERT INTO master_users (tenant_id, email, senha_hash, role)
-      VALUES (?, ?, ?, ?)
-    `);
-
     // Hash da senha
     const senhaHash = await bcryptjs.hash(ownerSenha, 12);
 
-    // Executar transação
-    const transaction = masterDb.transaction(() => {
-      // Inserir tenant
-      insertTenant.run(
+    // Inserir tenant
+    await masterDb.run(
+      `INSERT INTO tenants (
+        id, slug, nome, email, telefone, plano, status,
+        trial_expire_at, database_name, config, billing, theme
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (id) DO UPDATE SET
+        slug = EXCLUDED.slug, nome = EXCLUDED.nome, email = EXCLUDED.email,
+        telefone = EXCLUDED.telefone, plano = EXCLUDED.plano, status = EXCLUDED.status,
+        trial_expire_at = EXCLUDED.trial_expire_at, database_name = EXCLUDED.database_name,
+        config = EXCLUDED.config, billing = EXCLUDED.billing, theme = EXCLUDED.theme`,
+      [
         tenantId,
         slug,
         clinicaNome,
@@ -177,40 +173,44 @@ router.post('/register', async (req, res) => {
         JSON.stringify(defaultConfig),
         JSON.stringify(defaultBilling),
         JSON.stringify(defaultTheme)
-      );
+      ]
+    );
 
-      // Inserir owner no master
-      insertOwner.run(tenantId, ownerEmail, senhaHash, 'owner');
-    });
+    // Inserir owner no master
+    await masterDb.run(
+      `INSERT INTO master_users (tenant_id, email, senha_hash, role)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email, tenant_id) DO UPDATE SET senha_hash = EXCLUDED.senha_hash, role = EXCLUDED.role`,
+      [tenantId, ownerEmail, senhaHash, 'owner']
+    );
 
-    transaction();
-
-    // Criar database do tenant
-    await multiTenantDb.createTenantDatabase(tenantId, databaseName);
+    // Criar schema do tenant
+    await mgr.createTenantSchema(tenantId, slug);
 
     // Criar usuário owner no database do tenant
-    const tenantDb = multiTenantDb.getTenantDb(tenantId);
-    tenantDb.prepare(`
-      INSERT INTO usuarios (
+    const tenantDb = mgr.getTenantDb(tenantId, slug);
+    await tenantDb.run(
+      `INSERT INTO usuarios (
         tenant_id, nome, email, senha_hash, role, permissions, status, email_verified_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      tenantId,
-      ownerNome,
-      ownerEmail,
-      senhaHash,
-      'owner',
-      JSON.stringify({
-        agendamentos: true,
-        pacientes: true,
-        financeiro: true,
-        whatsapp: true,
-        automacoes: true,
-        relatorios: true,
-        configuracoes: true
-      }),
-      'active',
-      new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        tenantId,
+        ownerNome,
+        ownerEmail,
+        senhaHash,
+        'owner',
+        JSON.stringify({
+          agendamentos: true,
+          pacientes: true,
+          financeiro: true,
+          whatsapp: true,
+          automacoes: true,
+          relatorios: true,
+          configuracoes: true
+        }),
+        'active',
+        new Date().toISOString()
+      ]
     );
 
     // Inserir dados iniciais (configurações padrão)
@@ -218,7 +218,7 @@ router.post('/register', async (req, res) => {
 
     // Gerar token JWT para login automático
     const token = jwt.sign(
-      { 
+      {
         userId: 1, // primeiro usuário no tenant DB
         tenantId,
         email: ownerEmail,
@@ -236,45 +236,47 @@ router.post('/register', async (req, res) => {
       try {
         console.log(`📧 Iniciando envio de email para: ${ownerEmail}`);
         const emailService = require('../services/emailService');
-        
+
         // Gerar senha temporária para primeiro acesso
         const tempPassword = require('crypto').randomBytes(8).toString('hex');
         const tempPasswordHash = await bcryptjs.hash(tempPassword, 12);
-        
+
         // Atualizar senha no banco do tenant para a temporária
-        tenantDb.prepare(`
-          UPDATE usuarios 
-          SET senha_hash = ?, email_verified_at = NULL, status = 'pending_first_access'
-          WHERE email = ? AND tenant_id = ?
-        `).run(tempPasswordHash, ownerEmail, tenantId);
-        
+        await tenantDb.run(
+          `UPDATE usuarios
+           SET senha_hash = $1, email_verified_at = NULL, status = 'pending_first_access'
+           WHERE email = $2 AND tenant_id = $3`,
+          [tempPasswordHash, ownerEmail, tenantId]
+        );
+
         // Atualizar master_users também
-        masterDb.prepare(`
-        UPDATE master_users 
-        SET senha_hash = ?
-        WHERE email = ? AND tenant_id = ?
-      `).run(tempPasswordHash, ownerEmail, tenantId);
+        await masterDb.run(
+          `UPDATE master_users
+           SET senha_hash = $1
+           WHERE email = $2 AND tenant_id = $3`,
+          [tempPasswordHash, ownerEmail, tenantId]
+        );
 
-      const templateData = {
-        userName: ownerNome,
-        tenantName: clinicaNome,
-        email: ownerEmail,
-        tempPassword: tempPassword,
-        loginUrl: process.env.NODE_ENV === 'production' 
-          ? `https://altclinic.onrender.com/login`
-          : `http://localhost:3000/login`,
-        trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${trialExpireAt.toLocaleDateString('pt-BR')}</p>`
-      };
+        const templateData = {
+          userName: ownerNome,
+          tenantName: clinicaNome,
+          email: ownerEmail,
+          tempPassword: tempPassword,
+          loginUrl: process.env.NODE_ENV === 'production'
+            ? `https://altclinic.onrender.com/login`
+            : `http://localhost:3000/login`,
+          trialExpireAt: `<p><strong>📅 Período de teste:</strong> Expira em ${trialExpireAt.toLocaleDateString('pt-BR')}</p>`
+        };
 
-      await emailService.sendEmail({
-        to: ownerEmail,
-        subject: `Bem-vindo à ${clinicaNome} - Suas credenciais de acesso`,
-        template: 'first-access',
-        data: templateData
-      });
+        await emailService.sendEmail({
+          to: ownerEmail,
+          subject: `Bem-vindo à ${clinicaNome} - Suas credenciais de acesso`,
+          template: 'first-access',
+          data: templateData
+        });
 
-      console.log(`📧 Email de primeiro acesso enviado para: ${ownerEmail}`);
-      console.log(`🔑 Senha temporária: ${tempPassword}`);
+        console.log(`📧 Email de primeiro acesso enviado para: ${ownerEmail}`);
+        console.log(`🔑 Senha temporária: ${tempPassword}`);
 
       } catch (emailError) {
         console.error('⚠️ Erro ao enviar email de primeiro acesso:', emailError);
@@ -284,14 +286,14 @@ router.post('/register', async (req, res) => {
 
     // Retornar resposta imediatamente (não esperar email)
     console.log(`✅ Preparando resposta de sucesso para: ${ownerEmail}`);
-    
+
     res.status(201).json({
       message: 'Clínica criada com sucesso! Verifique seu email para acessar.',
       tenant: {
         id: tenantId,
         slug,
         nome: clinicaNome,
-        url: process.env.NODE_ENV === 'production' 
+        url: process.env.NODE_ENV === 'production'
           ? `https://altclinic.onrender.com`
           : `http://localhost:3000`,
         status: 'trial',
@@ -306,7 +308,7 @@ router.post('/register', async (req, res) => {
       emailSent: true,
       loginInstructions: {
         message: 'Um email foi enviado com suas credenciais de primeiro acesso.',
-        loginUrl: process.env.NODE_ENV === 'production' 
+        loginUrl: process.env.NODE_ENV === 'production'
           ? `https://altclinic.onrender.com/login`
           : `http://localhost:3000/login`,
         checkEmail: 'Verifique sua caixa de entrada e spam.'
@@ -346,14 +348,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const masterDb = multiTenantDb.getMasterDb();
+    const masterDb = mgr.getMasterDb();
 
     // Buscar tenant
-    const tenant = masterDb.prepare(`
-      SELECT id, slug, nome, status, trial_expire_at 
-      FROM tenants 
-      WHERE slug = ?
-    `).get(tenantSlug);
+    const tenant = await masterDb.get(
+      'SELECT id, slug, nome, status, trial_expire_at FROM tenants WHERE slug = $1',
+      [tenantSlug]
+    );
 
     if (!tenant) {
       return res.status(404).json({
@@ -382,12 +383,13 @@ router.post('/login', async (req, res) => {
     }
 
     // Buscar usuário no database do tenant
-    const tenantDb = multiTenantDb.getTenantDb(tenant.id);
-    const usuario = tenantDb.prepare(`
-      SELECT id, nome, email, senha_hash, role, permissions, status, last_login
-      FROM usuarios 
-      WHERE email = ? AND tenant_id = ?
-    `).get(email, tenant.id);
+    const tenantDb = mgr.getTenantDb(tenant.id, tenant.slug);
+    const usuario = await tenantDb.get(
+      `SELECT id, nome, email, senha_hash, role, permissions, status, last_login
+       FROM usuarios
+       WHERE email = $1 AND tenant_id = $2`,
+      [email, tenant.id]
+    );
 
     if (!usuario) {
       return res.status(401).json({
@@ -413,9 +415,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Atualizar último login
-    tenantDb.prepare(`
-      UPDATE usuarios SET last_login = datetime('now') WHERE id = ?
-    `).run(usuario.id);
+    await tenantDb.run(
+      'UPDATE usuarios SET last_login = NOW() WHERE id = $1',
+      [usuario.id]
+    );
 
     // Gerar token JWT
     const token = jwt.sign(
@@ -467,59 +470,66 @@ router.post('/login', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     // TODO: Adicionar middleware de autenticação admin
-    
-    const masterDb = multiTenantDb.getMasterDb();
+
+    const masterDb = mgr.getMasterDb();
     const { page = 1, limit = 50, status, plano } = req.query;
-    
+
     let query = 'SELECT * FROM tenants WHERE 1=1';
     const params = [];
-    
+    let paramIdx = 1;
+
     if (status) {
-      query += ' AND status = ?';
+      query += ` AND status = $${paramIdx++}`;
       params.push(status);
     }
-    
+
     if (plano) {
-      query += ' AND plano = ?';
+      query += ` AND plano = $${paramIdx++}`;
       params.push(plano);
     }
-    
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
     params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
-    
-    const tenants = masterDb.prepare(query).all(...params);
-    
+
+    const tenants = await masterDb.all(query, params);
+
     // Parsear JSON e adicionar estatísticas
     const tenantsWithStats = await Promise.all(tenants.map(async (tenant) => {
       tenant.config = JSON.parse(tenant.config || '{}');
       tenant.billing = JSON.parse(tenant.billing || '{}');
       tenant.theme = JSON.parse(tenant.theme || '{}');
-      
+
       // Adicionar estatísticas
       try {
-        const tenantDb = multiTenantDb.getTenantDb(tenant.id);
-        const stats = {
-          usuarios: tenantDb.prepare('SELECT COUNT(*) as count FROM usuarios WHERE status = "active"').get().count,
-          pacientes: tenantDb.prepare('SELECT COUNT(*) as count FROM pacientes WHERE status = "ativo"').get().count,
-          agendamentos: tenantDb.prepare('SELECT COUNT(*) as count FROM agendamentos WHERE date(data_agendamento) >= date("now")').get().count
+        const tenantDb = mgr.getTenantDb(tenant.id, tenant.slug);
+        const [usuariosRow, pacientesRow, agendamentosRow] = await Promise.all([
+          tenantDb.get('SELECT COUNT(*) as count FROM usuarios WHERE status = $1', ['active']),
+          tenantDb.get('SELECT COUNT(*) as count FROM pacientes WHERE status = $1', ['ativo']),
+          tenantDb.get('SELECT COUNT(*) as count FROM agendamentos WHERE data_agendamento >= CURRENT_DATE', [])
+        ]);
+        tenant.stats = {
+          usuarios: usuariosRow.count,
+          pacientes: pacientesRow.count,
+          agendamentos: agendamentosRow.count
         };
-        tenant.stats = stats;
       } catch (error) {
         tenant.stats = { usuarios: 0, pacientes: 0, agendamentos: 0 };
       }
-      
+
       return tenant;
     }));
-    
+
+    const totalRow = await masterDb.get('SELECT COUNT(*) as count FROM tenants', []);
+
     res.json({
       tenants: tenantsWithStats,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: masterDb.prepare('SELECT COUNT(*) as count FROM tenants').get().count
+        total: totalRow.count
       }
     });
-    
+
   } catch (error) {
     console.error('❌ Erro ao listar tenants:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -533,41 +543,57 @@ router.get('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     // TODO: Adicionar middleware de autenticação (owner/admin)
-    
+
     const { id } = req.params;
     const { nome, telefone, config, theme } = req.body;
-    
-    const masterDb = multiTenantDb.getMasterDb();
-    
-    const updateData = {};
-    if (nome) updateData.nome = nome;
-    if (telefone) updateData.telefone = telefone;
-    if (config) updateData.config = JSON.stringify(config);
-    if (theme) updateData.theme = JSON.stringify(theme);
-    
-    if (Object.keys(updateData).length === 0) {
+
+    const masterDb = mgr.getMasterDb();
+
+    const updateFields = [];
+    const values = [];
+    let paramIdx = 1;
+
+    if (nome) {
+      updateFields.push(`nome = $${paramIdx++}`);
+      values.push(nome);
+    }
+    if (telefone) {
+      updateFields.push(`telefone = $${paramIdx++}`);
+      values.push(telefone);
+    }
+    if (config) {
+      updateFields.push(`config = $${paramIdx++}`);
+      values.push(JSON.stringify(config));
+    }
+    if (theme) {
+      updateFields.push(`theme = $${paramIdx++}`);
+      values.push(JSON.stringify(theme));
+    }
+
+    if (updateFields.length === 0) {
       return res.status(400).json({ error: 'Nenhum dado para atualizar' });
     }
-    
-    updateData.updated_at = new Date().toISOString();
-    
-    const setClause = Object.keys(updateData).map(key => `${key} = ?`).join(', ');
-    const values = Object.values(updateData);
+
+    updateFields.push(`updated_at = $${paramIdx++}`);
+    values.push(new Date().toISOString());
     values.push(id);
-    
-    masterDb.prepare(`UPDATE tenants SET ${setClause} WHERE id = ?`).run(...values);
-    
+
+    await masterDb.run(
+      `UPDATE tenants SET ${updateFields.join(', ')} WHERE id = $${paramIdx}`,
+      values
+    );
+
     // Buscar tenant atualizado
-    const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(id);
+    const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [id]);
     tenant.config = JSON.parse(tenant.config || '{}');
     tenant.billing = JSON.parse(tenant.billing || '{}');
     tenant.theme = JSON.parse(tenant.theme || '{}');
-    
+
     res.json({
       message: 'Tenant atualizado com sucesso',
       tenant
     });
-    
+
   } catch (error) {
     console.error('❌ Erro ao atualizar tenant:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -632,12 +658,11 @@ async function seedTenantData(tenantDb, tenantId) {
     { chave: 'whatsapp_webhook_token', valor: '', tipo: 'string' }
   ];
 
-  const insertConfig = tenantDb.prepare(`
-    INSERT INTO configuracoes (tenant_id, chave, valor, tipo) VALUES (?, ?, ?, ?)
-  `);
-
   for (const config of defaultConfigs) {
-    insertConfig.run(tenantId, config.chave, config.valor, config.tipo);
+    await tenantDb.run(
+      'INSERT INTO configuracoes (tenant_id, chave, valor, tipo) VALUES ($1, $2, $3, $4)',
+      [tenantId, config.chave, config.valor, config.tipo]
+    );
   }
 
   // Serviços padrão
@@ -647,12 +672,11 @@ async function seedTenantData(tenantDb, tenantId) {
     { nome: 'Exame de Rotina', descricao: 'Exames de rotina e preventivos', duracao: 30, valor: 100.00 }
   ];
 
-  const insertServico = tenantDb.prepare(`
-    INSERT INTO servicos (tenant_id, nome, descricao, duracao, valor) VALUES (?, ?, ?, ?, ?)
-  `);
-
   for (const servico of defaultServicos) {
-    insertServico.run(tenantId, servico.nome, servico.descricao, servico.duracao, servico.valor);
+    await tenantDb.run(
+      'INSERT INTO servicos (tenant_id, nome, descricao, duracao, valor) VALUES ($1, $2, $3, $4, $5)',
+      [tenantId, servico.nome, servico.descricao, servico.duracao, servico.valor]
+    );
   }
 
   // Pacientes iniciais (fakes)
@@ -662,15 +686,13 @@ async function seedTenantData(tenantDb, tenantId) {
     { nome: 'Ana Costa', email: 'ana.costa@example.com', telefone: '(11) 96666-3333', cpf: '111.222.333-44', data_nascimento: '1992-11-08', status: 'ativo' }
   ];
 
-  const insertPaciente = tenantDb.prepare(`
-    INSERT INTO pacientes (tenant_id, nome, email, telefone, cpf, data_nascimento, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
   const pacienteIds = [];
   for (const p of pacientes) {
-    const res = insertPaciente.run(tenantId, p.nome, p.email, p.telefone, p.cpf, p.data_nascimento, p.status);
-    pacienteIds.push(res.lastInsertRowid);
+    const result = await tenantDb.run(
+      'INSERT INTO pacientes (tenant_id, nome, email, telefone, cpf, data_nascimento, status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [tenantId, p.nome, p.email, p.telefone, p.cpf, p.data_nascimento, p.status]
+    );
+    pacienteIds.push(result.lastID);
   }
 
   // Agendamentos iniciais (fakes) nos próximos dias
@@ -687,13 +709,11 @@ async function seedTenantData(tenantDb, tenantId) {
     { paciente_id: pacienteIds[2], data_agendamento: inDays(3, 14), duracao: 30, servico: 'Exame de Rotina', status: 'agendado', valor: 100.00 }
   ];
 
-  const insertAgendamento = tenantDb.prepare(`
-    INSERT INTO agendamentos (tenant_id, paciente_id, medico_id, data_agendamento, duracao, servico, status, valor)
-    VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
-  `);
-
   for (const a of agendamentos) {
-    insertAgendamento.run(tenantId, a.paciente_id, a.data_agendamento, a.duracao, a.servico, a.status, a.valor);
+    await tenantDb.run(
+      'INSERT INTO agendamentos (tenant_id, paciente_id, medico_id, data_agendamento, duracao, servico, status, valor) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)',
+      [tenantId, a.paciente_id, a.data_agendamento, a.duracao, a.servico, a.status, a.valor]
+    );
   }
 
   console.log(`✅ Dados iniciais inseridos para tenant: ${tenantId}`);
@@ -714,10 +734,11 @@ router.get('/check-slug', async (req, res) => {
       });
     }
 
-    const masterDb = multiTenantDb.getMasterDb();
-    const existingTenant = masterDb.prepare(`
-      SELECT id FROM tenants WHERE slug = ?
-    `).get(slug);
+    const masterDb = mgr.getMasterDb();
+    const existingTenant = await masterDb.get(
+      'SELECT id FROM tenants WHERE slug = $1',
+      [slug]
+    );
 
     res.json({
       exists: !!existingTenant,

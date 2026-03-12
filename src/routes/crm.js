@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const PacienteModel = require('../models/Paciente');
 const AgendamentoModel = require('../models/Agendamento');
-const dbManager = require('../models/database');
 const authUtil = require('../utils/auth');
 const { mailchimpService } = require('../utils/mailchimp');
 const cronManager = require('../cron/inactivityChecker');
@@ -13,27 +12,27 @@ const cronManager = require('../cron/inactivityChecker');
  */
 router.get('/relatorios', authUtil.authenticate, async (req, res) => {
   try {
-    const { 
-      tipo = 'inativos', 
+    const {
+      tipo = 'inativos',
       dias_inativo = 90,
       page = 1,
-      limit = 50 
+      limit = 50
     } = req.query;
 
     let dados = {};
 
     switch (tipo) {
       case 'inativos':
-        dados = await gerarRelatorioInativos(req.user.clinica_id, dias_inativo, page, limit);
+        dados = await gerarRelatorioInativos(req.db, req.user.clinica_id, dias_inativo, page, limit);
         break;
       case 'ativos':
-        dados = await gerarRelatorioAtivos(req.user.clinica_id, page, limit);
+        dados = await gerarRelatorioAtivos(req.db, req.user.clinica_id, page, limit);
         break;
       case 'novos':
-        dados = await gerarRelatorioNovos(req.user.clinica_id, page, limit);
+        dados = await gerarRelatorioNovos(req.db, req.user.clinica_id, page, limit);
         break;
       case 'geral':
-        dados = await gerarRelatorioGeral(req.user.clinica_id);
+        dados = await gerarRelatorioGeral(req.db, req.user.clinica_id);
         break;
       default:
         return res.status(400).json({
@@ -62,10 +61,10 @@ router.get('/relatorios', authUtil.authenticate, async (req, res) => {
  */
 router.post('/campanhas/inativos', authUtil.authenticate, authUtil.authorize(['admin']), async (req, res) => {
   try {
-    const { 
+    const {
       dias_inativo = 90,
       mensagem_personalizada,
-      incluir_email = true 
+      incluir_email = true
     } = req.body;
 
     const pacientesInativos = PacienteModel.findInativos(req.user.clinica_id, dias_inativo);
@@ -81,21 +80,18 @@ router.post('/campanhas/inativos', authUtil.authenticate, authUtil.authorize(['a
     let enviados = 0;
     let errors = 0;
 
-    // Simular envio da campanha manual
-    const db = dbManager.getDb();
-    
     for (const paciente of pacientesInativos) {
       try {
-        const mensagem = mensagem_personalizada || 
+        const mensagem = mensagem_personalizada ||
           `Olá ${paciente.nome}! 😊\n\nSentimos sua falta na clínica! ` +
           `Que tal agendar uma nova sessão? Temos promoções especiais esperando por você! ✨\n\n` +
           `Responda esta mensagem para agendar.`;
 
         // Registrar tentativa de envio
-        db.prepare(`
+        await req.db.run(`
           INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-          VALUES (?, 'campanha_inativo', ?, 'enviada')
-        `).run(paciente.id, mensagem);
+          VALUES ($1, 'campanha_inativo', $2, 'enviada')
+        `, [paciente.id, mensagem]);
 
         enviados++;
 
@@ -146,54 +142,53 @@ router.post('/campanhas/inativos', authUtil.authenticate, authUtil.authorize(['a
  */
 router.get('/mensagens', authUtil.authenticate, async (req, res) => {
   try {
-    const { 
+    const {
       tipo,
       paciente_id,
       data_inicio,
       data_fim,
       page = 1,
-      limit = 50 
+      limit = 50
     } = req.query;
 
-    const db = dbManager.getDb();
-    
+    let paramIndex = 1;
     let query = `
       SELECT m.*, p.nome as paciente_nome, p.telefone as paciente_telefone
       FROM mensagem_crm m
       LEFT JOIN paciente p ON m.paciente_id = p.id
-      WHERE p.clinica_id = ?
+      WHERE p.clinica_id = $${paramIndex++}
     `;
-    
+
     const params = [req.user.clinica_id];
-    
+
     if (tipo) {
-      query += ' AND m.tipo = ?';
+      query += ` AND m.tipo = $${paramIndex++}`;
       params.push(tipo);
     }
-    
+
     if (paciente_id) {
-      query += ' AND m.paciente_id = ?';
+      query += ` AND m.paciente_id = $${paramIndex++}`;
       params.push(paciente_id);
     }
-    
+
     if (data_inicio) {
-      query += ' AND DATE(m.data_envio) >= ?';
+      query += ` AND DATE(m.data_envio) >= $${paramIndex++}`;
       params.push(data_inicio);
     }
-    
+
     if (data_fim) {
-      query += ' AND DATE(m.data_envio) <= ?';
+      query += ` AND DATE(m.data_envio) <= $${paramIndex++}`;
       params.push(data_fim);
     }
-    
+
     query += ' ORDER BY m.data_envio DESC';
-    
+
     // Paginação
     const offset = (page - 1) * limit;
-    query += ` LIMIT ? OFFSET ?`;
+    query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(parseInt(limit), offset);
-    
-    const mensagens = db.prepare(query).all(...params);
+
+    const mensagens = await req.db.all(query, params);
 
     res.json({
       success: true,
@@ -220,60 +215,60 @@ router.get('/mensagens', authUtil.authenticate, async (req, res) => {
 router.get('/estatisticas', authUtil.authenticate, async (req, res) => {
   try {
     const { periodo = 'mes' } = req.query;
-    
-    let dataInicio;
+
+    let diasAtras;
     switch (periodo) {
       case 'semana':
-        dataInicio = "date('now', '-7 days')";
+        diasAtras = 7;
         break;
       case 'mes':
-        dataInicio = "date('now', '-30 days')";
+        diasAtras = 30;
         break;
       case 'trimestre':
-        dataInicio = "date('now', '-90 days')";
+        diasAtras = 90;
         break;
       default:
-        dataInicio = "date('now', '-30 days')";
+        diasAtras = 30;
     }
 
-    const db = dbManager.getDb();
-    
     // Estatísticas de pacientes
     const estatisticasPacientes = PacienteModel.getStatusCounts(req.user.clinica_id);
-    
+
     // Estatísticas de mensagens
-    const mensagensEnviadas = db.prepare(`
+    const mensagensRow = await req.db.get(`
       SELECT COUNT(*) as count
       FROM mensagem_crm m
       LEFT JOIN paciente p ON m.paciente_id = p.id
-      WHERE p.clinica_id = ? AND DATE(m.data_envio) >= ${dataInicio}
-    `).get(req.user.clinica_id).count;
-    
-    const mensagensPorTipo = db.prepare(`
+      WHERE p.clinica_id = $1 AND m.data_envio >= NOW() - INTERVAL '${diasAtras} days'
+    `, [req.user.clinica_id]);
+    const mensagensEnviadas = mensagensRow.count;
+
+    const mensagensPorTipo = await req.db.all(`
       SELECT m.tipo, COUNT(*) as count
       FROM mensagem_crm m
       LEFT JOIN paciente p ON m.paciente_id = p.id
-      WHERE p.clinica_id = ? AND DATE(m.data_envio) >= ${dataInicio}
+      WHERE p.clinica_id = $1 AND m.data_envio >= NOW() - INTERVAL '${diasAtras} days'
       GROUP BY m.tipo
-    `).all(req.user.clinica_id);
-    
+    `, [req.user.clinica_id]);
+
     // Estatísticas de agendamentos
     const estatisticasAgendamentos = AgendamentoModel.getEstatisticas(req.user.clinica_id, periodo);
-    
+
     // Taxa de conversão (agendamentos após mensagem)
-    const conversoes = db.prepare(`
+    const conversoesRow = await req.db.get(`
       SELECT COUNT(DISTINCT a.paciente_id) as convertidos
       FROM agendamento a
       LEFT JOIN paciente p ON a.paciente_id = p.id
-      WHERE p.clinica_id = ?
-        AND DATE(a.created_at) >= ${dataInicio}
+      WHERE p.clinica_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${diasAtras} days'
         AND a.paciente_id IN (
-          SELECT DISTINCT paciente_id FROM mensagem_crm 
-          WHERE DATE(data_envio) >= ${dataInicio}
+          SELECT DISTINCT paciente_id FROM mensagem_crm
+          WHERE data_envio >= NOW() - INTERVAL '${diasAtras} days'
         )
-    `).get(req.user.clinica_id).convertidos;
-    
-    const taxaConversao = mensagensEnviadas > 0 ? 
+    `, [req.user.clinica_id]);
+    const conversoes = conversoesRow.convertidos;
+
+    const taxaConversao = mensagensEnviadas > 0 ?
       ((conversoes / mensagensEnviadas) * 100).toFixed(1) : 0;
 
     res.json({
@@ -361,9 +356,9 @@ router.post('/cron/manual', authUtil.authenticate, authUtil.authorize(['admin'])
 
 // Funções auxiliares para relatórios
 
-async function gerarRelatorioInativos(clinicaId, diasInativo, page, limit) {
+async function gerarRelatorioInativos(db, clinicaId, diasInativo, page, limit) {
   const pacientes = PacienteModel.findInativos(clinicaId, diasInativo);
-  
+
   // Paginação
   const startIndex = (page - 1) * limit;
   const endIndex = startIndex + parseInt(limit);
@@ -382,24 +377,23 @@ async function gerarRelatorioInativos(clinicaId, diasInativo, page, limit) {
   };
 }
 
-async function gerarRelatorioAtivos(clinicaId, page, limit) {
-  const db = dbManager.getDb();
-  
-  const pacientes = db.prepare(`
-    SELECT p.*, 
+async function gerarRelatorioAtivos(db, clinicaId, page, limit) {
+  const pacientes = await db.all(`
+    SELECT p.*,
            (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id AND status = 'realizado') as total_atendimentos,
            (SELECT MAX(data_hora) FROM agendamento WHERE paciente_id = p.id AND status = 'realizado') as ultimo_agendamento
     FROM paciente p
-    WHERE p.clinica_id = ?
-      AND p.ultimo_atendimento > datetime('now', '-90 days')
+    WHERE p.clinica_id = $1
+      AND p.ultimo_atendimento > NOW() - INTERVAL '90 days'
     ORDER BY p.ultimo_atendimento DESC
-    LIMIT ? OFFSET ?
-  `).all(clinicaId, parseInt(limit), (page - 1) * limit);
+    LIMIT $2 OFFSET $3
+  `, [clinicaId, parseInt(limit), (page - 1) * limit]);
 
-  const total = db.prepare(`
-    SELECT COUNT(*) as count FROM paciente 
-    WHERE clinica_id = ? AND ultimo_atendimento > datetime('now', '-90 days')
-  `).get(clinicaId).count;
+  const totalRow = await db.get(`
+    SELECT COUNT(*) as count FROM paciente
+    WHERE clinica_id = $1 AND ultimo_atendimento > NOW() - INTERVAL '90 days'
+  `, [clinicaId]);
+  const total = totalRow.count;
 
   return {
     tipo: 'ativos',
@@ -414,23 +408,22 @@ async function gerarRelatorioAtivos(clinicaId, page, limit) {
   };
 }
 
-async function gerarRelatorioNovos(clinicaId, page, limit) {
-  const db = dbManager.getDb();
-  
-  const pacientes = db.prepare(`
-    SELECT p.*, 
+async function gerarRelatorioNovos(db, clinicaId, page, limit) {
+  const pacientes = await db.all(`
+    SELECT p.*,
            (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id) as total_agendamentos
     FROM paciente p
-    WHERE p.clinica_id = ?
-      AND p.created_at > datetime('now', '-30 days')
+    WHERE p.clinica_id = $1
+      AND p.created_at > NOW() - INTERVAL '30 days'
     ORDER BY p.created_at DESC
-    LIMIT ? OFFSET ?
-  `).all(clinicaId, parseInt(limit), (page - 1) * limit);
+    LIMIT $2 OFFSET $3
+  `, [clinicaId, parseInt(limit), (page - 1) * limit]);
 
-  const total = db.prepare(`
-    SELECT COUNT(*) as count FROM paciente 
-    WHERE clinica_id = ? AND created_at > datetime('now', '-30 days')
-  `).get(clinicaId).count;
+  const totalRow = await db.get(`
+    SELECT COUNT(*) as count FROM paciente
+    WHERE clinica_id = $1 AND created_at > NOW() - INTERVAL '30 days'
+  `, [clinicaId]);
+  const total = totalRow.count;
 
   return {
     tipo: 'novos',
@@ -445,24 +438,22 @@ async function gerarRelatorioNovos(clinicaId, page, limit) {
   };
 }
 
-async function gerarRelatorioGeral(clinicaId) {
+async function gerarRelatorioGeral(db, clinicaId) {
   const statusCounts = PacienteModel.getStatusCounts(clinicaId);
   const estatisticasAgendamentos = AgendamentoModel.getEstatisticas(clinicaId, 'mes');
-  
-  const db = dbManager.getDb();
-  
+
   // Top procedimentos
-  const topProcedimentos = db.prepare(`
+  const topProcedimentos = await db.all(`
     SELECT proc.nome, COUNT(*) as total_agendamentos
     FROM agendamento a
     LEFT JOIN procedimento proc ON a.procedimento_id = proc.id
     LEFT JOIN paciente p ON a.paciente_id = p.id
-    WHERE p.clinica_id = ?
-      AND a.created_at > datetime('now', '-30 days')
+    WHERE p.clinica_id = $1
+      AND a.created_at > NOW() - INTERVAL '30 days'
     GROUP BY proc.id, proc.nome
     ORDER BY total_agendamentos DESC
     LIMIT 5
-  `).all(clinicaId);
+  `, [clinicaId]);
 
   return {
     tipo: 'geral',

@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const dbManager = require('../models/database');
 const PacienteModel = require('../models/Paciente');
 const authUtil = require('../utils/auth');
 const { sendWhatsAppMessage } = require('../utils/bot');
-const { mailchimpService } = require('../utils/mailchimp');
 
 /**
  * @route POST /propostas
@@ -34,8 +32,6 @@ router.post('/', authUtil.authenticate, async (req, res) => {
       });
     }
 
-    const db = dbManager.getDb();
-    
     // Calcular valor total
     let valorTotal = 0;
     for (const item of itens) {
@@ -43,57 +39,63 @@ router.post('/', authUtil.authenticate, async (req, res) => {
     }
 
     // Criar proposta
-    const propostaResult = db.prepare(`
-      INSERT INTO proposta (paciente_id, contrato_texto, itens, valor_total)
-      VALUES (?, ?, ?, ?)
-    `).run(
-      paciente_id,
-      contrato_texto || 'Contrato padrão da clínica',
-      JSON.stringify(itens),
-      valorTotal
+    const propostaResult = await req.db.run(
+      `INSERT INTO proposta (paciente_id, contrato_texto, itens, valor_total)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [
+        paciente_id,
+        contrato_texto || 'Contrato padrão da clínica',
+        JSON.stringify(itens),
+        valorTotal
+      ]
     );
 
-    const propostaId = propostaResult.lastInsertRowid;
+    const propostaId = propostaResult.lastID;
 
     // Buscar dados do paciente para mensagem
     const paciente = PacienteModel.findById(paciente_id);
-    
+
     // Gerar mensagem da proposta
     let mensagemProposta = `💰 *Nova Proposta de Tratamento*\n\n`;
     mensagemProposta += `Olá ${paciente.nome}!\n\n`;
     mensagemProposta += `Preparamos uma proposta especial para você:\n\n`;
-    
+
     for (const item of itens) {
-      const procedimento = db.prepare('SELECT nome FROM procedimento WHERE id = ?').get(item.procedimento_id);
+      const procedimento = await req.db.get(
+        'SELECT nome FROM procedimento WHERE id = $1',
+        [item.procedimento_id]
+      );
       mensagemProposta += `💆‍♀️ ${procedimento.nome}\n`;
       mensagemProposta += `   • ${item.sessoes} sessão(ões)\n`;
       mensagemProposta += `   • R$ ${item.valor_unitario.toFixed(2)} por sessão\n\n`;
     }
-    
+
     mensagemProposta += `💵 *Valor Total: R$ ${valorTotal.toFixed(2)}*\n\n`;
     mensagemProposta += `Responda *ACEITO* para confirmar ou *DÚVIDAS* se tiver questões! 😊`;
 
     // Enviar proposta via WhatsApp
     try {
       await sendWhatsAppMessage(paciente.telefone, mensagemProposta, req.user.clinica_id);
-      
+
       // Registrar envio
-      db.prepare(`
-        INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-        VALUES (?, 'proposta', ?, 'enviada')
-      `).run(paciente_id, mensagemProposta);
-      
+      await req.db.run(
+        `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
+         VALUES ($1, 'proposta', $2, 'enviada')`,
+        [paciente_id, mensagemProposta]
+      );
+
     } catch (error) {
       console.error('Erro ao enviar proposta:', error.message);
     }
 
     // Buscar dados completos da proposta
-    const proposta = db.prepare(`
-      SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
-      FROM proposta p
-      LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE p.id = ?
-    `).get(propostaId);
+    const proposta = await req.db.get(
+      `SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
+       FROM proposta p
+       LEFT JOIN paciente pac ON p.paciente_id = pac.id
+       WHERE p.id = $1`,
+      [propostaId]
+    );
 
     res.status(201).json({
       success: true,
@@ -122,14 +124,13 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
     const { id } = req.params;
     const { datas_agendamento, equipamento_id } = req.body;
 
-    const db = dbManager.getDb();
-    
-    const proposta = db.prepare(`
-      SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
-      FROM proposta p
-      LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE p.id = ?
-    `).get(id);
+    const proposta = await req.db.get(
+      `SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
+       FROM proposta p
+       LEFT JOIN paciente pac ON p.paciente_id = pac.id
+       WHERE p.id = $1`,
+      [id]
+    );
 
     if (!proposta) {
       return res.status(404).json({
@@ -158,18 +159,21 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
 
     // Criar agendamentos automaticamente
     const AgendamentoModel = require('../models/Agendamento');
-    
+
     for (let i = 0; i < itens.length; i++) {
       const item = itens[i];
-      
+
       for (let sessao = 1; sessao <= item.sessoes; sessao++) {
         const dataAgendamento = datas_agendamento?.[`${item.procedimento_id}_${sessao}`];
-        
+
         if (dataAgendamento) {
           try {
             // Verificar disponibilidade
-            const procedimento = db.prepare('SELECT duracao_minutos FROM procedimento WHERE id = ?').get(item.procedimento_id);
-            
+            const procedimento = await req.db.get(
+              'SELECT duracao_minutos FROM procedimento WHERE id = $1',
+              [item.procedimento_id]
+            );
+
             const disponibilidade = AgendamentoModel.verificarDisponibilidade(
               equipamento_id,
               dataAgendamento,
@@ -185,10 +189,10 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
                 sessao_numero: sessao,
                 observacoes: `Proposta #${id} - Sessão ${sessao}/${item.sessoes}`
               });
-              
+
               agendamentosCriados.push(agendamento);
             }
-            
+
           } catch (error) {
             console.error(`Erro ao agendar sessão ${sessao} do procedimento ${item.procedimento_id}:`, error.message);
           }
@@ -197,24 +201,26 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
     }
 
     // Atualizar status da proposta
-    db.prepare(`
-      UPDATE proposta 
-      SET status = 'aceita', updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(id);
+    await req.db.run(
+      `UPDATE proposta
+       SET status = 'aceita', updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
 
     // Criar conta a receber
-    db.prepare(`
-      INSERT INTO conta_receber (proposta_id, valor_pago, recibo_texto)
-      VALUES (?, 0, ?)
-    `).run(id, `Proposta #${id} aceita - Valor: R$ ${proposta.valor_total}`);
+    await req.db.run(
+      `INSERT INTO conta_receber (proposta_id, valor_pago, recibo_texto)
+       VALUES ($1, 0, $2)`,
+      [id, `Proposta #${id} aceita - Valor: R$ ${proposta.valor_total}`]
+    );
 
     // Enviar mensagem de confirmação
     try {
       let mensagemConfirmacao = `🎉 *Proposta Aceita!*\n\n`;
       mensagemConfirmacao += `Olá ${proposta.paciente_nome}!\n\n`;
       mensagemConfirmacao += `Sua proposta foi aceita com sucesso!\n\n`;
-      
+
       if (agendamentosCriados.length > 0) {
         mensagemConfirmacao += `📅 *Agendamentos criados:*\n`;
         agendamentosCriados.forEach((ag, index) => {
@@ -222,17 +228,18 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
           mensagemConfirmacao += `${index + 1}. ${data} - ${ag.procedimento_nome}\n`;
         });
       }
-      
+
       mensagemConfirmacao += `\nObrigado por escolher nossa clínica! ✨`;
 
       await sendWhatsAppMessage(proposta.paciente_telefone, mensagemConfirmacao, req.user.clinica_id);
-      
+
       // Registrar mensagem
-      db.prepare(`
-        INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-        VALUES (?, 'proposta_aceita', ?, 'enviada')
-      `).run(proposta.paciente_id, mensagemConfirmacao);
-      
+      await req.db.run(
+        `INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
+         VALUES ($1, 'proposta_aceita', $2, 'enviada')`,
+        [proposta.paciente_id, mensagemConfirmacao]
+      );
+
     } catch (error) {
       console.error('Erro ao enviar confirmação:', error.message);
     }
@@ -263,37 +270,38 @@ router.put('/:id/aceitar', authUtil.authenticate, async (req, res) => {
 router.get('/', authUtil.authenticate, async (req, res) => {
   try {
     const { status, paciente_id, page = 1, limit = 20 } = req.query;
-    
-    const db = dbManager.getDb();
-    
+
     let query = `
       SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
       FROM proposta p
       LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE pac.clinica_id = ?
+      WHERE pac.clinica_id = $1
     `;
-    
+
     const params = [req.user.clinica_id];
-    
+    let paramIndex = 2;
+
     if (status) {
-      query += ' AND p.status = ?';
+      query += ` AND p.status = $${paramIndex}`;
       params.push(status);
+      paramIndex++;
     }
-    
+
     if (paciente_id) {
-      query += ' AND p.paciente_id = ?';
+      query += ` AND p.paciente_id = $${paramIndex}`;
       params.push(paciente_id);
+      paramIndex++;
     }
-    
+
     query += ' ORDER BY p.created_at DESC';
-    
+
     // Paginação
     const offset = (page - 1) * limit;
-    query += ` LIMIT ? OFFSET ?`;
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(parseInt(limit), offset);
-    
-    const propostas = db.prepare(query).all(...params);
-    
+
+    const propostas = await req.db.all(query, params);
+
     // Parse dos itens JSON
     const propostasFormatadas = propostas.map(p => ({
       ...p,
@@ -325,14 +333,14 @@ router.get('/', authUtil.authenticate, async (req, res) => {
 router.get('/:id', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const db = dbManager.getDb();
-    
-    const proposta = db.prepare(`
-      SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone, pac.email as paciente_email
-      FROM proposta p
-      LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE p.id = ?
-    `).get(id);
+
+    const proposta = await req.db.get(
+      `SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone, pac.email as paciente_email
+       FROM proposta p
+       LEFT JOIN paciente pac ON p.paciente_id = pac.id
+       WHERE p.id = $1`,
+      [id]
+    );
 
     if (!proposta) {
       return res.status(404).json({
@@ -350,9 +358,10 @@ router.get('/:id', authUtil.authenticate, async (req, res) => {
     }
 
     // Buscar conta a receber relacionada
-    const contaReceber = db.prepare(`
-      SELECT * FROM conta_receber WHERE proposta_id = ?
-    `).get(id);
+    const contaReceber = await req.db.get(
+      'SELECT * FROM conta_receber WHERE proposta_id = $1',
+      [id]
+    );
 
     res.json({
       success: true,
@@ -373,22 +382,21 @@ router.get('/:id', authUtil.authenticate, async (req, res) => {
 });
 
 /**
- * @route POST /propostas/:id/rejeitar
+ * @route PUT /propostas/:id/rejeitar
  * @desc Rejeita proposta
  */
 router.put('/:id/rejeitar', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
-    
-    const db = dbManager.getDb();
-    
-    const proposta = db.prepare(`
-      SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
-      FROM proposta p
-      LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE p.id = ?
-    `).get(id);
+
+    const proposta = await req.db.get(
+      `SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
+       FROM proposta p
+       LEFT JOIN paciente pac ON p.paciente_id = pac.id
+       WHERE p.id = $1`,
+      [id]
+    );
 
     if (!proposta) {
       return res.status(404).json({
@@ -406,27 +414,28 @@ router.put('/:id/rejeitar', authUtil.authenticate, async (req, res) => {
     }
 
     // Atualizar status
-    db.prepare(`
-      UPDATE proposta 
-      SET status = 'rejeitada', updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(id);
+    await req.db.run(
+      `UPDATE proposta
+       SET status = 'rejeitada', updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
 
     // Enviar mensagem
     try {
       let mensagem = `💔 Proposta não aceita\n\n`;
       mensagem += `Olá ${proposta.paciente_nome}!\n\n`;
       mensagem += `Entendemos que nossa proposta não atendeu suas expectativas no momento.\n\n`;
-      
+
       if (motivo) {
         mensagem += `Motivo informado: ${motivo}\n\n`;
       }
-      
+
       mensagem += `Estamos sempre dispostos a criar novas propostas que se adequem melhor às suas necessidades. `;
       mensagem += `Entre em contato conosco! 😊`;
 
       await sendWhatsAppMessage(proposta.paciente_telefone, mensagem, req.user.clinica_id);
-      
+
     } catch (error) {
       console.error('Erro ao enviar mensagem de rejeição:', error.message);
     }
@@ -453,22 +462,21 @@ router.post('/:id/recibo', authUtil.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { valor_pago, forma_pagamento = 'Dinheiro' } = req.body;
-    
+
     if (!valor_pago || valor_pago <= 0) {
       return res.status(400).json({
         success: false,
         message: 'Valor pago deve ser maior que zero'
       });
     }
-    
-    const db = dbManager.getDb();
-    
-    const proposta = db.prepare(`
-      SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
-      FROM proposta p
-      LEFT JOIN paciente pac ON p.paciente_id = pac.id
-      WHERE p.id = ?
-    `).get(id);
+
+    const proposta = await req.db.get(
+      `SELECT p.*, pac.nome as paciente_nome, pac.telefone as paciente_telefone
+       FROM proposta p
+       LEFT JOIN paciente pac ON p.paciente_id = pac.id
+       WHERE p.id = $1`,
+      [id]
+    );
 
     if (!proposta) {
       return res.status(404).json({
@@ -502,19 +510,24 @@ Obrigado pela preferência! ✨
     `.trim();
 
     // Atualizar conta a receber
-    const contaExistente = db.prepare('SELECT id FROM conta_receber WHERE proposta_id = ?').get(id);
-    
+    const contaExistente = await req.db.get(
+      'SELECT id FROM conta_receber WHERE proposta_id = $1',
+      [id]
+    );
+
     if (contaExistente) {
-      db.prepare(`
-        UPDATE conta_receber 
-        SET valor_pago = valor_pago + ?, data_pagamento = CURRENT_TIMESTAMP, recibo_texto = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE proposta_id = ?
-      `).run(valor_pago, reciboTexto, id);
+      await req.db.run(
+        `UPDATE conta_receber
+         SET valor_pago = valor_pago + $1, data_pagamento = NOW(), recibo_texto = $2, updated_at = NOW()
+         WHERE proposta_id = $3`,
+        [valor_pago, reciboTexto, id]
+      );
     } else {
-      db.prepare(`
-        INSERT INTO conta_receber (proposta_id, valor_pago, data_pagamento, recibo_texto)
-        VALUES (?, ?, CURRENT_TIMESTAMP, ?)
-      `).run(id, valor_pago, reciboTexto);
+      await req.db.run(
+        `INSERT INTO conta_receber (proposta_id, valor_pago, data_pagamento, recibo_texto)
+         VALUES ($1, $2, NOW(), $3)`,
+        [id, valor_pago, reciboTexto]
+      );
     }
 
     // Enviar recibo via WhatsApp

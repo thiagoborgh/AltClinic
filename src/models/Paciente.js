@@ -1,27 +1,27 @@
-const dbManager = require('./database');
 const { format, parseISO, differenceInYears, startOfMonth, endOfMonth } = require('date-fns');
 
 class PacienteModel {
-  constructor(db = null) {
-    this.db = db || dbManager.getDb();
+  constructor(db) {
+    this.db = db;
   }
 
   /**
    * Cria um novo paciente
    * @param {Object} pacienteData - Dados do paciente
-   * @returns {Object} - Paciente criado
+   * @returns {number} - ID do paciente criado
    */
-  create(pacienteData) {
+  async create(pacienteData) {
     const { tenant_id, nome, telefone, email, cpf, dataNascimento, endereco, observacoes, status } = pacienteData;
-    
+
     try {
-      const result = this.db.prepare(`
-        INSERT INTO pacientes (tenant_id, nome, telefone, email, cpf, data_nascimento, endereco, observacoes, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(tenant_id, nome, telefone, email, cpf, dataNascimento, endereco || null, observacoes || null, status || 'ativo');
-      
-      return result.lastInsertRowid;
-      
+      const r = await this.db.run(
+        `INSERT INTO pacientes (tenant_id, nome, telefone, email, cpf, data_nascimento, endereco, observacoes, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id`,
+        [tenant_id, nome, telefone, email, cpf, dataNascimento, endereco || null, observacoes || null, status || 'ativo']
+      );
+
+      return r.lastID;
     } catch (error) {
       throw error;
     }
@@ -32,15 +32,16 @@ class PacienteModel {
    * @param {number} id - ID do paciente
    * @returns {Object|null} - Paciente encontrado
    */
-  findById(id) {
-    return this.db.prepare(`
-      SELECT p.*, c.nome as clinica_nome,
-             (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id) as total_agendamentos,
-             (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id AND status = 'realizado') as agendamentos_realizados
-      FROM paciente p
-      LEFT JOIN clinica c ON p.clinica_id = c.id
-      WHERE p.id = ?
-    `).get(id);
+  async findById(id) {
+    return this.db.get(
+      `SELECT p.*, c.nome as clinica_nome,
+              (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id) as total_agendamentos,
+              (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id AND status = 'realizado') as agendamentos_realizados
+       FROM paciente p
+       LEFT JOIN clinica c ON p.clinica_id = c.id
+       WHERE p.id = $1`,
+      [id]
+    );
   }
 
   /**
@@ -49,11 +50,11 @@ class PacienteModel {
    * @param {number} clinicaId - ID da clínica
    * @returns {Object|null} - Paciente encontrado
    */
-  findByTelefone(telefone, clinicaId) {
-    return this.db.prepare(`
-      SELECT * FROM paciente
-      WHERE telefone = ? AND clinica_id = ?
-    `).get(telefone, clinicaId);
+  async findByTelefone(telefone, clinicaId) {
+    return this.db.get(
+      `SELECT * FROM paciente WHERE telefone = $1 AND clinica_id = $2`,
+      [telefone, clinicaId]
+    );
   }
 
   /**
@@ -62,49 +63,46 @@ class PacienteModel {
    * @param {Object} filters - Filtros opcionais
    * @returns {Array} - Lista de pacientes
    */
-  findByClinica(clinicaId, filters = {}) {
+  async findByClinica(clinicaId, filters = {}) {
     let query = `
       SELECT p.*,
              (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id) as total_agendamentos,
              (SELECT COUNT(*) FROM agendamento WHERE paciente_id = p.id AND status = 'realizado') as agendamentos_realizados
       FROM paciente p
-      WHERE p.clinica_id = ?
+      WHERE p.clinica_id = $1
     `;
-    
+
     const params = [clinicaId];
-    
-    // Filtro por nome
+    let idx = 2;
+
     if (filters.nome) {
-      query += ' AND p.nome LIKE ?';
+      query += ` AND p.nome ILIKE $${idx++}`;
       params.push(`%${filters.nome}%`);
     }
-    
-    // Filtro por telefone
+
     if (filters.telefone) {
-      query += ' AND p.telefone LIKE ?';
+      query += ` AND p.telefone ILIKE $${idx++}`;
       params.push(`%${filters.telefone}%`);
     }
-    
-    // Filtro por pacientes inativos
+
     if (filters.inativos) {
       const diasInativo = filters.diasInativo || 90;
-      query += ` AND (p.ultimo_atendimento IS NULL OR p.ultimo_atendimento < datetime('now', '-${diasInativo} days'))`;
+      query += ` AND (p.ultimo_atendimento IS NULL OR p.ultimo_atendimento < NOW() - INTERVAL '${diasInativo} days')`;
     }
-    
+
     query += ' ORDER BY p.nome';
-    
-    // Paginação
+
     if (filters.limit) {
-      query += ' LIMIT ?';
+      query += ` LIMIT $${idx++}`;
       params.push(filters.limit);
-      
+
       if (filters.offset) {
-        query += ' OFFSET ?';
+        query += ` OFFSET $${idx++}`;
         params.push(filters.offset);
       }
     }
-    
-    return this.db.prepare(query).all(...params);
+
+    return this.db.all(query, params);
   }
 
   /**
@@ -113,23 +111,24 @@ class PacienteModel {
    * @param {number} diasInativo - Dias para considerar inativo
    * @returns {Array} - Lista de pacientes inativos
    */
-  findInativos(clinicaId, diasInativo = 90) {
-    return this.db.prepare(`
-      SELECT p.*, 
-             julianday('now') - julianday(p.ultimo_atendimento) as dias_sem_atendimento,
-             (SELECT data_envio FROM mensagem_crm 
-              WHERE paciente_id = p.id AND tipo = 'inativo' 
-              ORDER BY data_envio DESC LIMIT 1) as ultima_mensagem_inativo
-      FROM paciente p
-      WHERE p.clinica_id = ?
-        AND (p.ultimo_atendimento IS NULL OR p.ultimo_atendimento < datetime('now', '-${diasInativo} days'))
-        AND p.id NOT IN (
-          SELECT paciente_id FROM mensagem_crm 
-          WHERE tipo = 'inativo' 
-            AND data_envio > datetime('now', '-30 days')
-        )
-      ORDER BY p.ultimo_atendimento ASC
-    `).all(clinicaId);
+  async findInativos(clinicaId, diasInativo = 90) {
+    return this.db.all(
+      `SELECT p.*,
+              EXTRACT(DAY FROM NOW() - p.ultimo_atendimento) as dias_sem_atendimento,
+              (SELECT data_envio FROM mensagem_crm
+               WHERE paciente_id = p.id AND tipo = 'inativo'
+               ORDER BY data_envio DESC LIMIT 1) as ultima_mensagem_inativo
+       FROM paciente p
+       WHERE p.clinica_id = $1
+         AND (p.ultimo_atendimento IS NULL OR p.ultimo_atendimento < NOW() - INTERVAL '${diasInativo} days')
+         AND p.id NOT IN (
+           SELECT paciente_id FROM mensagem_crm
+           WHERE tipo = 'inativo'
+             AND data_envio > NOW() - INTERVAL '30 days'
+         )
+       ORDER BY p.ultimo_atendimento ASC`,
+      [clinicaId]
+    );
   }
 
   /**
@@ -138,44 +137,44 @@ class PacienteModel {
    * @param {Object} pacienteData - Dados para atualizar
    * @returns {Object} - Paciente atualizado
    */
-  update(id, pacienteData) {
+  async update(id, pacienteData) {
     const { nome, telefone, email, ultimo_atendimento } = pacienteData;
     const updates = [];
     const values = [];
-    
+    let idx = 1;
+
     if (nome) {
-      updates.push('nome = ?');
+      updates.push(`nome = $${idx++}`);
       values.push(nome);
     }
-    
+
     if (telefone) {
-      updates.push('telefone = ?');
+      updates.push(`telefone = $${idx++}`);
       values.push(telefone);
     }
-    
+
     if (email !== undefined) {
-      updates.push('email = ?');
+      updates.push(`email = $${idx++}`);
       values.push(email);
     }
-    
+
     if (ultimo_atendimento) {
-      updates.push('ultimo_atendimento = ?');
+      updates.push(`ultimo_atendimento = $${idx++}`);
       values.push(ultimo_atendimento);
     }
-    
+
     if (updates.length === 0) {
       throw new Error('Nenhum campo para atualizar');
     }
-    
+
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
-    
-    this.db.prepare(`
-      UPDATE paciente
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `).run(...values);
-    
+
+    await this.db.run(
+      `UPDATE paciente SET ${updates.join(', ')} WHERE id = $${idx}`,
+      values
+    );
+
     return this.findById(id);
   }
 
@@ -185,15 +184,14 @@ class PacienteModel {
    * @param {string} dataAtendimento - Data do atendimento
    * @returns {boolean} - True se atualizado
    */
-  updateUltimoAtendimento(id, dataAtendimento = null) {
+  async updateUltimoAtendimento(id, dataAtendimento = null) {
     const data = dataAtendimento || new Date().toISOString();
-    
-    const result = this.db.prepare(`
-      UPDATE paciente
-      SET ultimo_atendimento = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(data, id);
-    
+
+    const result = await this.db.run(
+      `UPDATE paciente SET ultimo_atendimento = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [data, id]
+    );
+
     return result.changes > 0;
   }
 
@@ -202,8 +200,11 @@ class PacienteModel {
    * @param {number} id - ID do paciente
    * @returns {boolean} - True se removido
    */
-  delete(id) {
-    const result = this.db.prepare('DELETE FROM paciente WHERE id = ?').run(id);
+  async delete(id) {
+    const result = await this.db.run(
+      'DELETE FROM paciente WHERE id = $1',
+      [id]
+    );
     return result.changes > 0;
   }
 
@@ -213,29 +214,30 @@ class PacienteModel {
    * @param {number} diasInativo - Dias para considerar inativo
    * @returns {Object} - Contadores
    */
-  getStatusCounts(clinicaId, diasInativo = 90) {
-    const total = this.db.prepare('SELECT COUNT(*) as count FROM paciente WHERE clinica_id = ?').get(clinicaId).count;
-    
-    const ativos = this.db.prepare(`
-      SELECT COUNT(*) as count FROM paciente 
-      WHERE clinica_id = ? 
-        AND ultimo_atendimento > datetime('now', '-${diasInativo} days')
-    `).get(clinicaId).count;
-    
+  async getStatusCounts(clinicaId, diasInativo = 90) {
+    const totalRow = await this.db.get(
+      'SELECT COUNT(*) as count FROM paciente WHERE clinica_id = $1',
+      [clinicaId]
+    );
+    const total = parseInt(totalRow.count, 10);
+
+    const ativosRow = await this.db.get(
+      `SELECT COUNT(*) as count FROM paciente
+       WHERE clinica_id = $1 AND ultimo_atendimento > NOW() - INTERVAL '${diasInativo} days'`,
+      [clinicaId]
+    );
+    const ativos = parseInt(ativosRow.count, 10);
+
     const inativos = total - ativos;
-    
-    const novos = this.db.prepare(`
-      SELECT COUNT(*) as count FROM paciente 
-      WHERE clinica_id = ? 
-        AND created_at > datetime('now', '-30 days')
-    `).get(clinicaId).count;
-    
-    return {
-      total,
-      ativos,
-      inativos,
-      novos
-    };
+
+    const novosRow = await this.db.get(
+      `SELECT COUNT(*) as count FROM paciente
+       WHERE clinica_id = $1 AND created_at > DATE_TRUNC('month', NOW())`,
+      [clinicaId]
+    );
+    const novos = parseInt(novosRow.count, 10);
+
+    return { total, ativos, inativos, novos };
   }
 
   /**
@@ -244,16 +246,17 @@ class PacienteModel {
    * @param {number} limit - Limite de resultados
    * @returns {Array} - Histórico de agendamentos
    */
-  getHistoricoAgendamentos(pacienteId, limit = 10) {
-    return this.db.prepare(`
-      SELECT a.*, p.nome as procedimento_nome, e.nome as equipamento_nome
-      FROM agendamento a
-      LEFT JOIN procedimento p ON a.procedimento_id = p.id
-      LEFT JOIN equipamento e ON a.equipamento_id = e.id
-      WHERE a.paciente_id = ?
-      ORDER BY a.data_hora DESC
-      LIMIT ?
-    `).all(pacienteId, limit);
+  async getHistoricoAgendamentos(pacienteId, limit = 10) {
+    return this.db.all(
+      `SELECT a.*, p.nome as procedimento_nome, e.nome as equipamento_nome
+       FROM agendamento a
+       LEFT JOIN procedimento p ON a.procedimento_id = p.id
+       LEFT JOIN equipamento e ON a.equipamento_id = e.id
+       WHERE a.paciente_id = $1
+       ORDER BY a.data_hora DESC
+       LIMIT $2`,
+      [pacienteId, limit]
+    );
   }
 
   /**
@@ -285,72 +288,63 @@ class PacienteModel {
         status
       FROM pacientes
       WHERE 1=1
-    `;    const params = [];
+    `;
+    const params = [];
+    let idx = 1;
 
-    // Filtro de busca
     if (search) {
-      query += ` AND (nome LIKE ? OR email LIKE ? OR telefone LIKE ? OR cpf LIKE ?)`;
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      query += ` AND (nome ILIKE $${idx} OR email ILIKE $${idx} OR telefone ILIKE $${idx} OR cpf ILIKE $${idx})`;
+      params.push(`%${search}%`);
+      idx++;
     }
 
-    // Filtro de status
     if (status !== 'todos') {
-      query += ` AND status = ?`;
+      query += ` AND status = $${idx++}`;
       params.push(status);
     }
 
-    // Ordem
     const validOrderBy = ['nome', 'email', 'created_at'];
     const validOrder = ['ASC', 'DESC'];
-    
+
     if (validOrderBy.includes(orderBy) && validOrder.includes(order.toUpperCase())) {
       query += ` ORDER BY ${orderBy} ${order.toUpperCase()}`;
     } else {
       query += ` ORDER BY nome ASC`;
     }
 
-    // Paginação
-    query += ` LIMIT ? OFFSET ?`;
+    query += ` LIMIT $${idx++} OFFSET $${idx++}`;
     params.push(limit, offset);
 
     try {
-      const pacientes = this.db.prepare(query).all(...params);
-      
+      const pacientes = await this.db.all(query, params);
+
       // Contar total
-      let countQuery = `
-        SELECT COUNT(*) as total
-        FROM pacientes
-        WHERE 1=1
-      `;
-      
+      let countQuery = `SELECT COUNT(*) as total FROM pacientes WHERE 1=1`;
       const countParams = [];
-      
+      let cidx = 1;
+
       if (search) {
-        countQuery += ` AND (nome LIKE ? OR email LIKE ? OR telefone LIKE ? OR cpf LIKE ?)`;
-        const searchTerm = `%${search}%`;
-        countParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        countQuery += ` AND (nome ILIKE $${cidx} OR email ILIKE $${cidx} OR telefone ILIKE $${cidx} OR cpf ILIKE $${cidx})`;
+        countParams.push(`%${search}%`);
+        cidx++;
       }
 
       if (status !== 'todos') {
-        countQuery += ` AND status = ?`;
+        countQuery += ` AND status = $${cidx++}`;
         countParams.push(status);
       }
 
-      const total = this.db.prepare(countQuery).get(...countParams).total;
+      const countRow = await this.db.get(countQuery, countParams);
+      const total = parseInt(countRow.total, 10);
 
-      // Processar dados dos pacientes
       const pacientesProcessados = pacientes.map(p => ({
         ...p,
         idade: p.dataNascimento ? differenceInYears(new Date(), parseISO(p.dataNascimento)) : null,
-        endereco: p.endereco ? JSON.parse(p.endereco) : null,
-        convenio: p.convenio ? JSON.parse(p.convenio) : null
+        endereco: p.endereco ? (typeof p.endereco === 'string' ? JSON.parse(p.endereco) : p.endereco) : null,
+        convenio: p.convenio ? (typeof p.convenio === 'string' ? JSON.parse(p.convenio) : p.convenio) : null
       }));
 
-      return {
-        pacientes: pacientesProcessados,
-        total
-      };
+      return { pacientes: pacientesProcessados, total };
     } catch (error) {
       console.error('Erro ao listar pacientes:', error);
       throw error;
@@ -364,33 +358,22 @@ class PacienteModel {
    */
   async buscarPorId(id) {
     try {
-      const query = `
-        SELECT 
-          id,
-          nome,
-          email,
-          telefone,
-          cpf,
-          data_nascimento,
-          endereco,
-          observacoes,
-          status,
-          created_at,
-          updated_at
-        FROM pacientes
-        WHERE id = ?
-      `;
+      const paciente = await this.db.get(
+        `SELECT id, nome, email, telefone, cpf, data_nascimento, endereco,
+                observacoes, status, created_at, updated_at
+         FROM pacientes
+         WHERE id = $1`,
+        [id]
+      );
 
-      const paciente = this.db.prepare(query).get(id);
-      
       if (!paciente) return null;
 
       return {
         ...paciente,
         nomeCompleto: paciente.nome,
-        idade: paciente.dataNascimento ? differenceInYears(new Date(), parseISO(paciente.dataNascimento)) : null,
-        endereco: paciente.endereco ? JSON.parse(paciente.endereco) : null,
-        convenio: paciente.convenio ? JSON.parse(paciente.convenio) : null
+        idade: paciente.data_nascimento ? differenceInYears(new Date(), new Date(paciente.data_nascimento)) : null,
+        endereco: paciente.endereco ? (typeof paciente.endereco === 'string' ? JSON.parse(paciente.endereco) : paciente.endereco) : null,
+        convenio: paciente.convenio ? (typeof paciente.convenio === 'string' ? JSON.parse(paciente.convenio) : paciente.convenio) : null
       };
     } catch (error) {
       console.error('Erro ao buscar paciente por ID:', error);
@@ -405,25 +388,13 @@ class PacienteModel {
    */
   async buscarPorCpf(cpf) {
     try {
-      const query = `
-        SELECT 
-          id,
-          nome,
-          email,
-          telefone,
-          cpf,
-          data_nascimento,
-          endereco,
-          observacoes,
-          status,
-          created_at,
-          updated_at
-        FROM pacientes
-        WHERE cpf = ?
-      `;
-
-      const paciente = this.db.prepare(query).get(cpf);
-      return paciente || null;
+      return await this.db.get(
+        `SELECT id, nome, email, telefone, cpf, data_nascimento, endereco,
+                observacoes, status, created_at, updated_at
+         FROM pacientes
+         WHERE cpf = $1`,
+        [cpf]
+      );
     } catch (error) {
       console.error('Erro ao buscar paciente por CPF:', error);
       throw error;
@@ -444,42 +415,28 @@ class PacienteModel {
         cpf,
         dataNascimento,
         endereco,
-        estadoCivil,
-        profissao,
-        convenio,
         observacoes,
-        tenant_id,
-        criado_por
+        tenant_id
       } = dadosPaciente;
 
-      const query = `
-        INSERT INTO pacientes (
+      const r = await this.db.run(
+        `INSERT INTO pacientes (nome, email, telefone, cpf, data_nascimento, endereco, observacoes, tenant_id, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+         RETURNING id`,
+        [
           nome,
           email,
           telefone,
           cpf,
-          data_nascimento,
-          endereco,
+          dataNascimento,
+          endereco ? JSON.stringify(endereco) : null,
           observacoes,
           tenant_id,
-          status,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `;
-
-      const result = this.db.prepare(query).run(
-        nome,
-        email,
-        telefone,
-        cpf,
-        dataNascimento,
-        endereco ? JSON.stringify(endereco) : null,
-        observacoes,
-        tenant_id,
-        'ativo'
+          'ativo'
+        ]
       );
 
-      return await this.buscarPorId(result.lastInsertRowid);
+      return await this.buscarPorId(r.lastID);
     } catch (error) {
       console.error('Erro ao criar paciente:', error);
       throw error;
@@ -494,42 +451,29 @@ class PacienteModel {
    */
   async atualizar(id, dadosAtualizacao) {
     try {
-      const {
-        nome,
-        email,
-        telefone,
-        cpf,
-        dataNascimento,
-        endereco,
-        estadoCivil,
-        profissao,
-        convenio,
-        observacoes,
-        atualizado_por
-      } = dadosAtualizacao;
+      const { nome, email, telefone, cpf, dataNascimento, endereco, observacoes } = dadosAtualizacao;
 
-      const query = `
-        UPDATE pacientes SET
-          nome = ?,
-          email = ?,
-          telefone = ?,
-          cpf = ?,
-          data_nascimento = ?,
-          endereco = ?,
-          observacoes = ?,
-          updated_at = datetime('now')
-        WHERE id = ?
-      `;
-
-      this.db.prepare(query).run(
-        nome,
-        email,
-        telefone,
-        cpf,
-        dataNascimento,
-        endereco ? JSON.stringify(endereco) : null,
-        observacoes,
-        id
+      await this.db.run(
+        `UPDATE pacientes SET
+           nome = $1,
+           email = $2,
+           telefone = $3,
+           cpf = $4,
+           data_nascimento = $5,
+           endereco = $6,
+           observacoes = $7,
+           updated_at = NOW()
+         WHERE id = $8`,
+        [
+          nome,
+          email,
+          telefone,
+          cpf,
+          dataNascimento,
+          endereco ? JSON.stringify(endereco) : null,
+          observacoes,
+          id
+        ]
       );
 
       return await this.buscarPorId(id);
@@ -547,15 +491,10 @@ class PacienteModel {
    */
   async remover(id, removido_por) {
     try {
-      const query = `
-        UPDATE paciente SET
-          ativo = 0,
-          removido_por = ?,
-          removido_em = datetime('now')
-        WHERE id = ?
-      `;
-
-      const result = this.db.prepare(query).run(removido_por, id);
+      const result = await this.db.run(
+        `UPDATE paciente SET ativo = FALSE, removido_por = $1, removido_em = NOW() WHERE id = $2`,
+        [removido_por, id]
+      );
       return result.changes > 0;
     } catch (error) {
       console.error('Erro ao remover paciente:', error);
@@ -569,70 +508,43 @@ class PacienteModel {
    */
   async obterEstatisticas() {
     try {
-      const now = new Date();
-      const inicioMes = startOfMonth(now);
-      const fimMes = endOfMonth(now);
+      const totalRow = await this.db.get(
+        `SELECT COUNT(*) as count FROM paciente WHERE ativo = TRUE`
+      );
+      const total = parseInt(totalRow.count, 10);
 
-      // Total de pacientes ativos
-      const total = this.db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM paciente 
-        WHERE ativo = 1
-      `).get().count;
+      const ativosRow = await this.db.get(
+        `SELECT COUNT(*) as count FROM paciente
+         WHERE ativo = TRUE AND ultimo_atendimento > NOW() - INTERVAL '90 days'`
+      );
+      const ativos = parseInt(ativosRow.count, 10);
 
-      // Pacientes ativos (com atendimento nos últimos 90 dias)
-      const ativos = this.db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM paciente 
-        WHERE ativo = 1 
-          AND ultimo_atendimento > datetime('now', '-90 days')
-      `).get().count;
-
-      // Pacientes inativos
       const inativos = total - ativos;
 
-      // Pacientes com prontuário
-      const comProntuario = this.db.prepare(`
-        SELECT COUNT(DISTINCT p.id) as count 
-        FROM paciente p
-        INNER JOIN prontuario pr ON p.id = pr.paciente_id
-        WHERE p.ativo = 1
-      `).get().count;
+      const comProntuarioRow = await this.db.get(
+        `SELECT COUNT(DISTINCT p.id) as count
+         FROM paciente p
+         INNER JOIN prontuario pr ON p.id = pr.paciente_id
+         WHERE p.ativo = TRUE`
+      );
+      const comProntuario = parseInt(comProntuarioRow.count, 10);
 
-      // Novos pacientes este mês
-      const novosEsseMes = this.db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM paciente 
-        WHERE ativo = 1 
-          AND created_at >= datetime('now', 'start of month')
-      `).get().count;
+      const novosRow = await this.db.get(
+        `SELECT COUNT(*) as count FROM paciente
+         WHERE ativo = TRUE AND created_at >= DATE_TRUNC('month', NOW())`
+      );
+      const novosEsseMes = parseInt(novosRow.count, 10);
 
-      // Atendimentos hoje
-      const atendimentosHoje = this.db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM agendamento 
-        WHERE DATE(data_hora) = DATE('now')
-          AND status = 'agendado'
-      `).get().count;
+      const atendimentosRow = await this.db.get(
+        `SELECT COUNT(*) as count FROM agendamento
+         WHERE DATE(data_hora) = CURRENT_DATE AND status = 'agendado'`
+      );
+      const atendimentosHoje = parseInt(atendimentosRow.count, 10);
 
-      return {
-        total,
-        ativos,
-        inativos,
-        comProntuario,
-        novosEsseMes,
-        atendimentosHoje
-      };
+      return { total, ativos, inativos, comProntuario, novosEsseMes, atendimentosHoje };
     } catch (error) {
       console.error('Erro ao obter estatísticas:', error);
-      return {
-        total: 0,
-        ativos: 0,
-        inativos: 0,
-        comProntuario: 0,
-        novosEsseMes: 0,
-        atendimentosHoje: 0
-      };
+      return { total: 0, ativos: 0, inativos: 0, comProntuario: 0, novosEsseMes: 0, atendimentosHoje: 0 };
     }
   }
 
@@ -643,18 +555,15 @@ class PacienteModel {
    */
   async obterProntuario(pacienteId) {
     try {
-      const query = `
-        SELECT 
-          pr.*,
-          p.nome as paciente_nome
-        FROM prontuario pr
-        INNER JOIN paciente p ON pr.paciente_id = p.id
-        WHERE pr.paciente_id = ?
-        ORDER BY pr.created_at DESC
-        LIMIT 1
-      `;
-
-      return this.db.prepare(query).get(pacienteId);
+      return await this.db.get(
+        `SELECT pr.*, p.nome as paciente_nome
+         FROM prontuario pr
+         INNER JOIN paciente p ON pr.paciente_id = p.id
+         WHERE pr.paciente_id = $1
+         ORDER BY pr.created_at DESC
+         LIMIT 1`,
+        [pacienteId]
+      );
     } catch (error) {
       console.error('Erro ao obter prontuário:', error);
       return null;
@@ -668,45 +577,21 @@ class PacienteModel {
    */
   async criarAtendimento(dadosAtendimento) {
     try {
-      const {
-        paciente_id,
-        tipo,
-        descricao,
-        observacoes,
-        realizado_por
-      } = dadosAtendimento;
+      const { paciente_id, tipo, descricao, observacoes, realizado_por } = dadosAtendimento;
 
-      const query = `
-        INSERT INTO atendimento (
-          paciente_id,
-          tipo,
-          descricao,
-          observacoes,
-          realizado_por,
-          realizado_em
-        ) VALUES (?, ?, ?, ?, ?, datetime('now'))
-      `;
-
-      const result = this.db.prepare(query).run(
-        paciente_id,
-        tipo,
-        descricao,
-        observacoes,
-        realizado_por
+      const r = await this.db.run(
+        `INSERT INTO atendimento (paciente_id, tipo, descricao, observacoes, realizado_por, realizado_em)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         RETURNING id`,
+        [paciente_id, tipo, descricao, observacoes, realizado_por]
       );
 
-      // Atualizar último atendimento do paciente
-      this.db.prepare(`
-        UPDATE paciente 
-        SET ultimo_atendimento = datetime('now')
-        WHERE id = ?
-      `).run(paciente_id);
+      await this.db.run(
+        `UPDATE paciente SET ultimo_atendimento = NOW() WHERE id = $1`,
+        [paciente_id]
+      );
 
-      return {
-        id: result.lastInsertRowid,
-        ...dadosAtendimento,
-        realizado_em: new Date().toISOString()
-      };
+      return { id: r.lastID, ...dadosAtendimento, realizado_em: new Date().toISOString() };
     } catch (error) {
       console.error('Erro ao criar atendimento:', error);
       throw error;
@@ -719,12 +604,11 @@ class PacienteModel {
    * @param {number} clinicaId - ID da clínica
    * @returns {boolean} - True se pertence
    */
-  belongsToClinica(pacienteId, clinicaId) {
-    const result = this.db.prepare(`
-      SELECT 1 FROM paciente
-      WHERE id = ? AND clinica_id = ?
-    `).get(pacienteId, clinicaId);
-    
+  async belongsToClinica(pacienteId, clinicaId) {
+    const result = await this.db.get(
+      `SELECT 1 FROM paciente WHERE id = $1 AND clinica_id = $2`,
+      [pacienteId, clinicaId]
+    );
     return !!result;
   }
 }

@@ -1,185 +1,169 @@
 const express = require('express');
 const router = express.Router();
 const billingManager = require('../services/BillingManager');
-// const { Tenant } = require('../models'); // TODO: configurar modelos
 const { authenticateToken } = require('../middleware/auth');
+const { getMasterDb } = require('../database/MultiTenantPostgres');
 
 /**
- * Rotas para Sistema de Cobrança
+ * Rotas para Sistema de Cobrança - AltClinic
+ *
+ * Modelo: R$ 79,90/mês base (1 profissional incluído)
+ *         + R$ 19,90/mês por profissional adicional
  */
 
 /**
  * GET /api/billing/plans
- * Listar planos disponíveis
+ * Retorna o modelo de precificação do AltClinic
  */
-router.get('/plans', async (req, res) => {
-  try {
-    const plans = {
-      starter: {
-        nome: 'Starter',
-        preco: 'R$ 199,00',
-        periodo: '/mês',
-        features: [
-          '3 usuários',
-          '500 pacientes',
-          'WhatsApp Business',
-          'Relatórios básicos',
-          'Suporte por email'
-        ],
-        popular: false
-      },
-      professional: {
-        nome: 'Professional',
-        preco: 'R$ 399,00',
-        periodo: '/mês',
-        features: [
-          '10 usuários',
-          '2.000 pacientes',
-          'WhatsApp Business',
-          'Telemedicina',
-          'Relatórios avançados',
-          'API Access',
-          'Suporte prioritário'
-        ],
-        popular: true
-      },
-      enterprise: {
-        nome: 'Enterprise',
-        preco: 'R$ 799,00',
-        periodo: '/mês',
-        features: [
-          'Usuários ilimitados',
-          'Pacientes ilimitados',
-          'WhatsApp Business',
-          'Telemedicina',
-          'Relatórios personalizados',
-          'API completa',
-          'White-label',
-          'Suporte dedicado'
-        ],
-        popular: false
+router.get('/plans', (req, res) => {
+  res.json({
+    success: true,
+    pricing: {
+      modelo: 'por_profissional',
+      precoBase: 79.90,
+      precoBaseFormatado: 'R$ 79,90',
+      precoPorProfissionalAdicional: 19.90,
+      precoPorProfissionalAdicionalFormatado: 'R$ 19,90',
+      descricao: 'R$ 79,90/mês · inclui 1 profissional · +R$ 19,90 por profissional adicional',
+      exemplos: [
+        { profissionais: 1, valorTotal: 79.90, formatado: 'R$ 79,90/mês' },
+        { profissionais: 2, valorTotal: 99.80, formatado: 'R$ 99,80/mês' },
+        { profissionais: 3, valorTotal: 119.70, formatado: 'R$ 119,70/mês' },
+        { profissionais: 5, valorTotal: 159.50, formatado: 'R$ 159,50/mês' }
+      ],
+      trial: {
+        duracao: 14,
+        descricao: '14 dias grátis, sem cartão de crédito'
       }
-    };
+    }
+  });
+});
 
-    res.json({ success: true, plans });
+/**
+ * GET /api/billing/summary
+ * Retorna o resumo de cobrança do tenant atual com valor calculado
+ */
+router.get('/summary', authenticateToken, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant não identificado' });
+    }
+
+    // Contar profissionais ativos do tenant
+    let qtdProfissionais = 1;
+    try {
+      const row = await req.db.get(
+        "SELECT COUNT(*) as total FROM medicos WHERE tenant_id = $1 AND (status = 'ativo' OR status IS NULL)",
+        [tenantId]
+      );
+      qtdProfissionais = Math.max(1, row?.total || 0);
+    } catch (_) { /* usa o default 1 */ }
+
+    const summary = billingManager.getPlanSummary(qtdProfissionais);
+
+    res.json({
+      success: true,
+      summary,
+      _note: 'Pagamento via Stripe pendente de ativação'
+    });
   } catch (error) {
-    console.error('Erro ao listar planos:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Erro ao obter resumo de cobrança:', error);
+    res.status(500).json({ success: false, error: 'Erro ao obter resumo' });
   }
 });
 
 /**
  * POST /api/billing/checkout
- * Criar sessão de checkout
+ * Criar sessão de checkout no Stripe
  */
-router.post('/checkout', async (req, res) => {
+router.post('/checkout', authenticateToken, async (req, res) => {
   try {
-    res.json({ 
-      success: true, 
-      message: 'Checkout em desenvolvimento - Stripe não configurado',
-      checkoutUrl: '/billing?dev=true'
+    const tenantId = req.user && req.user.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant não identificado' });
+    }
+
+    const origin = req.headers.origin || (process.env.FRONTEND_URL || 'http://localhost:3000');
+    const successUrl = origin + '/billing?status=success';
+    const cancelUrl  = origin + '/billing?status=canceled';
+
+    // Contar profissionais ativos para calcular valor
+    let qtdProfissionais = 1;
+    try {
+      const row = await req.db.get(
+        "SELECT COUNT(*) as total FROM medicos WHERE tenant_id = $1 AND (status = 'ativo' OR status IS NULL)",
+        [tenantId]
+      );
+      qtdProfissionais = Math.max(1, (row && row.total) || 0);
+    } catch (_) { /* usa o default 1 */ }
+
+    const session = await billingManager.createCheckoutSession({
+      tenantId, qtdProfissionais, successUrl, cancelUrl
     });
+
+    res.json({ success: true, checkoutUrl: session.url, sessionId: session.id });
   } catch (error) {
     console.error('Erro ao criar checkout:', error);
-    res.status(500).json({ error: 'Erro ao processar pagamento' });
+    res.status(500).json({ success: false, error: 'Erro ao iniciar checkout: ' + error.message });
   }
 });
 
 /**
  * GET /api/billing/info
- * Obter informações de cobrança do tenant
+ * Informações de cobrança do tenant
  */
 router.get('/info', authenticateToken, async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
-    
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
+    const tenantId = req.user && req.user.tenantId;
+    let billingStatus = 'trial';
+    let billingData = {};
+
+    if (tenantId) {
+      try {
+        const masterDb = getMasterDb();
+        const tenant = await masterDb.get('SELECT status, billing FROM tenants WHERE id = $1', [tenantId]);
+        if (tenant) {
+          billingStatus = tenant.status || 'trial';
+          billingData = tenant.billing || {};
+        }
+      } catch (_) {}
     }
 
-    const billingInfo = await billingManager.getBillingInfo(tenant);
-    
-    res.json({ success: true, billing: billingInfo });
-  } catch (error) {
-    console.error('Erro ao obter informações de cobrança:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-/**
- * GET /api/billing/usage
- * Obter informações de uso do tenant
- */
-router.get('/usage', authenticateToken, async (req, res) => {
-  try {
-    const tenantId = req.user.tenantId;
-
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
-    }
-
-    // Mock de dados de uso - em produção, calcular baseado no banco
-    const usage = {
-      users: {
-        current: 2,
-        limit: tenant.plano === 'starter' ? 3 : tenant.plano === 'professional' ? 10 : 999,
-        percentage: tenant.plano === 'starter' ? 67 : tenant.plano === 'professional' ? 20 : 1
-      },
-      patients: {
-        current: 45,
-        limit: tenant.plano === 'starter' ? 500 : tenant.plano === 'professional' ? 2000 : 99999,
-        percentage: tenant.plano === 'starter' ? 9 : tenant.plano === 'professional' ? 2 : 0
-      },
-      messages: {
-        current: 1250,
-        limit: tenant.plano === 'starter' ? 1000 : tenant.plano === 'professional' ? 5000 : 99999,
-        percentage: tenant.plano === 'starter' ? 125 : tenant.plano === 'professional' ? 25 : 1
-      },
-      storage: {
-        current: 2.1,
-        limit: tenant.plano === 'starter' ? 5 : tenant.plano === 'professional' ? 25 : 100,
-        percentage: tenant.plano === 'starter' ? 42 : tenant.plano === 'professional' ? 8 : 2
+    res.json({
+      success: true,
+      billing: {
+        status: billingStatus,
+        billing_status: billingData.billing_status || billingStatus,
+        plano: billingData.plan || 'altclinic',
+        modelo: 'por_profissional',
+        precoBase: 79.90,
+        precoPorProfissionalAdicional: 19.90,
+        stripe_customer_id: billingData.stripe_customer_id || null,
+        last_payment_at: billingData.last_payment_at || null
       }
-    };
-
-    res.json({ success: true, usage });
+    });
   } catch (error) {
-    console.error('Erro ao obter informações de uso:', error);
+    console.error('Erro ao obter informacoes de cobranca:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 /**
  * POST /api/billing/portal
- * Criar sessão do portal de cobrança
+ * Portal de cobrança (Stripe pendente)
  */
 router.post('/portal', authenticateToken, async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
-    
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
+    const tenantId = req.user && req.user.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant não identificado' });
     }
-
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? `https://${tenant.slug}.altclinic.com.br`
-      : `http://localhost:3001`;
-
-    const session = await billingManager.createBillingPortal(
-      tenant,
-      `${baseUrl}/billing`
-    );
-
-    res.json({ 
-      success: true, 
-      portalUrl: session.url 
-    });
+    const returnUrl = (req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:3000') + '/billing';
+    const session = await billingManager.createBillingPortal(tenantId, returnUrl);
+    res.json({ success: true, portalUrl: session.url });
   } catch (error) {
-    console.error('Erro ao criar portal de cobrança:', error);
-    res.status(500).json({ error: 'Erro ao acessar portal de cobrança' });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -187,28 +171,11 @@ router.post('/portal', authenticateToken, async (req, res) => {
  * POST /api/billing/cancel
  * Cancelar assinatura
  */
-router.post('/cancel', authenticateToken, async (req, res) => {
-  try {
-    const { immediate = false } = req.body;
-    const tenantId = req.user.tenantId;
-    
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
-    }
-
-    await billingManager.cancelSubscription(tenant, immediate);
-
-    res.json({ 
-      success: true, 
-      message: immediate 
-        ? 'Assinatura cancelada imediatamente'
-        : 'Assinatura será cancelada no final do período atual'
-    });
-  } catch (error) {
-    console.error('Erro ao cancelar assinatura:', error);
-    res.status(500).json({ error: 'Erro ao cancelar assinatura' });
-  }
+router.post('/cancel', authenticateToken, (req, res) => {
+  res.json({
+    success: false,
+    message: 'Para cancelar sua assinatura, entre em contato: contato@altclinic.com.br'
+  });
 });
 
 /**
@@ -219,16 +186,17 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  let event;
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(400).json({ error: 'Stripe não configurado' });
+  }
 
+  let event;
   try {
     event = require('stripe')(process.env.STRIPE_SECRET_KEY).webhooks.constructEvent(
-      req.body, 
-      sig, 
-      endpointSecret
+      req.body, sig, endpointSecret
     );
   } catch (err) {
-    console.error('Erro na verificação do webhook:', err.message);
+    console.error('Erro na verificação do webhook Stripe:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -241,60 +209,5 @@ router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async 
   }
 });
 
-/**
- * GET /api/billing/usage
- * Verificar uso atual vs limites do plano
- */
-router.get('/usage', authenticateToken, async (req, res) => {
-  try {
-    const tenantId = req.user.tenantId;
-    
-    const tenant = await Tenant.findByPk(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant não encontrado' });
-    }
-
-    const planConfig = billingManager.plansConfig[tenant.plano];
-    
-    // Calcular uso atual
-    const usage = {
-      usuarios: {
-        atual: await require('../models/UsuarioMultiTenant').count({
-          where: { tenantId: tenant.id }
-        }),
-        limite: planConfig.features.maxUsuarios,
-        percentual: 0
-      },
-      pacientes: {
-        atual: 0, // TODO: implementar contagem de pacientes
-        limite: planConfig.features.maxPacientes,
-        percentual: 0
-      }
-    };
-
-    // Calcular percentuais
-    if (usage.usuarios.limite > 0) {
-      usage.usuarios.percentual = Math.round(
-        (usage.usuarios.atual / usage.usuarios.limite) * 100
-      );
-    }
-
-    if (usage.pacientes.limite > 0) {
-      usage.pacientes.percentual = Math.round(
-        (usage.pacientes.atual / usage.pacientes.limite) * 100
-      );
-    }
-
-    res.json({ 
-      success: true, 
-      usage,
-      plano: tenant.plano,
-      features: planConfig.features
-    });
-  } catch (error) {
-    console.error('Erro ao obter uso:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
 module.exports = router;
+

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const multiTenantDb = require('../models/MultiTenantDatabase');
+const { getMasterDb } = require('../database/MultiTenantPostgres');
 const { sendTempPassword } = require('../services/emailService');
 
 /**
@@ -31,10 +31,13 @@ router.post('/', async (req, res) => {
             });
         }
 
+        const masterDb = getMasterDb();
+
         // Verificar se CNPJ/CPF já existe
-        const existingLicenca = multiTenantDb.getMasterDb().prepare(`
-      SELECT id FROM tenants WHERE cnpj_cpf = ?
-    `).get(cnpjCpf);
+        const existingLicenca = await masterDb.get(
+            'SELECT id FROM tenants WHERE cnpj_cpf = $1',
+            [cnpjCpf]
+        );
 
         if (existingLicenca) {
             return res.status(409).json({
@@ -57,7 +60,7 @@ router.post('/', async (req, res) => {
 
         let slug = baseSlug;
         let counter = 1;
-        while (multiTenantDb.getMasterDb().prepare(`SELECT id FROM tenants WHERE slug = ?`).get(slug)) {
+        while (await masterDb.get('SELECT id FROM tenants WHERE slug = $1', [slug])) {
             slug = `${baseSlug}-${counter}`;
             counter++;
         }
@@ -100,62 +103,58 @@ router.post('/', async (req, res) => {
         const tenantId = crypto.randomUUID();
         const databaseName = `tenant_${slug}_${Date.now()}`;
 
-        const masterDb = multiTenantDb.getMasterDb();
-
         // Inserir tenant
-        masterDb.prepare(`
-      INSERT INTO tenants (
+        await masterDb.run(
+            `INSERT INTO tenants (
         id, slug, nome, email, telefone, plano, status,
         trial_expire_at, database_name, config, billing, theme,
         cnpj_cpf, chave_licenca, responsavel_nome, responsavel_email,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-            tenantId,
-            slug,
-            nomeClinica,
-            responsavel.email,
-            responsavel.telefone || '',
-            tipoLicenca,
-            tipoLicenca === 'freemium' ? 'trial' : 'active',
-            trialExpireAt ? trialExpireAt.toISOString() : null,
-            databaseName,
-            JSON.stringify(defaultConfig),
-            JSON.stringify(defaultBilling),
-            JSON.stringify({}),
-            cnpjCpf,
-            chaveLicenca,
-            responsavel.nome,
-            responsavel.email,
-            new Date().toISOString(),
-            new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+            [
+                tenantId,
+                slug,
+                nomeClinica,
+                responsavel.email,
+                responsavel.telefone || '',
+                tipoLicenca,
+                tipoLicenca === 'freemium' ? 'trial' : 'active',
+                trialExpireAt ? trialExpireAt.toISOString() : null,
+                databaseName,
+                JSON.stringify(defaultConfig),
+                JSON.stringify(defaultBilling),
+                JSON.stringify({}),
+                cnpjCpf,
+                chaveLicenca,
+                responsavel.nome,
+                responsavel.email,
+                new Date().toISOString(),
+                new Date().toISOString()
+            ]
         );
 
-        // Criar database do tenant
-        multiTenantDb.createTenantDatabase(tenantId, databaseName);
-
         // Criar usuário admin para o tenant
-        const tenantDb = multiTenantDb.getTenantDb(tenantId);
         const bcrypt = require('bcryptjs');
 
         // Gerar senha
         const tempPassword = crypto.randomBytes(8).toString('hex');
         const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-        tenantDb.prepare(`
-      INSERT INTO usuarios (
+        await req.db.run(
+            `INSERT INTO usuarios (
         tenant_id, nome, email, senha_hash, role, status,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-            tenantId,
-            responsavel.nome,
-            responsavel.email,
-            hashedPassword,
-            'owner',
-            'active',
-            new Date().toISOString(),
-            new Date().toISOString()
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+                tenantId,
+                responsavel.nome,
+                responsavel.email,
+                hashedPassword,
+                'owner',
+                'active',
+                new Date().toISOString(),
+                new Date().toISOString()
+            ]
         );
 
         // Enviar email com senha se solicitado
@@ -305,9 +304,9 @@ router.post('/test-api/:service', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
-        const masterDb = multiTenantDb.getMasterDb();
+        const masterDb = getMasterDb();
 
-        const licencas = masterDb.prepare(`
+        const licencas = await masterDb.all(`
       SELECT
         id, slug, nome, email, telefone, plano, status,
         trial_expire_at, chave_licenca, cnpj_cpf,
@@ -315,7 +314,7 @@ router.get('/', async (req, res) => {
         created_at, updated_at
       FROM tenants
       ORDER BY created_at DESC
-    `).all();
+    `);
 
         // Formatar resposta
         const formattedLicencas = licencas.map(licenca => ({
