@@ -1,7 +1,11 @@
 require('dotenv').config();
 const http = require('http');
 const logger = require('./utils/logger');
-const { createApp } = require('./app');
+// app.js exporta SaeeApp (instância) ou { createApp } dependendo da branch
+const _appModule = require('./app');
+const createApp = typeof _appModule === 'function'
+  ? _appModule
+  : (_appModule.createApp || (() => _appModule));
 const cronManager = require('./cron/inactivityChecker');
 const ProductionInitializer = require('./utils/productionInitializer');
 // trialNurturing — lazy load (arquivo pode não existir em todas as branches)
