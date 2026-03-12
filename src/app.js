@@ -41,6 +41,7 @@ const { extractTenantFirestore } = require('./middleware/tenantFirestore');
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
+const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
 
@@ -718,6 +719,7 @@ class SaeeApp {
       // Iniciar cron jobs
       if (process.env.NODE_ENV !== 'test') {
         cronManager.start();
+        startAllJobs(); // CRM jobs: confirmação, retorno, aniversário, NPS
       }
 
       // Iniciar servidor HTTP

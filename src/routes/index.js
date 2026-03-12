@@ -30,6 +30,8 @@ const tenantsAdminFirestoreRoutes = require('./tenants-admin-firestore');
 const dashboardFirestoreRoutes = require('./dashboard-firestore');
 const financeiroFirestoreRoutes = require('./financeiro-firestore');
 const crmFirestoreRoutes      = require('./crm-firestore');
+const crmFunilRoutes          = require('./crm-funil');
+const crmSegmentacaoRoutes    = require('./crm-segmentacao');
 const whatsappRoutes          = require('./whatsapp');
 
 const cronManager = require('../cron/inactivityChecker');
@@ -114,6 +116,10 @@ function registerRoutes(app) {
   app.use('/api/tenants-admin-v2',  tenantsAdminFirestoreRoutes);
   app.use('/api/dashboard',         extractTenantFirestore, dashboardFirestoreRoutes);
   app.use('/api/financeiro',        extractTenantFirestore, financeiroFirestoreRoutes);
+  // ── CRM Camada 2 (PostgreSQL) — issues #21, #22, #23 — deve vir antes do Firestore catch-all
+  app.use('/api/crm/funil',         extractTenant,          crmFunilRoutes);
+  app.use('/api/crm/tags',          extractTenant,          crmSegmentacaoRoutes);
+  app.use('/api/crm/segmentos',     extractTenant,          crmSegmentacaoRoutes);
   app.use('/api/crm',               extractTenantFirestore, crmFirestoreRoutes);
   app.use('/api/professional',      extractTenantFirestore, professionalRoutes);
 
