@@ -1,10 +1,17 @@
 require('dotenv').config();
 const http = require('http');
 const logger = require('./utils/logger');
-const { createApp } = require('./app');
+// app.js exporta a classe SaeeApp — instanciar com new e usar .app (Express)
+const SaeeApp = require('./app');
+const createApp = () => {
+  const instance = new SaeeApp();
+  return instance.app; // retorna o Express app
+};
 const cronManager = require('./cron/inactivityChecker');
 const ProductionInitializer = require('./utils/productionInitializer');
-const { startNurturingJob } = require('./jobs/trialNurturing');
+// trialNurturing — lazy load (arquivo pode não existir em todas as branches)
+let startNurturingJob = () => {};
+try { ({ startNurturingJob } = require('./jobs/trialNurturing')); } catch (e) { /* não instalado */ }
 const { testFirestore } = require('./utils/firestoreHealth');
 
 const PORT = process.env.PORT || 3000;

@@ -23,8 +23,8 @@ const Login = lazy(() => import('./pages/Login'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
 const DashboardNew = lazy(() => import('./pages/DashboardNew'));
-const AgendaNova = lazy(() => import('./pages/AgendaNova'));
 const AgendaLite = lazy(() => import('./pages/AgendaLite'));
 const ListaPacientesNova = lazy(() => import('./pages/ListaPacientesNova'));
 const CadastroPacienteNovo = lazy(() => import('./pages/CadastroPacienteNovo'));
@@ -105,6 +105,8 @@ const AppContent = () => {
         <Routes>
         {/* Landing Page - rota pública */}
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/ajuda" element={<HelpCenter />} />
+        <Route path="/help" element={<HelpCenter />} />
         
         {/* Rota raiz - redireciona baseado na autenticação */}
         <Route path="/" element={
@@ -134,7 +136,7 @@ const AppContent = () => {
         {isAuthenticated && (
           <Route path="/" element={<DashboardLayout />}>
             <Route path="dashboard" element={<DashboardNew />} />
-            <Route path="agendamentos" element={<AgendaNova />} />
+            <Route path="agendamentos" element={<AgendaLite />} />
             <Route path="agenda-lite" element={<AgendaLite />} />
             <Route path="cadastros" element={<Cadastros />} />
             <Route path="pacientes" element={<ListaPacientesNova />} />

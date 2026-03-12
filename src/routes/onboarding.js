@@ -196,4 +196,25 @@ router.post('/reset', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/onboarding/wizard/complete — salva dados do wizard de configuração
+router.post('/wizard/complete', authenticateToken, async (req, res) => {
+  try {
+    const { clinica, medico, horarios } = req.body;
+    const masterDb = multiTenantDb.getMasterDb();
+    const tenantId = req.user?.tenantId;
+
+    if (clinica?.nome) {
+      await masterDb.run(
+        'UPDATE tenants SET nome=$1, updated_at=NOW() WHERE id=$2',
+        [clinica.nome, tenantId]
+      );
+    }
+    console.log(`[Onboarding Wizard] Dados salvos para tenant ${tenantId}`);
+    res.json({ success: true, message: 'Configuração concluída' });
+  } catch (err) {
+    console.error('[Onboarding Wizard] Erro:', err.message);
+    res.status(500).json({ error: 'Erro ao salvar configurações' });
+  }
+});
+
 module.exports = router;
