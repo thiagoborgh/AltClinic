@@ -593,7 +593,13 @@ class SaeeApp {
           message: 'Rota da API não encontrada'
         });
       }
-      res.sendFile(path.join(__dirname, '../public/index.html'));
+      const indexPath = path.join(__dirname, '../public/index.html');
+      const fs = require('fs');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(200).json({ status: 'ok', message: 'AltClinic API v2.0', docs: '/health' });
+      }
     });
 
     // 404 para rotas da API

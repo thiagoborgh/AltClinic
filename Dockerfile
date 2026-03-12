@@ -12,7 +12,7 @@ RUN apk add --no-cache sqlite-libs dumb-init
 COPY --from=deps /app/node_modules ./node_modules
 COPY src ./src
 COPY admin ./admin
-RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+RUN mkdir -p /app/uploads /app/public && chmod 777 /app/uploads
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV TZ=America/Sao_Paulo
