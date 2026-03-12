@@ -138,6 +138,15 @@ function registerRoutes(app) {
   app.use('/api/agendamentos',          extractTenantFirestore, agendaAgendamentosRoutes);
   app.use('/api/agenda/agendamentos',   extractTenantFirestore, agendaAgendamentosRoutes);
 
+  // ── CRM C3 — Inbox, Bot e PEP ─────────────────────────────────────────────
+  app.use('/api/inbox',      extractTenant, require('./inbox'));
+  app.use('/api/bot',        extractTenant, require('./bot-fluxos'));
+  app.use('/api/pep',        extractTenant, require('./pep'));
+  app.use('/api/crm/nps',    extractTenant, require('./crm-nps'));
+  app.use('/api/crm/funil',  extractTenant, require('./crm-funil'));
+  app.use('/api/crm/tags',   extractTenant, require('./crm-segmentacao'));
+  app.use('/api/crm/segmentos', extractTenant, require('./crm-segmentacao'));
+
   // ── SPA catch-all ──────────────────────────────────────────────────────────
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
