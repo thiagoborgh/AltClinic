@@ -13,12 +13,17 @@ export default function AbaPRESCRICOES({ pacienteId }) {
   const [itens, setItens] = useState([{ ...ITEM_VAZIO }]);
   const [observacoes, setObservacoes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API}/api/prontuario/prescricoes/paciente/${pacienteId}`, { headers: auth() })
+    const controller = new AbortController();
+    setLoading(true);
+    fetch(`${API}/api/prontuario/prescricoes/paciente/${pacienteId}`, { headers: auth(), signal: controller.signal })
       .then(r => r.json())
       .then(d => setPrescricoes(d.prescricoes || []))
+      .catch(e => { if (e.name !== 'AbortError') console.error(e); })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [pacienteId]);
 
   const addItem = () => setItens(prev => [...prev, { ...ITEM_VAZIO }]);
@@ -40,7 +45,12 @@ export default function AbaPRESCRICOES({ pacienteId }) {
         setShowNova(false);
         setItens([{ ...ITEM_VAZIO }]);
         setObservacoes('');
+        setSaveError(null);
+      } else {
+        setSaveError(data.error || 'Erro ao salvar prescrição.');
       }
+    } catch (e) {
+      setSaveError('Erro ao salvar prescrição.');
     } finally {
       setSaving(false);
     }
@@ -75,7 +85,7 @@ export default function AbaPRESCRICOES({ pacienteId }) {
                 <span className="text-xs text-gray-400">{p.profissional_nome}</span>
               </div>
               {(p.itens_json || []).map((item, i) => (
-                <div key={i} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 mb-1">
+                <div key={`${i}-${item.medicamento}`} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 mb-1">
                   <span className="font-medium">{item.medicamento}</span>
                   {item.dose && ` ${item.dose}`}
                   {item.frequencia && ` — ${item.frequencia}`}
@@ -96,7 +106,7 @@ export default function AbaPRESCRICOES({ pacienteId }) {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between">
               <h2 className="text-lg font-semibold">Nova Prescrição</h2>
-              <button onClick={() => setShowNova(false)} className="text-gray-400 text-2xl">&times;</button>
+              <button onClick={() => { setShowNova(false); setSaveError(null); }} className="text-gray-400 text-2xl">&times;</button>
             </div>
             <div className="p-6 space-y-4">
               {itens.map((item, i) => (
@@ -139,7 +149,7 @@ export default function AbaPRESCRICOES({ pacienteId }) {
               />
 
               <div className="flex justify-end gap-3">
-                <button onClick={() => setShowNova(false)} className="px-4 py-2 text-sm text-gray-600">
+                <button onClick={() => { setShowNova(false); setSaveError(null); }} className="px-4 py-2 text-sm text-gray-600">
                   Cancelar
                 </button>
                 <button
@@ -150,6 +160,7 @@ export default function AbaPRESCRICOES({ pacienteId }) {
                   {saving ? 'Salvando...' : 'Salvar Prescrição'}
                 </button>
               </div>
+              {saveError && <p className="text-sm text-red-600 mt-2">{saveError}</p>}
             </div>
           </div>
         </div>

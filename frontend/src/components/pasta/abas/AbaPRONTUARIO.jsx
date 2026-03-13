@@ -14,19 +14,24 @@ export default function AbaPRONTUARIO({ pacienteId }) {
   const [showNovoModal, setShowNovoModal] = useState(false);
   const [selectedFormDef, setSelectedFormDef] = useState(null);
   const [formData, setFormData] = useState({});
-  const [expandedRegistro, setExpandedRegistro] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    setLoading(true);
     Promise.all([
-      fetch(`${API}/api/prontuario/registros/paciente/${pacienteId}`, { headers: auth() }).then(r => r.json()),
-      fetch(`${API}/api/prontuario/formularios`, { headers: auth() }).then(r => r.json()),
-      fetch(`${API}/api/prontuario/diagnosticos/paciente/${pacienteId}`, { headers: auth() }).then(r => r.json()),
+      fetch(`${API}/api/prontuario/registros/paciente/${pacienteId}`, { headers: auth(), signal }).then(r => r.json()),
+      fetch(`${API}/api/prontuario/formularios`, { headers: auth(), signal }).then(r => r.json()),
+      fetch(`${API}/api/prontuario/diagnosticos/paciente/${pacienteId}`, { headers: auth(), signal }).then(r => r.json()),
     ]).then(([reg, forms, diags]) => {
       setRegistros(reg.registros || []);
       setFormularios(forms.formularios || []);
       setDiagnosticos(diags.diagnosticos || []);
-    }).finally(() => setLoading(false));
+    }).catch(e => { if (e.name !== 'AbortError') console.error(e); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [pacienteId]);
 
   const handleFieldChange = (fieldId, value) => {
@@ -52,7 +57,12 @@ export default function AbaPRONTUARIO({ pacienteId }) {
         setShowNovoModal(false);
         setSelectedFormDef(null);
         setFormData({});
+        setSaveError(null);
+      } else {
+        setSaveError(data.error || 'Erro ao salvar registro.');
       }
+    } catch (e) {
+      setSaveError('Erro ao salvar registro.');
     } finally {
       setSaving(false);
     }
@@ -106,7 +116,7 @@ export default function AbaPRONTUARIO({ pacienteId }) {
               key={r.id}
               registro={r}
               formDefinition={getFormDef(r.form_definition_id)}
-              onExpand={setExpandedRegistro}
+              onExpand={() => {}}
             />
           ))}
         </div>
@@ -120,7 +130,7 @@ export default function AbaPRONTUARIO({ pacienteId }) {
               <h2 className="text-lg font-semibold">
                 {selectedFormDef ? selectedFormDef.name : 'Selecionar Formulário'}
               </h2>
-              <button onClick={() => { setShowNovoModal(false); setSelectedFormDef(null); setFormData({}); }}
+              <button onClick={() => { setShowNovoModal(false); setSelectedFormDef(null); setFormData({}); setSaveError(null); }}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
 
@@ -165,6 +175,7 @@ export default function AbaPRONTUARIO({ pacienteId }) {
                       {saving ? 'Salvando...' : 'Salvar Registro'}
                     </button>
                   </div>
+                  {saveError && <p className="text-sm text-red-600 mt-2">{saveError}</p>}
                 </div>
               )}
             </div>

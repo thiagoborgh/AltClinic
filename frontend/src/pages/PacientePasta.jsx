@@ -16,14 +16,17 @@ export default function PacientePasta() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
     const token = localStorage.getItem('token');
     fetch(`${API}/api/pacientes/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
       .then(r => r.json())
       .then(d => setPaciente(d.paciente || d))
-      .catch(() => navigate('/pacientes'))
+      .catch(e => { if (e.name !== 'AbortError') navigate('/pacientes'); })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [id, navigate]);
 
   if (loading) {
