@@ -40,6 +40,7 @@ const WhatsApp = lazy(() => import('./pages/WhatsApp'));
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
 const Cadastros = lazy(() => import('./pages/Cadastros'));
+const PacientePasta = lazy(() => import('./pages/PacientePasta'));
 const AppContent = () => {
   const { 
     isAuthenticated, 
@@ -140,6 +141,7 @@ const AppContent = () => {
             <Route path="agenda-lite" element={<AgendaLite />} />
             <Route path="cadastros" element={<Cadastros />} />
             <Route path="pacientes" element={<ListaPacientesNova />} />
+            <Route path="pacientes/:id/pasta" element={<PacientePasta />} />
             <Route path="cadastro-paciente" element={<CadastroPacienteNovo />} />
             <Route path="profissionais" element={<ProfissionaisMedicosNovo />} />
             <Route path="cadastro-profissional" element={<CadastroProfissionalNovo />} />
