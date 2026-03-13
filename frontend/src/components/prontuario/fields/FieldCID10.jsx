@@ -17,6 +17,10 @@ export default function FieldCID10({ field, value, onChange, readOnly }) {
     }
   }, [value]);
 
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
   const search = useCallback((q) => {
     clearTimeout(debounceRef.current);
     if (q.length < 2) { setResults([]); return; }
@@ -61,6 +65,7 @@ export default function FieldCID10({ field, value, onChange, readOnly }) {
           type="text"
           value={query}
           onChange={e => { setQuery(e.target.value); search(e.target.value); }}
+          onBlur={() => setTimeout(() => setResults([]), 150)}
           disabled={readOnly}
           placeholder="Buscar por código ou descrição..."
           className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
