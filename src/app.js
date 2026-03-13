@@ -19,7 +19,8 @@ const tenantsAdminRoutes = require('./routes/tenants-admin');
 const adminAuthRoutes = require('./routes/admin-auth');
 const adminLicencasRoutes = require('./routes/admin-licencas');
 const billingRoutes = require('./routes/billing');
-const pacientesRoutes = require('./routes/pacientes-simple');const templatesRoutes = require('./routes/templates'); // 🆕 TEMPLATESconst prontuarioRoutes = require('./routes/prontuario-simple');
+const pacientesRoutes = require('./routes/pacientes-simple');const templatesRoutes = require('./routes/templates'); // 🆕 TEMPLATES
+const prontuarioRoutes = require('./routes/prontuario-medico');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 const atendimentosRoutes = require('./routes/atendimentos');
@@ -509,6 +510,7 @@ class SaeeApp {
     this.app.use('/api/agenda/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
     // this.app.use('/api/agendamentos', agendamentosRoutes); // ⚠️ AGENDA COMPLETA (comentada - muito pesada)
     
+    this.app.use('/api/prontuario', prontuarioRoutes); // prontuário médico schema-driven
     this.app.use('/api/prontuarios', prontuariosRoutes);
     // this.app.use('/api/financeiro', financeiroRoutes); // ⚠️ SQLite (não usar)
     this.app.use('/api/financeiro', extractTenantFirestore, financeiroFirestoreRoutes); // ✅ FIRESTORE
