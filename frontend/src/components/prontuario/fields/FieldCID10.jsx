@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
@@ -8,6 +8,14 @@ export default function FieldCID10({ field, value, onChange, readOnly }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (value) {
+      setQuery(`${value.codigo} — ${value.descricao}`);
+    } else {
+      setQuery('');
+    }
+  }, [value]);
 
   const search = useCallback((q) => {
     clearTimeout(debounceRef.current);

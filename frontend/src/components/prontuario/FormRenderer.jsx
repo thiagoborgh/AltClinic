@@ -33,7 +33,7 @@ export default function FormRenderer({ definition, data = {}, onChange, readOnly
     );
   }
 
-  const col1 = definition.fields_json.filter(f => f.grid_col === 1);
+  const col1 = definition.fields_json.filter(f => f.grid_col !== 2);
   const col2 = definition.fields_json.filter(f => f.grid_col === 2);
   const hasCol2 = col2.length > 0;
 
