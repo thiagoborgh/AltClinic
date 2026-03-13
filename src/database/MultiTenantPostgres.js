@@ -379,6 +379,104 @@ const TENANT_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_usuarios_email          ON usuarios(email);
   CREATE INDEX IF NOT EXISTS idx_prof_schedules_tenant   ON professional_schedules(tenant_id);
   CREATE INDEX IF NOT EXISTS idx_prof_schedules_prof     ON professional_schedules(professional_id);
+
+  -- ── Prontuário Eletrônico ────────────────────────────────────────────────
+
+  CREATE TABLE IF NOT EXISTS prontuario_registros (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id          BIGINT NOT NULL,
+    profissional_id      BIGINT NOT NULL,
+    agendamento_id       BIGINT,
+    form_definition_id   UUID NOT NULL,
+    data_registro        DATE NOT NULL DEFAULT CURRENT_DATE,
+    data_json            JSONB NOT NULL DEFAULT '{}',
+    assinado             BOOLEAN DEFAULT false,
+    assinado_em          TIMESTAMPTZ,
+    assinado_por         BIGINT,
+    ref_registro_id      UUID REFERENCES prontuario_registros(id) ON DELETE SET NULL,
+    tipo_registro        VARCHAR(20) DEFAULT 'registro'
+                           CHECK (tipo_registro IN ('registro','addendum')),
+    pep_origem_id        BIGINT,
+    created_at           TIMESTAMPTZ DEFAULT now(),
+    updated_at           TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_pront_reg_paciente ON prontuario_registros(paciente_id);
+  CREATE INDEX IF NOT EXISTS idx_pront_reg_data ON prontuario_registros(data_registro DESC);
+
+  CREATE OR REPLACE FUNCTION block_signed_update()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    IF OLD.assinado = true AND NEW.assinado = true THEN
+      RAISE EXCEPTION 'Registro assinado não pode ser editado. Crie um addendum.';
+    END IF;
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  DROP TRIGGER IF EXISTS trg_block_signed_update ON prontuario_registros;
+  CREATE TRIGGER trg_block_signed_update
+  BEFORE UPDATE ON prontuario_registros
+  FOR EACH ROW EXECUTE FUNCTION block_signed_update();
+
+  CREATE TABLE IF NOT EXISTS prontuario_diagnosticos (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id      BIGINT NOT NULL,
+    profissional_id  BIGINT NOT NULL,
+    registro_id      UUID REFERENCES prontuario_registros(id) ON DELETE SET NULL,
+    cid10_codigo     VARCHAR(10) NOT NULL,
+    cid10_descricao  VARCHAR(255) NOT NULL,
+    tipo             VARCHAR(20) DEFAULT 'principal' CHECK (tipo IN ('principal','secundario')),
+    data_diagnostico DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at       TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_diag_cid10 ON prontuario_diagnosticos(cid10_codigo);
+  CREATE INDEX IF NOT EXISTS idx_diag_paciente ON prontuario_diagnosticos(paciente_id);
+  CREATE INDEX IF NOT EXISTS idx_diag_data ON prontuario_diagnosticos(data_diagnostico DESC);
+
+  CREATE TABLE IF NOT EXISTS prontuario_prescricoes (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id      BIGINT NOT NULL,
+    profissional_id  BIGINT NOT NULL,
+    registro_id      UUID REFERENCES prontuario_registros(id) ON DELETE SET NULL,
+    itens_json       JSONB NOT NULL DEFAULT '[]',
+    observacoes      TEXT,
+    data_prescricao  DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at       TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_prescricoes_paciente ON prontuario_prescricoes(paciente_id);
+
+  CREATE TABLE IF NOT EXISTS prontuario_encaminhamentos (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id           BIGINT NOT NULL,
+    profissional_id       BIGINT NOT NULL,
+    registro_id           UUID REFERENCES prontuario_registros(id) ON DELETE SET NULL,
+    especialidade_destino VARCHAR(255) NOT NULL,
+    cid10_codigo          VARCHAR(10),
+    cid10_descricao       VARCHAR(255),
+    motivo                TEXT,
+    data_encaminhamento   DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at            TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_encam_paciente ON prontuario_encaminhamentos(paciente_id);
+
+  CREATE TABLE IF NOT EXISTS prontuario_exames (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id     BIGINT NOT NULL,
+    profissional_id BIGINT NOT NULL,
+    registro_id     UUID REFERENCES prontuario_registros(id) ON DELETE SET NULL,
+    tipo            VARCHAR(50) CHECK (tipo IN ('laboratorial','imagem','outro')),
+    descricao       TEXT,
+    resultado_json  JSONB,
+    arquivo_url     VARCHAR(500),
+    data_exame      DATE,
+    created_at      TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_exames_paciente ON prontuario_exames(paciente_id);
 `;
 
 // Exporta singleton
