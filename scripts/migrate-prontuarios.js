@@ -75,9 +75,16 @@ async function migrateTenant(tenantId, slug) {
         );
         if (jaExiste.rows.length > 0) { skipped++; continue; }
 
+        // profissional_id NOT NULL — usa 0 como sentinela quando medico_id ausente no legado
+        const profissionalId = pep.medico_id || 0;
+        if (!pep.medico_id) {
+          console.log(`  AVISO: PEP id=${pep.id} sem medico_id — usando profissional_id=0`);
+        }
+
         const data_json = {
           queixa_principal:  pep.queixa_principal || '',
           historia_doenca:   pep.historia_doenca_atual || '',
+          // Template legado tem campo único 'antecedentes' — consolidação intencional de pessoais+familiares
           antecedentes:      `${pep.antecedentes_pessoais || ''}\n${pep.antecedentes_familiares || ''}`.trim(),
           medicamentos:      pep.medicamentos_em_uso || '',
           alergias:          pep.alergias || '',
@@ -91,7 +98,7 @@ async function migrateTenant(tenantId, slug) {
              (paciente_id, profissional_id, form_definition_id, data_registro,
               data_json, assinado, assinado_em, pep_origem_id, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [pep.paciente_id, pep.medico_id || 0, template.id,
+          [pep.paciente_id, profissionalId, template.id,
            pep.created_at?.toISOString?.()?.split('T')[0] || pep.created_at?.split?.('T')[0] || new Date().toISOString().split('T')[0],
            JSON.stringify(data_json),
            pep.status === 'assinado', pep.assinado_em || null,
@@ -102,15 +109,11 @@ async function migrateTenant(tenantId, slug) {
     });
   } catch (err) {
     console.error(`  ROLLBACK tenant ${slug}:`, err.message);
-    errors = legados.length;
+    errors = legados.length - skipped;
     return { migrated: 0, skipped, errors };
   }
 
-  // Validação pós-COMMIT (fora da transação para consistência observável)
-  const countNovo = await tenantDb.get(
-    'SELECT COUNT(*) as n FROM prontuario_registros WHERE pep_origem_id IS NOT NULL'
-  );
-  console.log(`  Legados: ${legados.length} | Migrados: ${countNovo.n} | Skipped: ${skipped} | Erros: ${errors}`);
+  console.log(`  Legados: ${legados.length} | Migrados nesta execução: ${migrated} | Skipped: ${skipped}`);
 
   return { migrated, skipped, errors };
 }
