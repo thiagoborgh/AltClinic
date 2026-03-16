@@ -36,7 +36,8 @@ import {
   Email,
   Person,
   Refresh,
-  FilterList
+  FilterList,
+  FolderOpen
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import { usePacientes } from '../hooks/usePacientes';
@@ -109,6 +110,13 @@ const ListaPacientesNova = () => {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedPaciente(null);
+  };
+
+  const handleVerPasta = () => {
+    if (selectedPaciente) {
+      navigate(`/pacientes/${selectedPaciente.id}/pasta`);
+    }
+    handleMenuClose();
   };
 
   const handleEdit = () => {
@@ -288,7 +296,7 @@ const ListaPacientesNova = () => {
                     key={paciente.id}
                     hover
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/cadastro-paciente?id=${paciente.id}`)}
+                    onClick={() => navigate(`/pacientes/${paciente.id}/pasta`)}
                   >
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
@@ -357,9 +365,13 @@ const ListaPacientesNova = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
+        <MenuItem onClick={handleVerPasta}>
+          <FolderOpen sx={{ mr: 1, fontSize: 20 }} />
+          Ver Pasta / Prontuário
+        </MenuItem>
         <MenuItem onClick={handleEdit}>
           <Edit sx={{ mr: 1, fontSize: 20 }} />
-          Editar
+          Editar Cadastro
         </MenuItem>
         <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
           <Delete sx={{ mr: 1, fontSize: 20 }} />
