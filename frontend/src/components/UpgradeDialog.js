@@ -47,10 +47,10 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
       id: 'starter',
       nome: 'Starter',
       preco: 149,
-      precoDesconto: 119, // 30% off primeiros 30 dias
+      precoDesconto: 119, // 20% off primeiros 30 dias
       descricao: 'Perfeito para começar',
       recursos: [
-        'Até 3 usuários',
+        '1 médico / profissional',
         'Agendamentos ilimitados',
         'WhatsApp integrado (500 msg/mês)',
         'Relatórios básicos',
@@ -58,73 +58,45 @@ const UpgradeDialog = ({ open, onClose, currentPlan = 'trial' }) => {
         'Backup automático'
       ],
       limitacoes: [
-        'Sem integração avançada',
+        'Sem CRM avançado',
         'Relatórios limitados'
       ],
       popular: false
     },
     {
-      id: 'professional',
-      nome: 'Professional',
+      id: 'pro',
+      nome: 'Pro',
       preco: 349,
-      precoDesconto: 279, // 30% off primeiros 30 dias
+      precoDesconto: 279, // 20% off primeiros 30 dias
       descricao: 'Ideal para clínicas em crescimento',
       recursos: [
-        'Até 10 usuários',
-        'Agendamentos ilimitados',
-        'WhatsApp + Email + SMS (2500 msg/mês)',
+        'Até 5 médicos / profissionais',
+        'Até 2.000 pacientes',
+        'WhatsApp + automações CRM (2.500 msg/mês)',
+        'Funil Kanban de pacientes',
         'Relatórios avançados',
-        'Suporte prioritário',
-        'Backup automático',
-        'Integração com laboratórios',
         'Dashboard executivo',
-        'Automação de cobrança'
-      ],
-      limitacoes: [
-        'Customizações limitadas'
-      ],
-      popular: true
-    },
-    {
-      id: 'business',
-      nome: 'Business',
-      preco: 499,
-      precoDesconto: 419, // 30% off primeiros 30 dias
-      descricao: 'Para clínicas em expansão',
-      recursos: [
-        'Até 25 usuários',
-        'Agendamentos ilimitados',
-        'Todos os canais de comunicação (5000 msg/mês)',
-        'Relatórios personalizados',
-        'Suporte prioritário',
-        'Backup em tempo real',
-        'API personalizada',
-        'Integrações avançadas',
-        'Multi-especialidades'
+        'Suporte prioritário'
       ],
       limitacoes: [
         'Sem white-label'
       ],
-      popular: false
+      popular: true
     },
     {
       id: 'enterprise',
       nome: 'Enterprise',
       preco: 799,
-      precoDesconto: 559, // 30% off primeiros 30 dias
+      precoDesconto: 639, // 20% off primeiros 30 dias
       descricao: 'Solução completa para grandes clínicas',
       recursos: [
-        'Usuários ilimitados',
-        'Agendamentos ilimitados',
-        'Todos os canais de comunicação (10000 msg/mês)',
+        'Médicos e pacientes ilimitados',
+        'Todos os canais de comunicação',
+        'CRM completo + bot configurável',
         'Relatórios personalizados',
-        'Suporte 24/7',
-        'Backup em tempo real',
-        'Integração completa',
-        'BI avançado',
-        'Automação total',
-        'API personalizada',
-        'Treinamento incluso',
+        'Multi-unidade',
+        'API completa + White-label',
+        'Suporte 24/7 dedicado',
         'Consultoria mensal'
       ],
       limitacoes: [],

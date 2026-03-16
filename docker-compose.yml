@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Backend AltClinic
+  altclinic:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - EVOLUTION_API_URL=http://evolution_api:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+    env_file:
+      - .env
+    depends_on:
+      - evolution_api
+    volumes:
+      - ./logs:/app/logs
+      - ./.baileys_auth:/app/.baileys_auth
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Evolution API — WhatsApp microserviço isolado
+  evolution_api:
+    image: atendai/evolution-api:latest
+    ports:
+      - "8080:8080"
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-altclinic-evolution-key-change-me}
+      DATABASE_ENABLED: "false"
+      WEBHOOK_GLOBAL_URL: ${ALTCLINIC_URL:-http://altclinic:3000}/api/whatsapp/webhook
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_GLOBAL_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_GLOBAL_EVENTS_QRCODE_UPDATED: "true"
+      DEL_INSTANCE: "false"
+      QRCODE_LIMIT: "1000"
+      LOG_LEVEL: ERROR
+    volumes:
+      - evolution_data:/evolution/instances
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # n8n — Automação de Workflows
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - N8N_LOG_LEVEL=warn
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  evolution_data:
+    driver: local
+  n8n_data:
+    driver: local

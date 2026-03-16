@@ -17,18 +17,18 @@ export const FEATURES_ENABLED = {
   whatsapp: getEnvFeature('REACT_APP_FEATURE_WHATSAPP', true),
   configuracoes: getEnvFeature('REACT_APP_FEATURE_CONFIGURACOES', true),
 
-  // Funcionalidades avançadas (ocultas por padrão no MVP)
-  dashboard: getEnvFeature('REACT_APP_FEATURE_DASHBOARD', false),
-  financeiro: getEnvFeature('REACT_APP_FEATURE_FINANCEIRO', false),
-  crm_avancado: getEnvFeature('REACT_APP_FEATURE_CRM_AVANCADO', false),
-  relatorios: getEnvFeature('REACT_APP_FEATURE_RELATORIOS', false),
-  sala_espera: getEnvFeature('REACT_APP_FEATURE_SALA_ESPERA', false),
-  licencas: getEnvFeature('REACT_APP_FEATURE_LICENCAS', false),
-  analytics: getEnvFeature('REACT_APP_FEATURE_ANALYTICS', false),
+  // Funcionalidades avançadas (habilitadas por padrão)
+  dashboard: getEnvFeature('REACT_APP_FEATURE_DASHBOARD', true),
+  financeiro: getEnvFeature('REACT_APP_FEATURE_FINANCEIRO', true),
+  crm_avancado: getEnvFeature('REACT_APP_FEATURE_CRM_AVANCADO', true),
+  relatorios: getEnvFeature('REACT_APP_FEATURE_RELATORIOS', true),
+  sala_espera: getEnvFeature('REACT_APP_FEATURE_SALA_ESPERA', true),
+  licencas: getEnvFeature('REACT_APP_FEATURE_LICENCAS', true),
+  analytics: getEnvFeature('REACT_APP_FEATURE_ANALYTICS', true),
 
   // Funcionalidades experimentais
-  automacoes_avancadas: getEnvFeature('REACT_APP_FEATURE_AUTOMACOES_AVANCADAS', false),
-  integracoes_externas: getEnvFeature('REACT_APP_FEATURE_INTEGRACOES_EXTERNAS', false),
+  automacoes_avancadas: getEnvFeature('REACT_APP_FEATURE_AUTOMACOES_AVANCADAS', true),
+  integracoes_externas: getEnvFeature('REACT_APP_FEATURE_INTEGRACOES_EXTERNAS', true),
   multi_clinica: getEnvFeature('REACT_APP_FEATURE_MULTI_CLINICA', false),
 };
 

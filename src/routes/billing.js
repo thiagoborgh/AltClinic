@@ -30,28 +30,35 @@ router.get('/plans', async (req, res) => {
     const plans = {
       starter: {
         nome: 'Starter',
-        preco: 'R$ 199,00',
+        preco: 'R$ 149,00',
         periodo: '/mês',
+        valor: 149,
+        maxMedicos: 1,
+        maxPacientes: 500,
         features: [
-          '3 usuários',
-          '500 pacientes',
-          'WhatsApp Business',
+          '1 médico / profissional',
+          'Até 500 pacientes',
+          'WhatsApp integrado',
+          'Agenda e agendamentos',
           'Relatórios básicos',
           'Suporte por email'
         ],
         popular: false
       },
-      professional: {
-        nome: 'Professional',
-        preco: 'R$ 399,00',
+      pro: {
+        nome: 'Pro',
+        preco: 'R$ 349,00',
         periodo: '/mês',
+        valor: 349,
+        maxMedicos: 5,
+        maxPacientes: 2000,
         features: [
-          '10 usuários',
-          '2.000 pacientes',
-          'WhatsApp Business',
-          'Telemedicina',
+          'Até 5 médicos / profissionais',
+          'Até 2.000 pacientes',
+          'WhatsApp + automações CRM',
+          'Funil Kanban de pacientes',
           'Relatórios avançados',
-          'API Access',
+          'Dashboard executivo',
           'Suporte prioritário'
         ],
         popular: true
@@ -60,15 +67,18 @@ router.get('/plans', async (req, res) => {
         nome: 'Enterprise',
         preco: 'R$ 799,00',
         periodo: '/mês',
+        valor: 799,
+        maxMedicos: -1,
+        maxPacientes: -1,
         features: [
-          'Usuários ilimitados',
-          'Pacientes ilimitados',
-          'WhatsApp Business',
-          'Telemedicina',
+          'Médicos e pacientes ilimitados',
+          'WhatsApp + todos os canais',
+          'CRM completo + bot configurável',
           'Relatórios personalizados',
           'API completa',
           'White-label',
-          'Suporte dedicado'
+          'Multi-unidade',
+          'Suporte 24/7 dedicado'
         ],
         popular: false
       }
