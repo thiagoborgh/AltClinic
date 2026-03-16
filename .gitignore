@@ -46,3 +46,48 @@ create-*.js
 tools/notebook-server/config.ps1
 tools/notebook-server/ngrok.yml
 tools/notebook-server/runtime/
+
+# Claude Code temporary directories
+tmpclaude-*-cwd/
+admin/backend/tmpclaude-*-cwd/
+admin/frontend/src/tmpclaude-*-cwd/
+frontend/tmpclaude-*-cwd/
+src/routes/tmpclaude-*-cwd/
+
+# Claude Code metadata
+.claude/
+.superpowers/
+.wwebjs_auth/
+
+# Test databases
+data/tenant_*.db
+
+# Test/demo files
+app.js
+tasks.md
+docs/ARQUITETURA.md
+docs/CHECKLIST_COMERCIALIZACAO.md
+docs/DEPLOY.md
+docs/EMPRESA.md
+docs/PLANOS.md
+docs/PRODUTO.md
+docs/WHATSAPP_META_SETUP.md
+docs/superpowers/
+
+# Generated scripts and utils
+src/scripts/
+src/services/EvolutionAPIService.js
+src/services/MetaWhatsAppInstitutionalService.js
+src/services/MetaWhatsAppService.js
+src/services/baileyWhatsAppService.js
+src/middleware/errorHandler.js
+src/middleware/setupMiddlewares.js
+src/migrations/011_create_refresh_tokens.sql
+src/migrations/012_meta_whatsapp.sql
+src/utils/firestoreHealth.js
+src/utils/logger.js
+scripts/db/
+scripts/deploy/
+scripts/utils/
+frontend/public/service-worker.js
+frontend/src/themes/themeC.js
