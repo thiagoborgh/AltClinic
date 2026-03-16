@@ -57,10 +57,12 @@ async function processarRespostaConfirmacao(tenantDb, tenantId, telefone, conteu
   if (!isConfirmacao && !isCancelamento) return; // não é resposta de confirmação
 
   // Busca agendamento pendente de confirmação para este telefone
+  // O telefone está em pacientes, não diretamente em agendamentos
   const agendamento = await tenantDb.get(`
-    SELECT a.id, a.data_agendamento, a.horario, a.paciente_nome
+    SELECT a.id, a.data_agendamento, a.horario, p.nome AS paciente_nome, a.paciente_id
     FROM agendamentos a
-    WHERE (a.paciente_telefone LIKE $1 OR a.telefone LIKE $1)
+    JOIN pacientes p ON p.id = a.paciente_id
+    WHERE p.telefone LIKE $1
       AND a.confirmacao_status = 'aguardando_confirmacao'
       AND a.status = 'agendado'
       AND a.data_agendamento >= CURRENT_DATE
@@ -75,12 +77,11 @@ async function processarRespostaConfirmacao(tenantDb, tenantId, telefone, conteu
       `UPDATE agendamentos SET confirmacao_status='confirmado', updated_at=NOW() WHERE id=$1`,
       [agendamento.id]
     );
-    await tenantDb.run(`
-      INSERT INTO crm_mensagens (tenant_id, paciente_id, tipo, status, conteudo, created_at)
-      SELECT $1, a.paciente_id, 'confirmacao_resposta', 'confirmado', $2, NOW()
-      FROM agendamentos a WHERE a.id=$3
-    `, [tenantId, `Paciente confirmou: "${conteudo}"`, agendamento.id]);
-
+    await tenantDb.run(
+      `INSERT INTO crm_mensagens (tenant_id, paciente_id, agendamento_id, tipo, telefone, mensagem)
+       VALUES ($1, $2, $3, 'confirmacao_resposta', $4, 'Paciente confirmou via WhatsApp')`,
+      [tenantId, agendamento.paciente_id, agendamento.id, telefone]
+    );
     console.log(`[Confirmação] ✅ Agendamento ${agendamento.id} confirmado via WhatsApp`);
   }
 
@@ -89,14 +90,12 @@ async function processarRespostaConfirmacao(tenantDb, tenantId, telefone, conteu
       `UPDATE agendamentos SET confirmacao_status='cancelado', updated_at=NOW() WHERE id=$1`,
       [agendamento.id]
     );
-    // Notifica recepção sobre o cancelamento
-    await tenantDb.run(`
-      INSERT INTO crm_mensagens (tenant_id, paciente_id, tipo, status, conteudo, created_at)
-      SELECT $1, a.paciente_id, 'confirmacao_resposta', 'cancelado',
-             'Paciente cancelou via WhatsApp: ' || $2, NOW()
-      FROM agendamentos a WHERE a.id=$3
-    `, [tenantId, conteudo, agendamento.id]);
-
+    await tenantDb.run(
+      `INSERT INTO crm_mensagens (tenant_id, paciente_id, agendamento_id, tipo, telefone, mensagem)
+       VALUES ($1, $2, $3, 'confirmacao_cancelamento', $4, $5)`,
+      [tenantId, agendamento.paciente_id, agendamento.id, telefone,
+       `Paciente cancelou via WhatsApp. Consulta: ${agendamento.data_agendamento} às ${agendamento.horario}`]
+    );
     console.log(`[Confirmação] ❌ Agendamento ${agendamento.id} cancelado via WhatsApp — recepção notificada`);
   }
 }
