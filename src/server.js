@@ -1,4 +1,5 @@
 require('dotenv').config();
+const Sentry = require('@sentry/node');
 const http = require('http');
 const logger = require('./utils/logger');
 // app.js exporta a classe SaeeApp — instanciar com new e usar .app (Express)
@@ -7,12 +8,29 @@ const createApp = () => {
   const instance = new SaeeApp();
   return instance.app; // retorna o Express app
 };
-const cronManager = require('./cron/inactivityChecker');
+// cronManager legado (usa SQLite — carregamento protegido)
+let cronManager = { start: () => {}, stop: () => {} };
+try { cronManager = require('./cron/inactivityChecker'); } catch (e) {
+  logger.warn('cronManager (legado/SQLite) não disponível — ignorando', { message: e.message });
+}
 const ProductionInitializer = require('./utils/productionInitializer');
 // trialNurturing — lazy load (arquivo pode não existir em todas as branches)
 let startNurturingJob = () => {};
 try { ({ startNurturingJob } = require('./jobs/trialNurturing')); } catch (e) { /* não instalado */ }
 const { testFirestore } = require('./utils/firestoreHealth');
+const { startAllJobs } = require('./jobs');
+// Workers BullMQ — inicializados apenas se REDIS_URL estiver configurada
+require('./queues/workers/whatsapp');
+
+// Sentry — monitoramento de erros em produção
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.2,
+  });
+  logger.info('Sentry inicializado');
+}
 
 const PORT = process.env.PORT || 3000;
 
@@ -33,8 +51,15 @@ async function start() {
 
     // Start scheduled jobs
     if (process.env.NODE_ENV !== 'test') {
-      cronManager.start();
+      // Cron legado (usa modelo SQLite — protegido para não crashar em produção)
+      try {
+        cronManager.start();
+      } catch (err) {
+        logger.warn('cronManager (legado) falhou ao iniciar — ignorando', { message: err.message });
+      }
       startNurturingJob();
+      // Jobs CRM multi-tenant (confirmação D-2/D-1, retorno, aniversário, NPS)
+      startAllJobs();
     }
 
     // Boot HTTP server com maxHeaderSize aumentado (padrão Node é 8KB — insuficiente
@@ -57,7 +82,6 @@ async function start() {
       server.close(async () => {
         try {
           cronManager.stop();
-          dbManager.close();
           logger.info('Shutdown completo');
           process.exit(0);
         } catch (err) {
