@@ -23,12 +23,13 @@ import {
   Email, 
   Phone
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +39,7 @@ const OnboardingPage = () => {
     clinicaNome: '',
     slug: '',
     telefone: '',
-    
+
     // Etapa 2: Dados do Proprietário
     ownerNome: '',
     ownerEmail: '',
@@ -46,25 +47,16 @@ const OnboardingPage = () => {
     confirmarSenha: ''
   });
 
-  const steps = [
-    'Dados da Clínica',
-    'Proprietário',
-    'Confirmação'
-  ];
-
-  const planoUnico = {
-    nome: 'Plano Mensal',
-    preco: 'R$ 149',
-    descricao: 'Tudo que você precisa para gerenciar sua clínica',
-    recursos: [
-      'Agenda completa de agendamentos',
-      'Gestão de pacientes ilimitados',
-      'WhatsApp integrado',
-      'Relatórios financeiros',
-      'CRM para acompanhamento',
-      'Suporte por email'
-    ]
+  const PLANOS = {
+    starter:    { id: 'starter',    nome: 'Starter',    preco: 'R$ 149', descricao: 'Para clínica solo ou autônomo', recursos: ['1 médico', 'Até 500 pacientes', 'WhatsApp + confirmações', 'CRM básico', 'Prontuário eletrônico', 'Suporte por email'] },
+    pro:        { id: 'pro',        nome: 'Pro',        preco: 'R$ 349', descricao: 'Para clínicas em crescimento',  recursos: ['Até 5 médicos', 'Até 2.000 pacientes', 'WhatsApp multiagente', 'CRM completo + funil', 'NPS automático', 'Suporte prioritário'] },
+    enterprise: { id: 'enterprise', nome: 'Enterprise', preco: 'R$ 799', descricao: 'Para redes e multi-unidades',   recursos: ['Médicos ilimitados', 'Pacientes ilimitados', 'Multi-unidade', 'API completa', 'White-label', 'Suporte dedicado'] },
   };
+
+  const planParam = searchParams.get('plan') || 'starter';
+  const planoSelecionado = PLANOS[planParam] || PLANOS.starter;
+
+  const steps = ['Dados da Clínica', 'Proprietário', 'Confirmação'];
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -144,14 +136,14 @@ const OnboardingPage = () => {
     setError('');
 
     try {
-      const response = await api.post('/tenants/register', {
+      const response = await api.post('/onboarding/register', {
         clinicaNome: formData.clinicaNome,
         slug: formData.slug,
         ownerNome: formData.ownerNome,
         ownerEmail: formData.ownerEmail,
         ownerSenha: formData.ownerSenha,
         telefone: formData.telefone,
-        plano: 'mensal' // Plano Starter R$ 149/mês
+        plano: planoSelecionado.id
       });
 
       const data = response.data;
@@ -363,16 +355,16 @@ const OnboardingPage = () => {
                 }}
               >
                 <Typography variant="h5" gutterBottom fontWeight="bold">
-                  {planoUnico.nome}
+                  {planoSelecionado.nome}
                 </Typography>
                 <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
-                  {planoUnico.preco}/mês
+                  {planoSelecionado.preco}/mês
                 </Typography>
                 <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
-                  {planoUnico.descricao}
+                  {planoSelecionado.descricao}
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {planoUnico.recursos.map((recurso, index) => (
+                  {planoSelecionado.recursos.map((recurso, index) => (
                     <Typography key={index} variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       ✓ {recurso}
                     </Typography>

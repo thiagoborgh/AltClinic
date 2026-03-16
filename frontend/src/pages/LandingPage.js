@@ -88,7 +88,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [expandedFaq, setExpandedFaq] = useState(false);
 
-  const goRegister = () => navigate('/register');
+  const goRegister = (plano = 'starter') => navigate(`/register?plan=${plano}`);
   const goLogin   = () => navigate('/login');
 
   return (
@@ -294,7 +294,7 @@ const LandingPage = () => {
                     </Box>
                     <Button
                       variant={destaque ? 'contained' : 'outlined'}
-                      size="large" fullWidth onClick={goRegister}
+                      size="large" fullWidth onClick={() => goRegister(nome.toLowerCase())}
                       sx={{ py: 1.4, fontWeight: 700, borderRadius: 2 }}
                     >
                       Testar 14 dias grátis

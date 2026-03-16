@@ -104,16 +104,15 @@ const AppContent = () => {
     <Box sx={{ minHeight: '100vh' }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-        {/* Landing Page - rota pública */}
-        <Route path="/landing" element={<LandingPage />} />
+        {/* Landing Page — rota raiz pública (SEO-friendly) */}
+        <Route path="/" element={
+          isAuthenticated ? <Navigate to="/agenda-lite" replace /> :
+          <LandingPage />
+        } />
+        {/* /landing como alias para compatibilidade com links existentes */}
+        <Route path="/landing" element={<Navigate to="/" replace />} />
         <Route path="/ajuda" element={<HelpCenter />} />
         <Route path="/help" element={<HelpCenter />} />
-        
-        {/* Rota raiz - redireciona baseado na autenticação */}
-        <Route path="/" element={
-          isAuthenticated ? <Navigate to="/agenda-lite" replace /> : 
-          <Navigate to="/landing" replace />
-        } />
 
         {/* Rotas públicas */}
         <Route path="/login" element={
