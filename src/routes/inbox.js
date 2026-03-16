@@ -44,6 +44,63 @@ async function ensureTables(db) {
   `, []);
 }
 
+// ── Processamento de resposta SIM/NÃO de confirmação de consulta ─────────────
+// Chamado pelo webhook da Evolution API após salvar a mensagem no inbox.
+// Fecha o loop do CRM D-2/D-1: atualiza confirmacao_status e notifica recepção.
+async function processarRespostaConfirmacao(tenantDb, tenantId, telefone, conteudo) {
+  const texto = (conteudo || '').trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos
+
+  const isConfirmacao = ['SIM', 'S', '1', 'YES', 'OK', 'CONFIRMO', 'CONFIRMADO'].includes(texto);
+  const isCancelamento = ['NAO', 'N', '2', 'NO', 'CANCELAR', 'CANCELA', 'CANCELADO', 'NÃO'].includes(texto);
+
+  if (!isConfirmacao && !isCancelamento) return; // não é resposta de confirmação
+
+  // Busca agendamento pendente de confirmação para este telefone
+  const agendamento = await tenantDb.get(`
+    SELECT a.id, a.data_agendamento, a.horario, a.paciente_nome
+    FROM agendamentos a
+    WHERE (a.paciente_telefone LIKE $1 OR a.telefone LIKE $1)
+      AND a.confirmacao_status = 'aguardando_confirmacao'
+      AND a.status = 'agendado'
+      AND a.data_agendamento >= CURRENT_DATE
+    ORDER BY a.data_agendamento ASC
+    LIMIT 1
+  `, [`%${telefone.slice(-9)}`]);
+
+  if (!agendamento) return; // nenhum agendamento aguardando resposta
+
+  if (isConfirmacao) {
+    await tenantDb.run(
+      `UPDATE agendamentos SET confirmacao_status='confirmado', updated_at=NOW() WHERE id=$1`,
+      [agendamento.id]
+    );
+    await tenantDb.run(`
+      INSERT INTO crm_mensagens (tenant_id, paciente_id, tipo, status, conteudo, created_at)
+      SELECT $1, a.paciente_id, 'confirmacao_resposta', 'confirmado', $2, NOW()
+      FROM agendamentos a WHERE a.id=$3
+    `, [tenantId, `Paciente confirmou: "${conteudo}"`, agendamento.id]);
+
+    console.log(`[Confirmação] ✅ Agendamento ${agendamento.id} confirmado via WhatsApp`);
+  }
+
+  if (isCancelamento) {
+    await tenantDb.run(
+      `UPDATE agendamentos SET confirmacao_status='cancelado', updated_at=NOW() WHERE id=$1`,
+      [agendamento.id]
+    );
+    // Notifica recepção sobre o cancelamento
+    await tenantDb.run(`
+      INSERT INTO crm_mensagens (tenant_id, paciente_id, tipo, status, conteudo, created_at)
+      SELECT $1, a.paciente_id, 'confirmacao_resposta', 'cancelado',
+             'Paciente cancelou via WhatsApp: ' || $2, NOW()
+      FROM agendamentos a WHERE a.id=$3
+    `, [tenantId, conteudo, agendamento.id]);
+
+    console.log(`[Confirmação] ❌ Agendamento ${agendamento.id} cancelado via WhatsApp — recepção notificada`);
+  }
+}
+
 // ── GET /api/inbox ─────────────────────────────────────────────────────────
 // Lista todas as conversas do tenant (visão Kanban de atendimento)
 router.get('/', authenticateToken, async (req, res) => {
@@ -236,6 +293,9 @@ router.post('/webhook', async (req, res) => {
       INSERT INTO whatsapp_mensagens (tenant_id, conversa_id, direction, remetente, conteudo, evolution_message_id)
       VALUES ($1, $2, 'inbound', $3, $4, $5)
     `, [tenantId, conversa.id, telefone, conteudo, msg.key?.id]);
+
+    // ── Processar resposta SIM/NÃO de confirmação de consulta ──────────────
+    await processarRespostaConfirmacao(tenantDb, tenantId, telefone, conteudo);
 
   } catch (err) {
     console.error('[Inbox Webhook] Erro:', err.message);
