@@ -224,6 +224,32 @@ class StorageService {
       throw error;
     }
   }
+  /**
+   * Upload de foto de paciente para o Cloud Storage.
+   * @param {string} tenantId - ID do tenant
+   * @param {Buffer} buffer   - Buffer WebP já processado pelo sharp
+   * @param {string} filename - Nome do arquivo (ex: foto_1234567890.webp)
+   * @returns {Promise<string>} URL pública da foto
+   */
+  async uploadPacienteFoto(tenantId, buffer, filename) {
+    try {
+      const filePath = `pacientes/${tenantId}/${filename}`;
+      const file = bucket.file(filePath);
+
+      await file.save(buffer, {
+        metadata: {
+          contentType: 'image/webp',
+          metadata: { tenantId, uploadedAt: new Date().toISOString() },
+        },
+      });
+
+      await file.makePublic();
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    } catch (error) {
+      console.error('❌ Erro ao fazer upload da foto do paciente:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new StorageService();
