@@ -418,6 +418,9 @@ class SaeeApp {
 
     // Fila de Espera (TDD Fila de Espera)
     this.app.use('/api/fila', require('./routes/fila-espera'));
+
+    // Confirmação de Agendamentos (TDD Confirmação)
+    this.app.use('/api/confirmacoes', require('./routes/confirmacoes'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
