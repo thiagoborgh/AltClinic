@@ -415,6 +415,9 @@ class SaeeApp {
 
     // Check-in de Pacientes (TDD Check-in)
     this.app.use('/api/checkins', require('./routes/checkins'));
+
+    // Fila de Espera (TDD Fila de Espera)
+    this.app.use('/api/fila', require('./routes/fila-espera'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
