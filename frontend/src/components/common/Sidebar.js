@@ -20,6 +20,7 @@ import {
   AttachMoney as FinanceiroIcon,
   Chat as CrmIcon,
   WhatsApp as WhatsAppIcon,
+  Forum as CentralWAIcon,
   Assessment as RelatoriosIcon,
   Settings as ConfiguracoesIcon,
   LocalHospital as MedicosIcon,
@@ -87,6 +88,12 @@ const menuItems = [
     text: 'WhatsApp',
     icon: WhatsAppIcon,
     path: '/whatsapp',
+    feature: 'whatsapp'
+  },
+  {
+    text: 'Central WA',
+    icon: CentralWAIcon,
+    path: '/whatsapp/central',
     feature: 'whatsapp'
   },
   {

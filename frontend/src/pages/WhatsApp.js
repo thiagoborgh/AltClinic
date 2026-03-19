@@ -12,6 +12,7 @@ import {
 import WhatsAppConnection from '../components/whatsapp/WhatsAppConnection';
 import WhatsAppMessages from '../components/whatsapp/WhatsAppMessages';
 import WhatsAppConfig from '../components/whatsapp/WhatsAppConfig';
+import WhatsAppBot from '../components/whatsapp/WhatsAppBot';
 import whatsappService from '../services/whatsappService';
 
 function TabPanel({ children, value, index, ...other }) {
@@ -106,6 +107,7 @@ export default function WhatsApp() {
             <Tab label="Conexão" />
             <Tab label="Mensagens" />
             <Tab label="Configurações" />
+            <Tab label="🤖 Bot" />
           </Tabs>
 
           {loading ? (
@@ -130,6 +132,10 @@ export default function WhatsApp() {
 
               <TabPanel value={tabValue} index={2}>
                 <WhatsAppConfig />
+              </TabPanel>
+
+              <TabPanel value={tabValue} index={3}>
+                <WhatsAppBot />
               </TabPanel>
             </>
           )}
