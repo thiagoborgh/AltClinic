@@ -3,9 +3,6 @@
  *
  * Verifica se o tenant atingiu os limites do seu plano antes
  * de permitir a criação de médicos/usuários ou pacientes.
- *
- * Compatível com req.db via MultiTenantDatabase (SQLite síncrono).
- * Caso req.db exponha uma API async (TenantDb PostgreSQL), await funciona igualmente.
  */
 
 const PLANOS = {
@@ -62,18 +59,10 @@ const checkMedicoLimit = async (req, res, next) => {
     let total;
 
     if (db && typeof db.get === 'function') {
-      // API async (TenantDb PostgreSQL): await db.get(sql, params)
-      // ou SQLite síncrono que também retorna direto — await é transparente
       const row = await db.get(
         `SELECT COUNT(*) AS total FROM usuarios WHERE tenant_id = $1 AND status = 'active'`,
         [tenant.id]
       );
-      total = parseInt(row?.total ?? 0, 10);
-    } else if (db && typeof db.prepare === 'function') {
-      // Fallback: SQLite síncrono via better-sqlite3
-      const row = db.prepare(
-        `SELECT COUNT(*) AS total FROM usuarios WHERE tenant_id = ? AND status = 'active'`
-      ).get(tenant.id);
       total = parseInt(row?.total ?? 0, 10);
     } else {
       // Sem db disponível — deixar passar e logar
@@ -128,11 +117,6 @@ const checkPacienteLimit = async (req, res, next) => {
         `SELECT COUNT(*) AS total FROM pacientes WHERE tenant_id = $1 AND status = 'ativo'`,
         [tenant.id]
       );
-      total = parseInt(row?.total ?? 0, 10);
-    } else if (db && typeof db.prepare === 'function') {
-      const row = db.prepare(
-        `SELECT COUNT(*) AS total FROM pacientes WHERE tenant_id = ? AND status = 'ativo'`
-      ).get(tenant.id);
       total = parseInt(row?.total ?? 0, 10);
     } else {
       console.warn('[planLimits] checkPacienteLimit: req.db indisponível, pulando verificação');

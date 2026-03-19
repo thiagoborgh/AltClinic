@@ -10,9 +10,16 @@ const aiService = require('../utils/ai'); // Nova integração
 
 class CronJobManager {
   constructor() {
-    this.db = dbManager.getDb();
+    this.masterDb = dbManager.getDb(); // MasterDb — interface async (PostgreSQL)
     this.jobs = new Map();
     this.isRunning = false;
+  }
+
+  /** Lista todos os tenants ativos (substitui tabela 'clinica' do legado) */
+  async _getTenants() {
+    return this.masterDb.all(
+      "SELECT id, slug AS nome FROM tenants WHERE status IN ('active', 'trial') ORDER BY created_at"
+    );
   }
 
   /**
@@ -60,12 +67,12 @@ class CronJobManager {
       console.log('📊 Verificando pacientes inativos...');
       
       try {
-        const clinicas = this.db.prepare('SELECT id, nome FROM clinica').all();
-        
+        const clinicas = await this._getTenants();
+
         for (const clinica of clinicas) {
           await this.processInactivePatients(clinica);
         }
-        
+
         console.log('✅ Verificação de inativos concluída');
         
       } catch (error) {
@@ -88,12 +95,12 @@ class CronJobManager {
       console.log('📞 Enviando confirmações de agendamento...');
       
       try {
-        const clinicas = this.db.prepare('SELECT id, nome FROM clinica').all();
-        
+        const clinicas = await this._getTenants();
+
         for (const clinica of clinicas) {
           await this.processConfirmationReminders(clinica);
         }
-        
+
         console.log('✅ Confirmações enviadas');
         
       } catch (error) {
@@ -116,12 +123,12 @@ class CronJobManager {
       console.log('⏰ Enviando lembretes de agendamento...');
       
       try {
-        const clinicas = this.db.prepare('SELECT id, nome FROM clinica').all();
-        
+        const clinicas = await this._getTenants();
+
         for (const clinica of clinicas) {
           await this.processAppointmentReminders(clinica);
         }
-        
+
         console.log('✅ Lembretes enviados');
         
       } catch (error) {
@@ -144,12 +151,12 @@ class CronJobManager {
       console.log('📈 Gerando relatórios diários...');
       
       try {
-        const clinicas = this.db.prepare('SELECT id, nome FROM clinica').all();
-        
+        const clinicas = await this._getTenants();
+
         for (const clinica of clinicas) {
           await this.generateDailyReport(clinica);
         }
-        
+
         console.log('✅ Relatórios diários gerados');
         
       } catch (error) {
@@ -438,12 +445,12 @@ class CronJobManager {
    * @param {string} conteudo - Conteúdo da mensagem
    * @param {string} status - Status do envio
    */
-  registrarMensagemCRM(pacienteId, tipo, conteudo, status = 'enviada') {
+  async registrarMensagemCRM(pacienteId, tipo, conteudo, status = 'enviada') {
     try {
-      this.db.prepare(`
-        INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status)
-        VALUES (?, ?, ?, ?)
-      `).run(pacienteId, tipo, conteudo, status);
+      await this.masterDb.run(
+        'INSERT INTO mensagem_crm (paciente_id, tipo, conteudo, status) VALUES ($1, $2, $3, $4)',
+        [pacienteId, tipo, conteudo, status]
+      );
     } catch (error) {
       console.error('❌ Erro ao registrar mensagem CRM:', error.message);
     }
@@ -464,8 +471,8 @@ class CronJobManager {
   async runManual(jobName) {
     console.log(`🔧 Executando job manual: ${jobName}`);
     
-    const clinicas = this.db.prepare('SELECT id, nome FROM clinica').all();
-    
+    const clinicas = await this._getTenants();
+
     switch (jobName) {
       case 'inactivity':
         for (const clinica of clinicas) {
