@@ -373,6 +373,8 @@ class SaeeApp {
     // /api/auth/recovery não precisa de tenant - ela encontra o tenant pelo email
     
     this.app.use('/api/pacientes', extractTenant, pacientesRoutes);
+    // Histórico de Atendimentos (TDD 9) — montado no mesmo prefixo, rotas /:id/historico
+    this.app.use('/api/pacientes', require('./routes/historico'));
     this.app.use('/api/prontuario', extractTenant);
     this.app.use('/api/prontuario/imagem', extractTenant);
     this.app.use('/api/prontuario-completo', extractTenant);
