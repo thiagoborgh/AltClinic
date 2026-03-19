@@ -67,6 +67,23 @@ async function start() {
     const app = createApp();
     const server = http.createServer({ maxHeaderSize: 32768 }, app);
 
+    // Socket.io — real-time para WhatsApp, dashboard e alertas
+    const { Server } = require('socket.io');
+    const io = new Server(server, {
+      cors: {
+        origin: process.env.FRONTEND_URL || '*',
+        methods: ['GET', 'POST'],
+      },
+    });
+    io.on('connection', (socket) => {
+      const tenantId = socket.handshake.query.tenantId;
+      if (tenantId) {
+        socket.join(`tenant:${tenantId}`);
+      }
+    });
+    // Exporta io para ser usado pelos serviços
+    module.exports.io = io;
+
     server.listen(PORT, () => {
       console.log(`\n🌟 AltClinic API rodando em http://localhost:${PORT}`);
       logger.info('Health check disponivel', { url: `http://localhost:${PORT}/health` });
