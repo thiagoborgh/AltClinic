@@ -63,6 +63,7 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@sentry/node": "^10.43.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "axios": "^1.12.2",

@@ -47,6 +47,7 @@ const extractTenantFirestore = extractTenant;
 const cronManager = require('./cron/inactivityChecker');
 require('./cron/cleanup-tokens'); // Limpeza semanal de refresh_tokens e tokens_senha expirados
 require('./cron/alertas-registro-profissional'); // Alertas diários de registro profissional vencendo
+require('./jobs/crmScoreRecalculo'); // Recálculo diário de score IA do CRM às 6h
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -423,6 +424,9 @@ class SaeeApp {
 
     // Confirmação de Agendamentos (TDD Confirmação)
     this.app.use('/api/confirmacoes', require('./routes/confirmacoes'));
+
+    // CRM Pipeline (TDD 10)
+    this.app.use('/api/crm', require('./routes/crm-pipeline'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
