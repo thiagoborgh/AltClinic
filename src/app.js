@@ -412,6 +412,9 @@ class SaeeApp {
 
     // Profissionais (TDD Cadastro de Profissionais)
     this.app.use('/api/profissionais', require('./routes/profissionais'));
+
+    // Check-in de Pacientes (TDD Check-in)
+    this.app.use('/api/checkins', require('./routes/checkins'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
