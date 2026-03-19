@@ -5,6 +5,7 @@ const { extractTenant } = require('../middleware/tenant');
 const { authenticateToken } = require('../middleware/auth');
 const { calcularScoreIA, schemaFromSlug } = require('../services/CrmScoreService');
 const { processarSugestoesTenant } = require('../jobs/crmSugestoes');
+const { inserirPassosNaFila }      = require('../services/CrmFollowupMotor');
 
 function getSchema(req) {
   const slug = req.tenant?.slug || req.usuario?.tenant_slug || req.tenantId;
@@ -329,10 +330,18 @@ router.patch('/oportunidades/:id/mover', extractTenant, authenticateToken, async
       userId,
     ]);
 
+    // Hook de follow-up — inserir passos na fila (dentro da transação)
+    let filaResultado = { inserido: 0 };
+    try {
+      filaResultado = await inserirPassosNaFila(client, schema, opId, etapa_id);
+    } catch (err) {
+      console.error('[CRM Followup] Erro ao inserir fila (não bloqueia):', err.message);
+    }
+
     await client.query('COMMIT');
     return res.json({
       success: true,
-      data: { id: opId, etapa_anterior: op.etapa_nome, etapa_nova: etapaDestino.nome, atividade_id: atv.id },
+      data: { id: opId, etapa_anterior: op.etapa_nome, etapa_nova: etapaDestino.nome, atividade_id: atv.id, fila: filaResultado },
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -588,6 +597,238 @@ router.post('/oportunidades/:id/score', extractTenant, authenticateToken, async 
     }
     console.error('❌ POST /api/crm/oportunidades/:id/score:', err);
     return res.status(503).json({ success: false, error: 'Serviço de IA indisponível. Score anterior mantido.' });
+  }
+});
+
+// ── GET /api/crm/followup/fila ────────────────────────────────────────────────
+router.get('/followup/fila', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const { status = 'pendente', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const { rows: countRows } = await pool.query(`
+      SELECT COUNT(*) AS total FROM "${schema}".crm_followup_fila WHERE status = $1
+    `, [status]);
+
+    const { rows } = await pool.query(`
+      SELECT
+        f.id, f.oportunidade_id, f.passo_id,
+        f.mensagem_renderizada, f.modo,
+        f.agendado_para, f.status, f.criado_em,
+        p.nome    AS paciente_nome,
+        p.telefone AS paciente_telefone,
+        pr.nome   AS procedimento_nome,
+        e.nome    AS etapa_nome,
+        sp.ordem  AS passo_ordem,
+        sp.modo
+      FROM "${schema}".crm_followup_fila f
+      JOIN "${schema}".crm_oportunidades     o  ON o.id  = f.oportunidade_id
+      JOIN "${schema}".pacientes             p  ON p.id  = o.paciente_id
+      LEFT JOIN "${schema}".procedimentos    pr ON pr.id = o.procedimento_id
+      JOIN "${schema}".crm_etapas_config     e  ON e.id  = o.etapa_id
+      JOIN "${schema}".crm_sequencias_passos sp ON sp.id = f.passo_id
+      WHERE f.status = $1
+      ORDER BY f.agendado_para ASC
+      LIMIT $2 OFFSET $3
+    `, [status, parseInt(limit), offset]);
+
+    const pendentes_count = parseInt(countRows[0].total);
+    return res.json({ success: true, pendentes_count, data: rows });
+  } catch (err) {
+    console.error('❌ GET /api/crm/followup/fila:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/followup/fila/:id/enviar ───────────────────────────────────
+router.post('/followup/fila/:id/enviar', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema  = getSchema(req);
+    const filaId  = Number(req.params.id);
+
+    const { rows: [msg] } = await pool.query(`
+      SELECT f.*, p.telefone AS paciente_telefone, o.paciente_id
+      FROM "${schema}".crm_followup_fila f
+      JOIN "${schema}".crm_oportunidades o ON o.id = f.oportunidade_id
+      JOIN "${schema}".pacientes         p ON p.id = o.paciente_id
+      WHERE f.id = $1 AND f.status IN ('pendente','aprovado')
+    `, [filaId]);
+
+    if (!msg) return res.status(404).json({ success: false, error: 'Mensagem não encontrada ou já processada' });
+
+    const { rows: optout } = await pool.query(`
+      SELECT id FROM "${schema}".crm_optouts WHERE paciente_id = $1
+    `, [msg.paciente_id]);
+    if (optout.length > 0) {
+      return res.status(400).json({ success: false, error: 'Paciente está em opt-out. Mensagem não enviada.' });
+    }
+
+    let resultado = { success: false, message_id: null };
+    try {
+      const UnifiedWhatsAppService = require('../services/UnifiedWhatsAppService');
+      const whatsApp = new UnifiedWhatsAppService();
+      const tenantSlug = req.tenant?.slug || req.usuario?.tenant_slug;
+      resultado = await whatsApp.sendMessage(tenantSlug, 'crm_followup', {
+        to:   msg.paciente_telefone,
+        body: msg.mensagem_renderizada,
+      }, { eventType: 'crm_followup', eventId: msg.oportunidade_id });
+    } catch { /* WhatsApp não disponível — marcar como enviado manualmente */ resultado = { success: true, message_id: null }; }
+
+    await pool.query(`
+      UPDATE "${schema}".crm_followup_fila
+      SET status = 'enviado', enviado_em = NOW(), whatsapp_message_id = $1, atualizado_em = NOW()
+      WHERE id = $2
+    `, [resultado.message_id || null, filaId]);
+
+    return res.json({ success: true, data: { fila_id: filaId, status: 'enviado', enviado_em: new Date(), whatsapp_message_id: resultado.message_id } });
+  } catch (err) {
+    console.error('❌ POST /api/crm/followup/fila/:id/enviar:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/followup/fila/:id/adiar ────────────────────────────────────
+router.post('/followup/fila/:id/adiar', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const { nova_data } = req.body;
+    if (!nova_data) return res.status(400).json({ success: false, error: 'nova_data é obrigatório' });
+
+    const { rows: [updated] } = await pool.query(`
+      UPDATE "${schema}".crm_followup_fila
+      SET agendado_para = $1, atualizado_em = NOW()
+      WHERE id = $2 AND status IN ('pendente','aprovado')
+      RETURNING id, agendado_para
+    `, [nova_data, Number(req.params.id)]);
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Mensagem não encontrada' });
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('❌ POST /api/crm/followup/fila/:id/adiar:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/followup/fila/:id/cancelar ─────────────────────────────────
+router.post('/followup/fila/:id/cancelar', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const { rows: [updated] } = await pool.query(`
+      UPDATE "${schema}".crm_followup_fila
+      SET status = 'cancelado', atualizado_em = NOW()
+      WHERE id = $1 AND status IN ('pendente','aprovado')
+      RETURNING id, status
+    `, [Number(req.params.id)]);
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Mensagem não encontrada' });
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('❌ POST /api/crm/followup/fila/:id/cancelar:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── GET /api/crm/sequencias ───────────────────────────────────────────────────
+router.get('/sequencias', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+
+    const { rows: seqs } = await pool.query(`
+      SELECT s.id, s.etapa_id, e.nome AS etapa_nome, s.nome, s.ativo, s.criado_em
+      FROM "${schema}".crm_sequencias s
+      JOIN "${schema}".crm_etapas_config e ON e.id = s.etapa_id
+      ORDER BY s.etapa_id, s.id
+    `);
+
+    const { rows: passos } = await pool.query(`
+      SELECT * FROM "${schema}".crm_sequencias_passos
+      WHERE sequencia_id = ANY($1::BIGINT[])
+      ORDER BY sequencia_id, ordem
+    `, [seqs.map(s => s.id)]);
+
+    const resultado = seqs.map(s => ({
+      ...s,
+      passos: passos.filter(p => p.sequencia_id === s.id),
+    }));
+
+    return res.json({ success: true, data: resultado });
+  } catch (err) {
+    console.error('❌ GET /api/crm/sequencias:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/sequencias ──────────────────────────────────────────────────
+router.post('/sequencias', extractTenant, authenticateToken, async (req, res) => {
+  const schema = getSchema(req);
+  const { etapa_id, nome, ativo = 1, passos = [] } = req.body;
+
+  if (!etapa_id || !nome) return res.status(400).json({ success: false, error: 'etapa_id e nome são obrigatórios' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`SET search_path TO "${schema}", public`);
+
+    const { rows: [seq] } = await client.query(`
+      INSERT INTO crm_sequencias (etapa_id, nome, ativo) VALUES ($1, $2, $3) RETURNING id
+    `, [etapa_id, nome, ativo]);
+
+    for (const p of passos) {
+      await client.query(`
+        INSERT INTO crm_sequencias_passos
+          (sequencia_id, ordem, gatilho_tipo, gatilho_dias, mensagem_template, horario_inicio, horario_fim, modo)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `, [seq.id, p.ordem, p.gatilho_tipo, p.gatilho_dias ?? 0, p.mensagem_template,
+          p.horario_inicio ?? 8, p.horario_fim ?? 20, p.modo ?? 'semi_automatico']);
+    }
+
+    await client.query('COMMIT');
+    return res.status(201).json({ success: true, data: { id: seq.id, passos_criados: passos.length } });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ POST /api/crm/sequencias:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
+  }
+});
+
+// ── GET /api/crm/optouts ──────────────────────────────────────────────────────
+router.get('/optouts', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const { rows } = await pool.query(`
+      SELECT o.id, o.paciente_id, p.nome AS paciente_nome, p.telefone, o.motivo, o.criado_em
+      FROM "${schema}".crm_optouts o
+      JOIN "${schema}".pacientes p ON p.id = o.paciente_id
+      ORDER BY o.criado_em DESC
+    `);
+    return res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('❌ GET /api/crm/optouts:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/optouts/:paciente_id ────────────────────────────────────────
+router.post('/optouts/:paciente_id', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema     = getSchema(req);
+    const pacienteId = Number(req.params.paciente_id);
+    const { motivo } = req.body;
+
+    await pool.query(`
+      INSERT INTO "${schema}".crm_optouts (paciente_id, motivo)
+      VALUES ($1, $2)
+      ON CONFLICT (paciente_id) DO UPDATE SET motivo = EXCLUDED.motivo
+    `, [pacienteId, motivo || null]);
+
+    return res.status(201).json({ success: true, data: { paciente_id: pacienteId, motivo } });
+  } catch (err) {
+    console.error('❌ POST /api/crm/optouts/:paciente_id:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
 
