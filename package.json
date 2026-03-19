@@ -90,6 +90,7 @@
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.34.3",
+    "socket.io": "^4.8.3",
     "sqlite3": "^5.1.7",
     "stripe": "^18.5.0",
     "uuid": "^11.1.0",
