@@ -19,7 +19,8 @@ const tenantsAdminRoutes = require('./routes/tenants-admin');
 const adminAuthRoutes = require('./routes/admin-auth');
 const adminLicencasRoutes = require('./routes/admin-licencas');
 const billingRoutes = require('./routes/billing');
-const pacientesRoutes = require('./routes/pacientes-simple');const templatesRoutes = require('./routes/templates'); // 🆕 TEMPLATES
+const pacientesRoutes = require('./routes/pacientes'); // TDD Cadastro de Paciente
+const templatesRoutes = require('./routes/templates'); // 🆕 TEMPLATES
 const prontuarioRoutes = require('./routes/prontuario-medico');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
@@ -370,7 +371,7 @@ class SaeeApp {
     this.app.use('/api/auth/send-first-access-email', extractTenant);
     // /api/auth/recovery não precisa de tenant - ela encontra o tenant pelo email
     
-    this.app.use('/api/pacientes', extractTenant);
+    this.app.use('/api/pacientes', extractTenant, pacientesRoutes);
     this.app.use('/api/prontuario', extractTenant);
     this.app.use('/api/prontuario/imagem', extractTenant);
     this.app.use('/api/prontuario-completo', extractTenant);
