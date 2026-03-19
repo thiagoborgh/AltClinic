@@ -37,6 +37,7 @@ const TemplatesPage = lazy(() => import('./pages/crm/TemplatesPage'));
 const Relatorios = lazy(() => import('./pages/Relatorios'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes.js'));
 const WhatsApp = lazy(() => import('./pages/WhatsApp'));
+const WhatsAppCentral = lazy(() => import('./pages/WhatsAppCentral'));
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'));
 const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
 const Cadastros = lazy(() => import('./pages/Cadastros'));
@@ -149,6 +150,7 @@ const AppContent = () => {
             <Route path="crm" element={<CRMDashboard />} />
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="whatsapp/central" element={<WhatsAppCentral />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="billing" element={<BillingPage />} />

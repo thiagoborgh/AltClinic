@@ -19,7 +19,10 @@ import {
   Refresh,
   Download,
   Notifications,
-  Group
+  Group,
+  ViewKanban,
+  AutoAwesome,
+  Send
 } from '@mui/icons-material';
 import { useCRM } from '../../hooks/crm/useCRM';
 import CRMMetricsCards from '../../components/crm/dashboard/CRMMetricsCards';
@@ -29,6 +32,9 @@ import PacientesPage from './PacientesPage';
 import SegmentacaoPage from './SegmentacaoPage';
 import AutomacoesPage from '../automacoes/AutomacoesPage';
 import MensagensDashboard from '../../components/mensagens/MensagensDashboard';
+import CRMPipeline from '../../components/crm/CRMPipeline';
+import CRMSugestoesIA from '../../components/crm/CRMSugestoesIA';
+import CRMFollowup from '../../components/crm/CRMFollowup';
 
 // Componente de Alertas
 const AlertsPanel = ({ alerts, loading }) => {
@@ -143,8 +149,9 @@ const CRMDashboard = () => {
           <Tab icon={<Group />} label="Pacientes" />
           <Tab icon={<TrendingUp />} label="Segmentação" />
           <Tab icon={<Settings />} label="Automações" />
-          <Tab icon={<Refresh />} label="Relatórios" />
-          <Tab icon={<Settings />} label="Configurações" />
+          <Tab icon={<ViewKanban />} label="Pipeline" />
+          <Tab icon={<AutoAwesome />} label="Sugestões IA" />
+          <Tab icon={<Send />} label="Follow-up" />
         </Tabs>
       </Paper>
 
@@ -250,25 +257,15 @@ const CRMDashboard = () => {
       )}
 
       {tabValue === 5 && (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom>
-            Relatórios e Analytics
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Em desenvolvimento - Próxima fase da implementação
-          </Typography>
-        </Paper>
+        <CRMPipeline />
       )}
 
       {tabValue === 6 && (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom>
-            Configurações do CRM
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Em desenvolvimento - Próxima fase da implementação
-          </Typography>
-        </Paper>
+        <CRMSugestoesIA />
+      )}
+
+      {tabValue === 7 && (
+        <CRMFollowup />
       )}
     </Container>
   );
