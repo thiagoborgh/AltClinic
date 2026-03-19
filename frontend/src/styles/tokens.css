@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Cores primárias — sobrescritas por tenant via ThemeProvider */
+  --color-primary:       #2563EB;
+  --color-primary-dark:  #1D4ED8;
+  --color-primary-light: #DBEAFE;
+
+  /* Cores semânticas */
+  --color-success:       #16A34A;
+  --color-success-light: #DCFCE7;
+  --color-warning:       #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-danger:        #DC2626;
+  --color-danger-light:  #FEE2E2;
+  --color-info:          #0891B2;
+  --color-info-light:    #CFFAFE;
+
+  /* Neutros */
+  --color-neutral-50:  #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1E293B;
+  --color-neutral-900: #0F172A;
+
+  /* Sidebar */
+  --color-sidebar-bg:          #1E293B;
+  --color-sidebar-text:        #CBD5E1;
+  --color-sidebar-text-active: #FFFFFF;
+  --color-sidebar-item-active: rgba(37, 99, 235, 0.15);
+
+  /* Layout */
+  --sidebar-width:             240px;
+  --sidebar-width-collapsed:   64px;
+  --topbar-height:             56px;
+  --right-sidebar-width:       320px;
+
+  /* Tipografia */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-xs:   11px;
+  --font-size-sm:   12px;
+  --font-size-base: 14px;
+  --font-size-md:   16px;
+  --font-size-lg:   18px;
+  --font-size-xl:   20px;
+  --font-size-2xl:  24px;
+  --font-size-3xl:  30px;
+
+  /* Raios de borda */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-full: 9999px;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Transições */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+}
