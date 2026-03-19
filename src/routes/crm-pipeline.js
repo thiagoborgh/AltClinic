@@ -4,6 +4,7 @@ const pool = require('../database/postgres');
 const { extractTenant } = require('../middleware/tenant');
 const { authenticateToken } = require('../middleware/auth');
 const { calcularScoreIA, schemaFromSlug } = require('../services/CrmScoreService');
+const { processarSugestoesTenant } = require('../jobs/crmSugestoes');
 
 function getSchema(req) {
   const slug = req.tenant?.slug || req.usuario?.tenant_slug || req.tenantId;
@@ -363,6 +364,214 @@ router.post('/oportunidades/:id/atividades', extractTenant, authenticateToken, a
     return res.status(201).json({ success: true, data: atv });
   } catch (err) {
     console.error('❌ POST /api/crm/oportunidades/:id/atividades:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── GET /api/crm/sugestoes ────────────────────────────────────────────────────
+router.get('/sugestoes', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const { tipo, prioridade, procedimento_id, order_by = 'valor_estimado', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const filtros = [`(s.status = 'pendente' OR (s.status = 'adiada' AND s.adiado_ate <= NOW()))`];
+    const params  = [];
+
+    if (tipo)           { params.push(tipo);           filtros.push(`s.tipo = $${params.length}`); }
+    if (prioridade)     { params.push(prioridade);     filtros.push(`s.prioridade = $${params.length}`); }
+    if (procedimento_id){ params.push(Number(procedimento_id)); filtros.push(`s.procedimento_id = $${params.length}`); }
+
+    const orderMap = { valor_estimado: 's.valor_estimado DESC NULLS LAST', criado_em: 's.criado_em DESC', prioridade: "CASE s.prioridade WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END" };
+    const orderClause = orderMap[order_by] || orderMap.valor_estimado;
+    const where = filtros.join(' AND ');
+
+    const countParams = [...params];
+    const { rows: countRows } = await pool.query(`
+      SELECT COUNT(*) AS total FROM "${schema}".crm_sugestoes_ia s WHERE ${where}
+    `, countParams);
+
+    params.push(parseInt(limit), offset);
+    const { rows } = await pool.query(`
+      SELECT
+        s.id, s.paciente_id, p.nome AS paciente_nome,
+        s.tipo, s.procedimento_id, pr.nome AS procedimento_nome,
+        s.descricao, s.valor_estimado, s.prioridade, s.status,
+        s.adiado_ate, s.oportunidade_id, s.criado_em
+      FROM "${schema}".crm_sugestoes_ia s
+      JOIN  "${schema}".pacientes         p  ON p.id  = s.paciente_id
+      LEFT JOIN "${schema}".procedimentos pr ON pr.id = s.procedimento_id
+      WHERE ${where}
+      ORDER BY ${orderClause}
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    // Card de impacto
+    const { rows: [impacto] } = await pool.query(`
+      SELECT
+        COUNT(CASE WHEN status = 'pendente' AND criado_em >= NOW() - INTERVAL '7 days' THEN 1 END)::INTEGER AS semana_atual,
+        COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor_estimado END), 0) AS valor_potencial_total,
+        COUNT(CASE WHEN status = 'convertida' AND atualizado_em >= date_trunc('month', NOW()) THEN 1 END)::INTEGER AS convertidas_mes,
+        COALESCE(SUM(CASE WHEN status = 'convertida' AND atualizado_em >= date_trunc('month', NOW()) THEN valor_estimado END), 0) AS valor_convertido_mes
+      FROM "${schema}".crm_sugestoes_ia
+    `);
+
+    const total = parseInt(countRows[0].total);
+    return res.json({
+      success:    true,
+      impacto,
+      data:       rows,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
+    });
+  } catch (err) {
+    console.error('❌ GET /api/crm/sugestoes:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/sugestoes/processar ─────────────────────────────────────────
+router.post('/sugestoes/processar', extractTenant, authenticateToken, async (req, res) => {
+  const slug = req.tenant?.slug || req.usuario?.tenant_slug;
+  if (!slug) return res.status(400).json({ success: false, error: 'Tenant não identificado' });
+
+  const perfil = req.usuario?.perfil || req.user?.perfil;
+  if (!['owner', 'admin', 'admin_master'].includes(perfil)) {
+    return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+  }
+
+  const jobId = `sugestoes_${new Date().toISOString().slice(0, 10)}_tenant_${slug}`;
+  setImmediate(async () => {
+    try { await processarSugestoesTenant(slug); }
+    catch (err) { console.error(`[CRM Sugestões] processar manual ${slug}:`, err.message); }
+  });
+
+  return res.status(202).json({ success: true, message: 'Job iniciado em background', job_id: jobId });
+});
+
+// ── POST /api/crm/sugestoes/config ────────────────────────────────────────────
+router.post('/sugestoes/config', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    const perfil = req.usuario?.perfil || req.user?.perfil;
+    if (!['owner', 'admin', 'admin_master'].includes(perfil)) {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
+    const { dias_inatividade, dias_recontato_perda, ticket_minimo_upgrade, procedimentos_excluidos } = req.body;
+    const fields = ['atualizado_em = NOW()'];
+    const params = [];
+
+    if (dias_inatividade !== undefined)      { params.push(dias_inatividade);                   fields.push(`dias_inatividade = $${params.length}`); }
+    if (dias_recontato_perda !== undefined)  { params.push(dias_recontato_perda);               fields.push(`dias_recontato_perda = $${params.length}`); }
+    if (ticket_minimo_upgrade !== undefined) { params.push(ticket_minimo_upgrade);              fields.push(`ticket_minimo_upgrade = $${params.length}`); }
+    if (procedimentos_excluidos !== undefined){ params.push(JSON.stringify(procedimentos_excluidos)); fields.push(`procedimentos_excluidos = $${params.length}`); }
+
+    if (params.length === 0) return res.status(400).json({ success: false, error: 'Nenhum campo para atualizar' });
+
+    const { rows: [cfg] } = await pool.query(`
+      UPDATE "${schema}".crm_sugestoes_config
+      SET ${fields.join(', ')}
+      WHERE ativo = 1
+      RETURNING *
+    `, params);
+
+    if (!cfg) return res.status(404).json({ success: false, error: 'Configuração não encontrada' });
+    return res.json({ success: true, data: cfg });
+  } catch (err) {
+    console.error('❌ POST /api/crm/sugestoes/config:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/sugestoes/:id/converter ─────────────────────────────────────
+router.post('/sugestoes/:id/converter', extractTenant, authenticateToken, async (req, res) => {
+  const schema  = getSchema(req);
+  const userId  = getUserId(req);
+  const sugestaoId = Number(req.params.id);
+  const { responsavel_id, etapa_id = 1, observacoes } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`SET search_path TO "${schema}", public`);
+
+    const { rows: [sugestao] } = await client.query(`
+      SELECT * FROM crm_sugestoes_ia WHERE id = $1 AND status = 'pendente'
+    `, [sugestaoId]);
+    if (!sugestao) { await client.query('ROLLBACK'); return res.status(404).json({ success: false, error: 'Sugestão não encontrada ou já processada' }); }
+
+    const { rows: [op] } = await client.query(`
+      INSERT INTO crm_oportunidades
+        (paciente_id, procedimento_id, etapa_id, valor_estimado, origem, responsavel_id, observacoes)
+      VALUES ($1, $2, $3, $4, 'ia', $5, $6)
+      RETURNING id
+    `, [sugestao.paciente_id, sugestao.procedimento_id || null, etapa_id,
+        sugestao.valor_estimado || null, responsavel_id || userId, observacoes || null]);
+
+    await client.query(`
+      INSERT INTO crm_atividades (oportunidade_id, tipo, descricao, usuario_id)
+      VALUES ($1, 'criacao', $2, $3)
+    `, [op.id, `Convertido de sugestão IA: ${sugestao.descricao}`, userId]);
+
+    await client.query(`
+      UPDATE crm_sugestoes_ia
+      SET status = 'convertida', oportunidade_id = $1, atualizado_em = NOW()
+      WHERE id = $2
+    `, [op.id, sugestaoId]);
+
+    await client.query('COMMIT');
+    return res.status(201).json({
+      success: true,
+      data: { sugestao_id: sugestaoId, oportunidade_id: op.id, mensagem: 'Oportunidade criada no pipeline com sucesso' },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ POST /api/crm/sugestoes/:id/converter:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
+  }
+});
+
+// ── POST /api/crm/sugestoes/:id/ignorar ───────────────────────────────────────
+router.post('/sugestoes/:id/ignorar', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema     = getSchema(req);
+    const sugestaoId = Number(req.params.id);
+
+    const { rows: [updated] } = await pool.query(`
+      UPDATE "${schema}".crm_sugestoes_ia
+      SET status = 'ignorada', metadata = metadata || $1::JSONB, atualizado_em = NOW()
+      WHERE id = $2 AND status IN ('pendente', 'adiada')
+      RETURNING id, status
+    `, [JSON.stringify({ motivo_ignorada: req.body.motivo || null }), sugestaoId]);
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Sugestão não encontrada ou já finalizada' });
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('❌ POST /api/crm/sugestoes/:id/ignorar:', err);
+    return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
+  }
+});
+
+// ── POST /api/crm/sugestoes/:id/adiar ─────────────────────────────────────────
+router.post('/sugestoes/:id/adiar', extractTenant, authenticateToken, async (req, res) => {
+  try {
+    const schema     = getSchema(req);
+    const sugestaoId = Number(req.params.id);
+    const dias       = parseInt(req.body.dias) || 30;
+
+    const { rows: [updated] } = await pool.query(`
+      UPDATE "${schema}".crm_sugestoes_ia
+      SET status = 'adiada', adiado_ate = NOW() + ($1 || ' days')::INTERVAL, atualizado_em = NOW()
+      WHERE id = $2 AND status IN ('pendente', 'adiada')
+      RETURNING id, status, adiado_ate
+    `, [dias, sugestaoId]);
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Sugestão não encontrada ou já finalizada' });
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('❌ POST /api/crm/sugestoes/:id/adiar:', err);
     return res.status(500).json({ success: false, error: 'Erro interno do servidor' });
   }
 });
