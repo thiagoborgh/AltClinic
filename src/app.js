@@ -44,6 +44,7 @@ const extractTenantFirestore = extractTenant;
 
 // Importar utilitários
 const cronManager = require('./cron/inactivityChecker');
+require('./cron/cleanup-tokens'); // Limpeza semanal de refresh_tokens e tokens_senha expirados
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -403,6 +404,9 @@ class SaeeApp {
     // Rotas de auth (SOMENTE as que não precisam de tenant)
     console.log('🔧 Configurando rota /api/auth...');
     this.app.use('/api/auth', authRoutes);
+
+    // Gestão de usuários da clínica
+    this.app.use('/api/usuarios', require('./routes/usuarios'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
