@@ -6,15 +6,15 @@ const crypto = require('crypto');
  * Inicializa o primeiro tenant e usuário admin em produção
  */
 class ProductionInitializer {
-  
+
   /**
    * Verifica se já existe algum tenant no sistema
    */
-  static hasExistingTenants() {
+  static async hasExistingTenants() {
     try {
       const masterDb = multiTenantDb.getMasterDb();
-      const tenantCount = masterDb.prepare('SELECT COUNT(*) as count FROM tenants').get();
-      return tenantCount.count > 0;
+      const row = await masterDb.get('SELECT COUNT(*) AS count FROM tenants');
+      return parseInt(row?.count ?? 0, 10) > 0;
     } catch (error) {
       console.error('❌ Erro ao verificar tenants existentes:', error.message);
       return false;
@@ -27,186 +27,61 @@ class ProductionInitializer {
   static async createFirstAccess() {
     try {
       console.log('🚀 Iniciando configuração de primeiro acesso...');
-      
+
       const masterDb = multiTenantDb.getMasterDb();
-      
-      // Configurações do tenant inicial
-      const tenantData = {
-        id: crypto.randomUUID(),
-        slug: 'demo-clinic',
-        nome: 'Clínica Demo',
-        email: 'admin@clinica.com',
-        telefone: null,
-        plano: 'trial',
-        status: 'active',
-        trial_expire_at: new Date(Date.now() + (15 * 24 * 60 * 60 * 1000)), // 15 dias
-        database_name: `tenant_demo-clinic_${Date.now()}`,
-        config: JSON.stringify({
-          maxUsuarios: 5,
-          maxPacientes: 1000,
-          whatsappEnabled: true,
-          telemedicina: false,
-          customBranding: false,
-          apiAccess: false
-        }),
-        billing: JSON.stringify({
-          proximoVencimento: null,
-          valor: 0,
-          customerId: null,
-          subscriptionId: null
-        }),
-        theme: JSON.stringify({
-          primaryColor: '#1976d2',
-          logo: null,
-          favicon: null,
-          customDomain: null
-        })
-      };
 
-      // Inserir tenant no banco master
-      const insertTenant = masterDb.prepare(`
-        INSERT INTO tenants (
-          id, slug, nome, email, telefone, plano, status, trial_expire_at,
-          database_name, config, billing, theme, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `);
+      const tenantId   = crypto.randomUUID();
+      const tenantSlug = 'demo-clinic';
+      const trialExpire = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-      insertTenant.run(
-        tenantData.id,
-        tenantData.slug,
-        tenantData.nome,
-        tenantData.email,
-        tenantData.telefone,
-        tenantData.plano,
-        tenantData.status,
-        tenantData.trial_expire_at.toISOString(),
-        tenantData.database_name,
-        tenantData.config,
-        tenantData.billing,
-        tenantData.theme
+      // Inserir tenant no banco master (PostgreSQL)
+      await masterDb.run(
+        `INSERT INTO tenants
+          (id, slug, nome, email, plano, status, trial_expire_at, schema_name, config, billing, theme)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (slug) DO NOTHING`,
+        [
+          tenantId, tenantSlug, 'Clínica Demo', 'admin@clinica.com',
+          'trial', 'active', trialExpire.toISOString(),
+          `clinica_demo_clinic`,
+          JSON.stringify({ maxUsuarios: 5, maxPacientes: 1000, whatsappEnabled: true }),
+          JSON.stringify({ proximoVencimento: null, valor: 0 }),
+          JSON.stringify({ primaryColor: '#1976d2' })
+        ]
       );
 
-      console.log('✅ Tenant inicial criado:', tenantData.slug);
+      console.log('✅ Tenant inicial criado:', tenantSlug);
 
-      // Criar banco do tenant
-      const tenantDb = multiTenantDb.getTenantDb(tenantData.id);
-
-      // Schema do tenant
-      const schema = `
-        -- Usuários do tenant
-        CREATE TABLE IF NOT EXISTS usuarios (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tenant_id TEXT NOT NULL DEFAULT '${tenantData.id}',
-          nome TEXT NOT NULL,
-          email TEXT NOT NULL,
-          senha_hash TEXT,
-          role TEXT DEFAULT 'medico',
-          permissions TEXT DEFAULT '{}',
-          avatar TEXT,
-          telefone TEXT,
-          crm TEXT,
-          especialidade TEXT,
-          status TEXT DEFAULT 'active',
-          last_login DATETIME,
-          email_verified_at DATETIME,
-          invite_token TEXT,
-          invite_expire_at DATETIME,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(email)
-        );
-
-        -- Pacientes
-        CREATE TABLE IF NOT EXISTS pacientes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tenant_id TEXT NOT NULL DEFAULT '${tenantData.id}',
-          nome TEXT NOT NULL,
-          email TEXT,
-          telefone TEXT,
-          cpf TEXT,
-          data_nascimento DATE,
-          endereco TEXT,
-          observacoes TEXT,
-          status TEXT DEFAULT 'ativo',
-          foto TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        -- Agendamentos
-        CREATE TABLE IF NOT EXISTS agendamentos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tenant_id TEXT NOT NULL DEFAULT '${tenantData.id}',
-          paciente_id INTEGER NOT NULL,
-          medico_id INTEGER,
-          data_agendamento DATETIME NOT NULL,
-          duracao INTEGER DEFAULT 60,
-          servico TEXT,
-          status TEXT DEFAULT 'agendado',
-          observacoes TEXT,
-          valor DECIMAL(10,2),
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-          FOREIGN KEY (medico_id) REFERENCES usuarios(id)
-        );
-
-        -- Serviços
-        CREATE TABLE IF NOT EXISTS servicos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tenant_id TEXT NOT NULL DEFAULT '${tenantData.id}',
-          nome TEXT NOT NULL,
-          descricao TEXT,
-          duracao INTEGER DEFAULT 60,
-          valor DECIMAL(10,2),
-          ativo BOOLEAN DEFAULT 1,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-
-      tenantDb.exec(schema);
+      // Provisionar schema do tenant via MultiTenantPostgres
+      await multiTenantDb.createTenantSchema(tenantId, tenantSlug);
       console.log('✅ Schema do tenant criado');
 
-      // Criar usuário admin
-      const hashedPassword = bcrypt.hashSync('123456', 12);
-      const insertAdmin = tenantDb.prepare(`
-        INSERT INTO usuarios (tenant_id, nome, email, senha_hash, role, status, email_verified_at)
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-      `);
+      // Criar usuário admin no schema do tenant
+      const tenantDb = multiTenantDb.getTenantDb(tenantId, tenantSlug);
+      const hashedPassword = await bcrypt.hash('123456', 12);
 
-      const adminResult = insertAdmin.run(
-        tenantData.id,
-        'Administrador',
-        'admin@clinica.com',
-        hashedPassword,
-        'owner',
-        'active'
+      const adminRow = await tenantDb.run(
+        `INSERT INTO usuarios (tenant_id, nome, email, senha_hash, role, status, email_verified_at)
+         VALUES ($1,$2,$3,$4,$5,$6,NOW())
+         ON CONFLICT (email) DO NOTHING
+         RETURNING id`,
+        [tenantId, 'Administrador', 'admin@clinica.com', hashedPassword, 'owner', 'active']
       );
 
-      console.log('✅ Usuário admin criado com ID:', adminResult.lastInsertRowid);
+      console.log('✅ Usuário admin criado com ID:', adminRow.lastID);
 
       // Criar entrada no master_users
-      const insertMasterUser = masterDb.prepare(`
-        INSERT OR IGNORE INTO master_users (
-          id, tenant_id, email, name, role, status, firstAccessCompleted, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `);
-
-      insertMasterUser.run(
-        crypto.randomUUID(),
-        tenantData.id,
-        'admin@clinica.com',
-        'Administrador',
-        'owner',
-        'active',
-        1
+      await masterDb.run(
+        `INSERT INTO master_users (tenant_id, email, name, role, senha_hash)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (email, tenant_id) DO NOTHING`,
+        [tenantId, 'admin@clinica.com', 'Administrador', 'owner', hashedPassword]
       );
 
       console.log('✅ Entrada master_users criada');
 
       // Criar alguns dados de exemplo
-      await this.createSampleData(tenantDb, tenantData.id);
+      await this.createSampleData(tenantDb, tenantId);
 
       console.log('🎉 Primeiro acesso configurado com sucesso!');
       console.log('📧 Email: admin@clinica.com');
@@ -214,8 +89,8 @@ class ProductionInitializer {
       console.log('🏢 Tenant: demo-clinic');
 
       return {
-        tenantId: tenantData.id,
-        tenantSlug: tenantData.slug,
+        tenantId,
+        tenantSlug,
         adminEmail: 'admin@clinica.com',
         adminPassword: '123456'
       };
@@ -231,37 +106,25 @@ class ProductionInitializer {
    */
   static async createSampleData(tenantDb, tenantId) {
     try {
-      // Criar alguns serviços de exemplo
-      const insertService = tenantDb.prepare(`
-        INSERT INTO servicos (tenant_id, nome, descricao, duracao, valor, ativo)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-
       const services = [
-        ['Limpeza de Pele', 'Limpeza profunda com extração', 60, 80.00],
-        ['Peeling Químico', 'Renovação celular com ácidos', 45, 120.00],
-        ['Hidratação Facial', 'Hidratação profunda da pele', 50, 90.00],
-        ['Consulta Dermatológica', 'Avaliação e orientação dermatológica', 30, 150.00]
+        ['Limpeza de Pele',       'Limpeza profunda com extração',              60, 80.00],
+        ['Peeling Químico',       'Renovação celular com ácidos',               45, 120.00],
+        ['Hidratação Facial',     'Hidratação profunda da pele',                50, 90.00],
+        ['Consulta Dermatológica','Avaliação e orientação dermatológica',        30, 150.00],
       ];
 
-      services.forEach(([nome, descricao, duracao, valor]) => {
-        insertService.run(tenantId, nome, descricao, duracao, valor, 1);
-      });
+      for (const [nome, descricao, duracao, valor] of services) {
+        await tenantDb.run(
+          'INSERT INTO servicos (tenant_id, nome, descricao, duracao, valor) VALUES ($1,$2,$3,$4,$5)',
+          [tenantId, nome, descricao, duracao, valor]
+        );
+      }
 
       console.log('✅ Serviços de exemplo criados');
 
-      // Criar um paciente de exemplo
-      const insertPatient = tenantDb.prepare(`
-        INSERT INTO pacientes (tenant_id, nome, email, telefone, observacoes)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-
-      insertPatient.run(
-        tenantId,
-        'Maria Silva',
-        'maria.silva@email.com',
-        '(11) 99999-9999',
-        'Paciente exemplo para demonstração do sistema'
+      await tenantDb.run(
+        'INSERT INTO pacientes (tenant_id, nome, email, telefone, observacoes) VALUES ($1,$2,$3,$4,$5)',
+        [tenantId, 'Maria Silva', 'maria.silva@email.com', '(11) 99999-9999', 'Paciente exemplo']
       );
 
       console.log('✅ Paciente de exemplo criado');
@@ -277,7 +140,7 @@ class ProductionInitializer {
   static async checkAndInitialize() {
     try {
       if (process.env.NODE_ENV === 'production') {
-        if (!this.hasExistingTenants()) {
+        if (!(await this.hasExistingTenants())) {
           console.log('🔍 Nenhum tenant encontrado em produção. Criando primeiro acesso...');
           await this.createFirstAccess();
         } else {
