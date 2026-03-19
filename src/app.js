@@ -211,31 +211,13 @@ class SaeeApp {
     this.app.get('/api/cleanup-orphans', async (req, res) => {
       try {
         const multiTenantDb = require('./models/MultiTenantDatabase');
-        const fs = require('fs');
-        const path = require('path');
-        
         const masterDb = multiTenantDb.getMasterDb();
-        const tenants = masterDb.prepare('SELECT id, slug, nome, database_name FROM tenants').all();
-        
-        const orphans = [];
-        const valid = [];
-        
-        tenants.forEach(tenant => {
-          const dbPath = path.join(__dirname, '../data', tenant.database_name);
-          const exists = fs.existsSync(dbPath);
-          
-          if (exists) {
-            valid.push({ slug: tenant.slug, database: tenant.database_name });
-          } else {
-            orphans.push({
-              id: tenant.id,
-              slug: tenant.slug,
-              nome: tenant.nome,
-              database: tenant.database_name
-            });
-          }
-        });
-        
+
+        // Com PostgreSQL, todos os tenants têm schema — listamos os sem schema_name definido
+        const tenants = await masterDb.all('SELECT id, slug, nome, schema_name FROM tenants ORDER BY created_at');
+        const orphans = tenants.filter(t => !t.schema_name);
+        const valid   = tenants.filter(t =>  t.schema_name);
+
         if (orphans.length === 0) {
           return res.json({
             success: true,
@@ -243,98 +225,45 @@ class SaeeApp {
             stats: { total: tenants.length, valid: valid.length, orphans: 0 }
           });
         }
-        
+
+        // Coletar dados afetados para análise
         const affectedUsers = [];
         const affectedInvites = [];
-        orphans.forEach(tenant => {
-          const users = masterDb.prepare('SELECT id, email FROM master_users WHERE tenant_id = ?').all(tenant.id);
-          users.forEach(user => {
-            affectedUsers.push({ email: user.email, tenantSlug: tenant.slug });
-          });
-          
-          const invites = masterDb.prepare('SELECT id, email FROM global_invites WHERE tenant_id = ?').all(tenant.id);
+        for (const tenant of orphans) {
+          const users   = await masterDb.all('SELECT id, email FROM master_users WHERE tenant_id = $1', [tenant.id]);
+          const invites = await masterDb.all('SELECT id FROM global_invites WHERE tenant_id = $1', [tenant.id]);
+          users.forEach(u => affectedUsers.push({ email: u.email, tenantSlug: tenant.slug }));
           affectedInvites.push({ tenantSlug: tenant.slug, count: invites.length });
-        });
-        
+        }
+
         if (req.query.execute === 'true') {
           let deletedTenants = 0;
-          let deletedUsers = 0;
-          let deletedInvites = 0;
-          let deletedOthers = 0;
-          
-          try {
-            // Desabilitar foreign key checks temporariamente
-            masterDb.pragma('foreign_keys = OFF');
-            
-            // Usar transação para garantir atomicidade
-            const transaction = masterDb.transaction(() => {
-              orphans.forEach(tenant => {
-                // Tentar deletar de TODAS as tabelas possíveis que referenciam tenant_id
-                try {
-                  const invitesResult = masterDb.prepare('DELETE FROM global_invites WHERE tenant_id = ?').run(tenant.id);
-                  deletedInvites += invitesResult.changes;
-                } catch (e) { /* tabela pode não existir */ }
-                
-                try {
-                  const usersResult = masterDb.prepare('DELETE FROM master_users WHERE tenant_id = ?').run(tenant.id);
-                  deletedUsers += usersResult.changes;
-                } catch (e) { /* tabela pode não existir */ }
-                
-                // Verificar se há outras tabelas (sessões, logs, etc)
-                try {
-                  const sessionsResult = masterDb.prepare('DELETE FROM sessions WHERE tenant_id = ?').run(tenant.id);
-                  deletedOthers += sessionsResult.changes;
-                } catch (e) { /* tabela pode não existir */ }
-                
-                try {
-                  const logsResult = masterDb.prepare('DELETE FROM audit_logs WHERE tenant_id = ?').run(tenant.id);
-                  deletedOthers += logsResult.changes;
-                } catch (e) { /* tabela pode não existir */ }
-                
-                // Deletar tenant por último
-                const tenantResult = masterDb.prepare('DELETE FROM tenants WHERE id = ?').run(tenant.id);
-                deletedTenants += tenantResult.changes;
-              });
-            });
-            
-            transaction();
-            
-            // Reabilitar foreign key checks
-            masterDb.pragma('foreign_keys = ON');
-            
-          } catch (deleteError) {
-            // Garantir que FK seja reabilitado mesmo em caso de erro
-            try { masterDb.pragma('foreign_keys = ON'); } catch (e) {}
-            
-            console.error('❌ Erro ao deletar órfãos:', deleteError);
-            return res.status(500).json({
-              success: false,
-              error: deleteError.message,
-              hint: 'Erro ao executar limpeza. Pode haver dependências no banco.',
-              orphansFound: orphans.map(t => ({ slug: t.slug, id: t.id }))
-            });
+          // CASCADE no schema public cuida de master_users e global_invites automaticamente
+          for (const tenant of orphans) {
+            const result = await masterDb.run('DELETE FROM tenants WHERE id = $1', [tenant.id]);
+            deletedTenants += result.changes;
           }
-          
+
           return res.json({
             success: true,
             action: 'CLEANUP_EXECUTED',
             message: 'Limpeza de órfãos concluída!',
-            deleted: { tenants: deletedTenants, users: deletedUsers, invites: deletedInvites, others: deletedOthers },
+            deleted: { tenants: deletedTenants },
             orphansRemoved: orphans.map(t => t.slug)
           });
         }
-        
+
         res.json({
           success: true,
           action: 'ANALYSIS_ONLY',
           message: 'Análise concluída. Para executar limpeza, adicione ?execute=true',
           stats: { total: tenants.length, valid: valid.length, orphans: orphans.length },
-          orphansFound: orphans.map(t => ({ slug: t.slug, nome: t.nome, database: t.database })),
-          affectedUsers: affectedUsers,
-          affectedInvites: affectedInvites,
+          orphansFound: orphans.map(t => ({ slug: t.slug, nome: t.nome })),
+          affectedUsers,
+          affectedInvites,
           nextStep: 'Acesse: /api/cleanup-orphans?execute=true para executar'
         });
-        
+
       } catch (error) {
         console.error('❌ Erro no cleanup:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -346,24 +275,22 @@ class SaeeApp {
       try {
         const { email } = req.params;
         const multiTenantDb = require('./models/MultiTenantDatabase');
-        const fs = require('fs');
-        const path = require('path');
         const masterDb = multiTenantDb.getMasterDb();
-        
+
         // Buscar usuário em master_users
-        const user = masterDb.prepare('SELECT * FROM master_users WHERE email = ?').get(email);
-        
+        const user = await masterDb.get('SELECT * FROM master_users WHERE email = $1', [email]);
+
         if (!user) {
           return res.json({
             success: false,
-            message: 'Usuário não encontrado no master.db',
+            message: 'Usuário não encontrado',
             email
           });
         }
 
         // Buscar tenant
-        const tenant = masterDb.prepare('SELECT * FROM tenants WHERE id = ?').get(user.tenant_id);
-        
+        const tenant = await masterDb.get('SELECT * FROM tenants WHERE id = $1', [user.tenant_id]);
+
         if (!tenant) {
           return res.json({
             success: false,
@@ -373,43 +300,15 @@ class SaeeApp {
           });
         }
 
-        // Verificar se arquivo do tenant existe
-        const dbPath = path.join(__dirname, '../data', tenant.database_name);
-        const tenantFileExists = fs.existsSync(dbPath);
-
         const analysis = {
           email,
-          user: {
-            id: user.id,
-            tenant_id: user.tenant_id,
-            role: user.role,
-            created_at: user.created_at
-          },
-          tenant: {
-            id: tenant.id,
-            slug: tenant.slug,
-            nome: tenant.nome,
-            database: tenant.database_name,
-            fileExists: tenantFileExists,
-            path: dbPath
-          }
+          user:   { id: user.id, tenant_id: user.tenant_id, role: user.role, created_at: user.created_at },
+          tenant: { id: tenant.id, slug: tenant.slug, nome: tenant.nome }
         };
 
         // Se ?execute=true, deletar
         if (req.query.execute === 'true') {
-          // Deletar de master_users
-          masterDb.prepare('DELETE FROM master_users WHERE email = ?').run(email);
-          
-          // Se arquivo do tenant existe, deletar usuário de lá também
-          if (tenantFileExists) {
-            try {
-              const tenantDb = new (require('better-sqlite3'))(dbPath);
-              tenantDb.prepare('DELETE FROM usuario WHERE email = ?').run(email);
-              tenantDb.close();
-            } catch (err) {
-              console.warn('⚠️ Erro ao deletar do tenant DB:', err.message);
-            }
-          }
+          await masterDb.run('DELETE FROM master_users WHERE email = $1', [email]);
 
           return res.json({
             success: true,
@@ -712,14 +611,14 @@ class SaeeApp {
       try {
         const dbManager = require('./models/database');
         const db = dbManager.getDb();
-        
-        // Testar conexão
-        db.prepare('SELECT 1').get();
+
+        // Testar conexão (MasterDb é async)
+        await db.query('SELECT 1');
         console.log('✅ Banco de dados conectado');
-        
+
       } catch (error) {
         console.error('❌ Erro no banco de dados:', error.message);
-        console.log('💡 Execute as migrations primeiro: npm run migrate');
+        console.log('💡 Verifique a variável DATABASE_URL e a conexão com o PostgreSQL');
         process.exit(1);
       }
 
