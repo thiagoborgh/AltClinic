@@ -429,6 +429,8 @@ class SaeeApp {
     
     this.app.use('/api/prontuario', prontuarioRoutes); // prontuário médico schema-driven
     this.app.use('/api/prontuarios', prontuariosRoutes);
+    // Prontuário Eletrônico TDD (novo — PostgreSQL multi-tenant)
+    this.app.use('/api/prontuarios-v2', require('./routes/prontuarios-eletronico'));
     // this.app.use('/api/financeiro', financeiroRoutes); // ⚠️ SQLite (não usar)
     this.app.use('/api/financeiro', extractTenantFirestore, financeiroFirestoreRoutes); // ✅ FIRESTORE
     // this.app.use('/api/crm', crmRoutes); // ⚠️ SQLite (não usar)
