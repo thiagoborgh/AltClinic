@@ -50,6 +50,7 @@ require('./cron/alertas-registro-profissional'); // Alertas diários de registro
 require('./jobs/crmScoreRecalculo'); // Recálculo diário de score IA do CRM às 6h
 require('./jobs/crmSugestoes');          // Sugestões IA de oportunidades às 7h
 require('./jobs/crmFollowupProcessor'); // Follow-up WhatsApp a cada 15min
+require('./jobs/whatsappSla').register(); // SLA WhatsApp a cada 5min
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -429,6 +430,9 @@ class SaeeApp {
 
     // CRM Pipeline (TDD 10)
     this.app.use('/api/crm', require('./routes/crm-pipeline'));
+
+    // WhatsApp Central de Atendimento (TDD 13) — antes das rotas Firestore legadas
+    this.app.use('/api/whatsapp', require('./routes/whatsapp-central'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);
