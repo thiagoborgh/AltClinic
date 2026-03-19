@@ -48,7 +48,8 @@ const cronManager = require('./cron/inactivityChecker');
 require('./cron/cleanup-tokens'); // Limpeza semanal de refresh_tokens e tokens_senha expirados
 require('./cron/alertas-registro-profissional'); // Alertas diários de registro profissional vencendo
 require('./jobs/crmScoreRecalculo'); // Recálculo diário de score IA do CRM às 6h
-require('./jobs/crmSugestoes');     // Sugestões IA de oportunidades às 7h
+require('./jobs/crmSugestoes');          // Sugestões IA de oportunidades às 7h
+require('./jobs/crmFollowupProcessor'); // Follow-up WhatsApp a cada 15min
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
