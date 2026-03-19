@@ -51,6 +51,7 @@ require('./jobs/crmScoreRecalculo'); // Recálculo diário de score IA do CRM à
 require('./jobs/crmSugestoes');          // Sugestões IA de oportunidades às 7h
 require('./jobs/crmFollowupProcessor'); // Follow-up WhatsApp a cada 15min
 require('./jobs/whatsappSla').register(); // SLA WhatsApp a cada 5min
+require('./jobs/botSessoes').register();   // Sessões inativas do bot a cada 15min
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -433,6 +434,8 @@ class SaeeApp {
 
     // WhatsApp Central de Atendimento (TDD 13) — antes das rotas Firestore legadas
     this.app.use('/api/whatsapp', require('./routes/whatsapp-central'));
+    // WhatsApp Bot de Agendamento (TDD 14) — config/FAQ/sessões admin
+    this.app.use('/api/whatsapp/bot', require('./routes/whatsapp-bot'));
     
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenantFirestore, agendaAgendamentosRoutes);

@@ -10,6 +10,7 @@ const { extractTenant }     = require('../middleware/tenant');
 const { schemaFromSlug }    = require('../services/CrmScoreService');
 const { WhatsAppConversaService, renderizarTemplate } = require('../services/WhatsAppConversaService');
 const ClassificacaoService  = require('../services/ClassificacaoService');
+const BotService             = require('../services/BotService');
 
 function getSchema(req) {
   const slug = req.tenant?.slug || req.usuario?.tenant_slug || req.user?.tenant_slug;
@@ -112,6 +113,12 @@ async function processarWebhookEntrada(payload) {
   });
 
   if (text) ClassificacaoService.classificar(conversa.id, text, pool, tenantId, schema).catch(console.error);
+
+  // Delegar para o bot se estiver ativo para este tenant
+  const bot = new BotService(tenantId, tenant_slug);
+  bot.processar(conversa.id, from, text || '', type).catch(err =>
+    console.error('[Webhook WA] Erro no bot:', err.message)
+  );
 }
 
 // ── GET /api/whatsapp/conversas ───────────────────────────────────────────────
