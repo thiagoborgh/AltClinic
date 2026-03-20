@@ -1,23 +1,46 @@
-# Dockerfile — AltClinic Backend (Fly.io / Node.js 20)
-
-FROM node:20-alpine AS deps
+# =============================================================================
+# Stage 1: Dependencias da API Express
+# =============================================================================
+FROM node:20-alpine AS deps-api
 WORKDIR /app
-RUN apk add --no-cache python3 make g++ sqlite-dev
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-FROM node:20-alpine AS runner
+# =============================================================================
+# Stage 2: Build do Next.js (web/)
+# =============================================================================
+FROM node:20-alpine AS build-web
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ .
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+RUN npm run build
+
+# =============================================================================
+# Stage 3: Imagem final
+# =============================================================================
+FROM node:20-alpine AS final
+RUN apk add --no-cache dumb-init curl
+
 WORKDIR /app
-RUN apk add --no-cache sqlite-libs dumb-init
-COPY --from=deps /app/node_modules ./node_modules
-COPY src ./src
-COPY admin ./admin
-RUN mkdir -p /app/uploads /app/public && chmod 777 /app/uploads
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV TZ=America/Sao_Paulo
+
+# Express
+COPY --from=deps-api /app/node_modules ./node_modules
+COPY src/ ./src/
+COPY package.json ./
+
+# Next.js
+COPY --from=build-web /app/web/.next ./web/.next
+COPY --from=build-web /app/web/node_modules ./web/node_modules
+COPY --from=build-web /app/web/package.json ./web/package.json
+COPY --from=build-web /app/web/public ./web/public
+
+# Entrypoint
+COPY entrypoint.sh .
+
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:8080/health || exit 1
+
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "src/server.js"]
+CMD ["./entrypoint.sh"]
