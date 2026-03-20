@@ -70,7 +70,7 @@ AltClinic/
 │   ├── hooks/
 │   ├── contexts/
 │   │   └── TenantContext.tsx
-│   ├── middleware.ts             # next-auth: protege /(app)/*
+│   ├── middleware.ts             # JWT cookie check: protege /(app)/*
 │   └── package.json
 │
 ├── admin/                        # INTOCADO
@@ -170,15 +170,17 @@ firestore.rules
 
 ### Swap Firestore → PostgreSQL em src/app.js
 
-| Desmontar | Montar |
-|---|---|
-| `crm-firestore.js` | `crm-pipeline.js` |
-| `financeiro-firestore.js` | `financeiro-faturas.js` |
-| `professional-firestore.js` | `profissionais.js` (existente) |
-| `dashboard-firestore.js` | `dashboard-ia.js` |
-| `pacientes-firestore.js` | `pacientes.js` |
-| `trial-firestore.js` | `trial.js` |
-| `tenants-admin-firestore.js` | `tenants-admin.js` |
+| Desmontar | Montar | Rota pública |
+|---|---|---|
+| `crm-firestore.js` | `crm-pipeline.js` | `/api/crm` |
+| `financeiro-firestore.js` | `financeiro-faturas.js` | `/api/financeiro` |
+| `professional-firestore.js` | **DELETE apenas** — não há swap | `/api/professional` era o path antigo; o path correto `/api/profissionais` já usa `profissionais.js` que continua registrado |
+| `dashboard-firestore.js` | `dashboard-ia.js` | `/api/dashboard-ia` |
+| `pacientes-firestore.js` | `pacientes.js` | `/api/pacientes` |
+| `trial-firestore.js` | `trial.js` | `/api/trial` |
+| `tenants-admin-firestore.js` | `tenants-admin.js` | `/api/tenants/admin` |
+
+> **Atenção:** `professional-firestore.js` expunha `/api/professional` (singular, legado SQLite/Firestore). O arquivo `profissionais.js` que usa PostgreSQL já está registrado em `app.js` em `/api/profissionais`. São rotas diferentes — basta deletar `professional-firestore.js`, não há swap.
 
 ### Endpoints temporários a remover de app.js
 ```js
@@ -203,18 +205,30 @@ TanStack Query v5        — cache e estado de servidor
 Zustand                  — estado global (user, tenant, alertas)
 socket.io-client         — alertas em tempo real
 axios                    — cliente HTTP para API Express
-next-auth v5 (Auth.js)   — sessão JWT + refresh automático
+jose                     — verificação JWT no middleware.ts (edge runtime)
 Recharts                 — gráficos (dashboard, relatórios)
 ```
 
+> **Sem next-auth.** O Express já emite e valida JWT; duplicar isso no next-auth geraria dois sistemas de sessão. Em vez disso, o Next.js usa um cookie httpOnly (`altclinic_token`) setado pelo próprio Express no login, e o `middleware.ts` usa a lib `jose` (compatível com Edge Runtime) para verificar a assinatura localmente.
+
 ### Fluxo de Autenticação
 ```
-/login → POST /api/auth/login (Express)
-       → JWT salvo na sessão next-auth (httpOnly cookie)
-       → middleware.ts verifica sessão em toda rota /(app)/
-       → TenantContext: perfil + permissões extraídos do JWT
+/login → POST /api/auth/login (Express via BFF proxy)
+       → Express retorna { token, user }
+       → Next.js action: document.cookie = "altclinic_token=<jwt>; HttpOnly; SameSite=Strict; Secure"
+           (ou Express seta o cookie diretamente na resposta se CORS permitir)
+       → middleware.ts: lê cookie "altclinic_token", verifica JWT com jose/jwtVerify
+           → sem cookie válido → redirect para /login
+           → com cookie válido → request passa, payload disponível via header x-user
+       → TenantContext: perfil + permissões extraídos do payload JWT
        → Sidebar renderiza itens por RBAC
-       → lib/api.ts: interceptor 401 → refresh automático
+       → lib/api.ts: interceptor 401 → limpa cookie → redirect /login
+```
+
+**Variáveis de ambiente necessárias (web/):**
+```
+NEXT_PUBLIC_API_URL=http://localhost:8080    # Express API URL
+JWT_SECRET=<igual ao JWT_SECRET do Express>  # para verificação no middleware.ts
 ```
 
 ### RBAC no Frontend
@@ -231,14 +245,66 @@ web/app/api/[...proxy]/route.ts
   → Evita CORS no cliente
 ```
 
-### Deploy (Fly.io — 2 processos)
-```toml
-# fly.toml
-[[services]]
-  internal_port = 3000   # Express API
+### Deploy (Fly.io — 2 processos via entrypoint)
 
-[[services]]
-  internal_port = 3001   # Next.js
+O `fly.toml` atual mantém **um único `[http_service]` na porta 8080** (sem alteração de infraestrutura). Por dentro da VM, dois processos rodam em paralelo:
+
+- **Next.js** na porta 8080 — recebe todo o tráfego público
+- **Express API** na porta 3000 — interno, não exposto diretamente
+
+O tráfego de API chega ao Next.js via Browser → `web/app/api/[...proxy]/route.ts` (BFF proxy) → Express em `localhost:3000`. Isso evita CORS, mantém o cookie httpOnly e não requer reverse proxy externo.
+
+```toml
+# fly.toml — sem alterações estruturais
+[http_service]
+  internal_port = 8080   # Next.js escuta aqui
+  force_https = true
+```
+
+```dockerfile
+# Dockerfile — multi-stage
+FROM node:20-alpine AS deps-api
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-alpine AS build-web
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ .
+RUN npm run build          # next build
+
+FROM node:20-alpine AS final
+WORKDIR /app
+# Express
+COPY --from=deps-api /app/node_modules ./node_modules
+COPY src/ ./src/
+COPY package.json .
+# Next.js
+COPY --from=build-web /app/web/.next ./web/.next
+COPY --from=build-web /app/web/node_modules ./web/node_modules
+COPY --from=build-web /app/web/package.json ./web/package.json
+COPY --from=build-web /app/web/public ./web/public
+# Entrypoint
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+EXPOSE 8080
+CMD ["./entrypoint.sh"]
+```
+
+```bash
+# entrypoint.sh
+#!/bin/sh
+# Express na porta 3000 (interno)
+node src/server.js &
+# Next.js na porta 8080 (público)
+cd web && PORT=8080 node_modules/.bin/next start -p 8080
+```
+
+**Desenvolvimento local (`npm run dev` na raiz):**
+```json
+"dev": "concurrently \"node src/server.js\" \"cd web && next dev -p 3001\""
 ```
 
 ---
@@ -248,10 +314,10 @@ web/app/api/[...proxy]/route.ts
 ### Sprint 0 — Fundação (Semana 1)
 - [ ] Limpeza backend (delete legados, swap Firestore→PG, remove endpoints temp)
 - [ ] Limpeza docs (delete ~110 .md)
-- [ ] Criar `web/` com Next.js 14 + TypeScript + shadcn/ui + next-auth
+- [ ] Criar `web/` com Next.js 14 + TypeScript + shadcn/ui + jose (sem next-auth)
 - [ ] AppShell, Sidebar RBAC, Topbar, TenantContext
 - [ ] `lib/api.ts`, `lib/socket.ts`, `lib/permissions.ts`
-- [ ] `fly.toml` 2 processos, Procfile, scripts dev
+- [ ] `entrypoint.sh`, `Dockerfile` multi-stage, `fly.toml` (manter port 8080), scripts dev com `concurrently`
 - [ ] Atualizar `.claude/context/`, README.md, CHANGELOG.md
 - [ ] Deletar `frontend/`, `public/`, `copy-build.ps1`
 
