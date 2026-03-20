@@ -55,6 +55,8 @@ require('./jobs/botSessoes').register();   // Sessões inativas do bot a cada 15
 require('./jobs/cobrancasWhatsApp').register(); // Cobranças e lembretes financeiros a cada hora
 require('./jobs/faturasVencidas').register();   // Marcar faturas vencidas às 00:05 diário
 require('./jobs/qrExpirar').register();         // Expirar QR codes vencidos (1min) + fallback polling (10min)
+require('./jobs/iaScores').register();          // Scores de risco financeiro IA às 06:00 diário
+require('./jobs/iaInsights').register();        // Insights financeiros IA dia 1 do mês às 07:00
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -439,6 +441,9 @@ class SaeeApp {
     this.app.use('/api/whatsapp', require('./routes/whatsapp-central'));
     // WhatsApp Bot de Agendamento (TDD 14) — config/FAQ/sessões admin
     this.app.use('/api/whatsapp/bot', require('./routes/whatsapp-bot'));
+
+    // IA Financeira (TDD 18) — score de risco, insights Claude, projeção de caixa, alertas
+    this.app.use('/api/financeiro', require('./routes/ia-financeiro'));
 
     // Financeiro Cobranças e Pagamentos (TDD 16) — faturas, pagamentos, caixa, repasses, preços
     this.app.use('/api/financeiro', require('./routes/financeiro-faturas'));
