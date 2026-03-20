@@ -71,42 +71,60 @@ web/
 
 ## Tipos TypeScript (`web/types/dashboard.ts`)
 
+Tipos espelham exatamente os campos retornados pelo backend (`src/routes/dashboard-ia.js`).
+
 ```typescript
+// Perfis admin e admin_master — calcularKpisAdmin()
 export interface KpisAdmin {
+  perfil: 'admin'
   agendamentos_hoje: number
   confirmados: number
+  no_shows: number
   receita_mes: number
+  meta_receita: number
   inadimplencia_valor: number
-  inadimplencia_pct: number
   faturas_vencidas: number
-  no_show_pct: number
-  metas: Record<string, { valor_meta: number; valor_atual: number }>
+  taxa_no_show_mes: number       // percentual, ex: 12
+  metas: Record<string, number>  // { receita: 60000, atendimentos: 40, ... }
+  calculado_em: string
 }
 
+// Perfil financeiro — calcularKpisFinanceiro()
+export interface KpisFinanceiro {
+  perfil: 'financeiro'
+  receita_mes: number
+  meta_receita: number
+  faturas_vencidas: number
+  valor_vencido: number
+  cobradas_hoje: number
+  calculado_em: string
+}
+
+// Perfil recepcionista — calcularKpisRecepcionista()
 export interface KpisRecepcionista {
+  perfil: 'recepcionista'
   agendamentos_hoje: number
-  confirmados: number
-  em_atendimento: number
-  aguardando_checkin: number
-  fila_espera: number
+  aguardando_confirmacao: number  // status agendado/pendente
+  checkins_pendentes: number      // status check_in
+  fila_atual: number              // fila_espera.status = 'aguardando'
+  calculado_em: string
 }
 
+// Perfil medico — calcularKpisMedico()
+// Nota: NÃO inclui próximo paciente — backend retorna apenas agregados do dia
 export interface KpisMedico {
-  consultas_hoje: number
-  realizadas: number
-  aguardando: number
-  proximo_paciente: {
-    nome: string
-    horario: string
-    tipo: string
-  } | null
+  perfil: 'medico'
+  pacientes_hoje: number
+  primeira_consulta: number
+  retornos: number
+  duracao_media_min: number
+  calculado_em: string
 }
 
-export interface KpisEnfermeira {
-  aguardando_triagem: number
-  em_triagem: number
-  triados_hoje: number
-}
+// Perfil enfermeira — backend usa calcularKpisAdmin() como fallback (default case)
+export type KpisEnfermeira = KpisAdmin
+
+export type KpisQualquer = KpisAdmin | KpisFinanceiro | KpisRecepcionista | KpisMedico | KpisEnfermeira
 
 export interface Briefing {
   briefing: string
@@ -219,16 +237,17 @@ interface DraggableGridProps {
 - Todo o grid envolto em `DraggableGrid`
 
 **`RecepcionistaDashboard`**:
-- Grid 2×2: Agenda hoje / Em atendimento / Aguardando check-in / Fila de espera
+- Grid 2×2: Agenda hoje (`agendamentos_hoje`) / Aguardando confirmação (`aguardando_confirmacao`) / Check-ins pendentes (`checkins_pendentes`) / Fila de espera (`fila_atual`)
 - `BriefingCard` compacto (colapsado por padrão)
 
 **`MedicoDashboard`**:
-- Card destacado "Próximo paciente": nome + horário + tipo de consulta (ou "Sem mais consultas hoje")
-- Grid 1×3: Consultas hoje / Realizadas / Aguardando
+- Grid 2×2: Pacientes hoje (`pacientes_hoje`) / Primeiras consultas (`primeira_consulta`) / Retornos (`retornos`) / Duração média (`duracao_media_min` min)
 - `BriefingCard`
+- Nota: "Próximo paciente" com dados de prontuário está fora do escopo — o backend não retorna esse dado no endpoint de KPIs (Sprint 2+).
 
 **`EnfermeiraDashboard`**:
-- Grid 1×3: Aguardando triagem / Em triagem / Triados hoje
+- Usa `KpisAdmin` (backend aplica `calcularKpisAdmin()` como fallback para o perfil enfermeira)
+- Grid 2×2: Agendamentos hoje / Confirmados / Receita do mês / No-show %
 - `BriefingCard` compacto
 
 ---
@@ -236,9 +255,9 @@ interface DraggableGridProps {
 ## Hooks
 
 ### `useDashboard(perfil: string)`
-- `GET /api/dashboard-ia?perfil=<perfil>`
+- `GET /api/dashboard-ia?perfil=<perfil>` — `perfil` vem de `useTenant().user.perfil`
 - `staleTime: 5 * 60 * 1000` (5 min)
-- Retorna `{ data: KpisAdmin | KpisRecepcionista | KpisMedico | KpisEnfermeira, isLoading, error }`
+- Retorna `{ data: KpisQualquer, isLoading, error }`
 
 ### `useBriefing()`
 - `GET /api/dashboard-ia/briefing`
