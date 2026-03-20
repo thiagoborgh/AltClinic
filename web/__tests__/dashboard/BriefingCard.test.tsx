@@ -28,9 +28,10 @@ describe('BriefingCard', () => {
   it('deve ter botão "Ver mais" e expandir o texto', () => {
     const texto = 'Texto longo do briefing que precisa de mais espaço.'
     render(<BriefingCard isLoading={false} briefing={{ briefing: texto, kpis: {}, gerado_em: '2026-03-20T07:00:00Z' }} error={null} defaultCollapsed={true} />)
-    const btn = screen.getByRole('button', { name: /ver mais/i })
-    expect(btn).toBeDefined()
-    fireEvent.click(btn)
-    expect(screen.queryByRole('button', { name: /ver menos/i })).toBeDefined()
+    // Before click: should show "Ver mais"
+    expect(screen.getByRole('button', { name: /ver mais/i })).toBeDefined()
+    // After click: should show "Ver menos"
+    fireEvent.click(screen.getByRole('button', { name: /ver mais/i }))
+    expect(screen.getByRole('button', { name: /ver menos/i })).toBeDefined()
   })
 })
