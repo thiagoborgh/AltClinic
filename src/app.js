@@ -53,6 +53,7 @@ require('./jobs/crmFollowupProcessor'); // Follow-up WhatsApp a cada 15min
 require('./jobs/whatsappSla').register(); // SLA WhatsApp a cada 5min
 require('./jobs/botSessoes').register();   // Sessões inativas do bot a cada 15min
 require('./jobs/cobrancasWhatsApp').register(); // Cobranças e lembretes financeiros a cada hora
+require('./jobs/faturasVencidas').register();   // Marcar faturas vencidas às 00:05 diário
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -437,6 +438,9 @@ class SaeeApp {
     this.app.use('/api/whatsapp', require('./routes/whatsapp-central'));
     // WhatsApp Bot de Agendamento (TDD 14) — config/FAQ/sessões admin
     this.app.use('/api/whatsapp/bot', require('./routes/whatsapp-bot'));
+
+    // Financeiro Cobranças e Pagamentos (TDD 16) — faturas, pagamentos, caixa, repasses, preços
+    this.app.use('/api/financeiro', require('./routes/financeiro-faturas'));
 
     // WhatsApp Cobranças e Lembretes Financeiros (TDD 15)
     this.app.use('/api/financeiro', require('./routes/financeiro-cobrancas'));
