@@ -442,6 +442,9 @@ class SaeeApp {
     // WhatsApp Bot de Agendamento (TDD 14) — config/FAQ/sessões admin
     this.app.use('/api/whatsapp/bot', require('./routes/whatsapp-bot'));
 
+    // Relatório de No-Show (TDD 19) — view analítica, export CSV/PDF, insights Claude
+    this.app.use('/api/relatorios/no-show', require('./routes/relatorios-no-show'));
+
     // IA Financeira (TDD 18) — score de risco, insights Claude, projeção de caixa, alertas
     this.app.use('/api/financeiro', require('./routes/ia-financeiro'));
 
