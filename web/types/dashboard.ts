@@ -1,6 +1,8 @@
 // web/types/dashboard.ts
 // Tipos espelham exatamente os campos retornados pelo backend (src/routes/dashboard-ia.js)
 
+import type { ReactNode } from 'react'
+
 export interface KpisAdmin {
   perfil: 'admin'
   agendamentos_hoje: number
@@ -69,5 +71,5 @@ export interface Meta {
 
 export interface CardConfig {
   id: string
-  component: React.ReactNode
+  component: ReactNode
 }

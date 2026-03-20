@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -62,6 +62,10 @@ function SortableCard({
 
 export function DraggableGrid({ items, onReorder, onHide, onReset }: DraggableGridProps) {
   const [localItems, setLocalItems] = useState(items)
+
+  useEffect(() => {
+    setLocalItems(items)
+  }, [items])
 
   const sensors = useSensors(
     useSensor(PointerSensor),

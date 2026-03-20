@@ -67,9 +67,9 @@ export function AdminDashboard() {
       component: (
         <KpiCard
           label="Inadimplência"
-          value={kpisLoading ? undefined : adminKpis ? `${adminKpis.taxa_no_show_mes}%` : undefined}
+          value={kpisLoading ? undefined : adminKpis ? formatBRL(adminKpis.inadimplencia_valor) : undefined}
           subtext={adminKpis ? `${adminKpis.faturas_vencidas} faturas vencidas` : undefined}
-          variant={adminKpis && adminKpis.taxa_no_show_mes > 10 ? 'danger' : 'warning'}
+          variant={adminKpis && adminKpis.inadimplencia_valor > 1000 ? 'danger' : 'warning'}
         />
       ),
     },
