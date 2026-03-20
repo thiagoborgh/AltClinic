@@ -58,6 +58,9 @@ require('./jobs/qrExpirar').register();         // Expirar QR codes vencidos (1m
 require('./jobs/iaScores').register();          // Scores de risco financeiro IA às 06:00 diário
 require('./jobs/iaInsights').register();        // Insights financeiros IA dia 1 do mês às 07:00
 require('./jobs/receitaInsights').register();   // Insights receita IA dia 1 do mês às 07:00
+require('./jobs/dashboard-cache').register();   // Pré-cálculo KPIs dashboard IA a cada hora
+require('./jobs/briefing-diario').register();   // Briefing IA diário às 07:00
+require('./jobs/alertas-engine').register();    // Detectores de alertas proativos a cada 5min
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -448,6 +451,9 @@ class SaeeApp {
 
     // Relatório de Receita (TDD 20) — views analíticas, export CSV/PDF, insights Claude mensal
     this.app.use('/api/relatorios/receita', require('./routes/relatorios-receita'));
+
+    // Dashboard IA com alertas proativos e briefing (TDD 21)
+    this.app.use('/api/dashboard-ia', require('./routes/dashboard-ia'));
 
     // IA Financeira (TDD 18) — score de risco, insights Claude, projeção de caixa, alertas
     this.app.use('/api/financeiro', require('./routes/ia-financeiro'));
