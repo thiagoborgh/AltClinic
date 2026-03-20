@@ -54,6 +54,7 @@ require('./jobs/whatsappSla').register(); // SLA WhatsApp a cada 5min
 require('./jobs/botSessoes').register();   // Sessões inativas do bot a cada 15min
 require('./jobs/cobrancasWhatsApp').register(); // Cobranças e lembretes financeiros a cada hora
 require('./jobs/faturasVencidas').register();   // Marcar faturas vencidas às 00:05 diário
+require('./jobs/qrExpirar').register();         // Expirar QR codes vencidos (1min) + fallback polling (10min)
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -441,6 +442,9 @@ class SaeeApp {
 
     // Financeiro Cobranças e Pagamentos (TDD 16) — faturas, pagamentos, caixa, repasses, preços
     this.app.use('/api/financeiro', require('./routes/financeiro-faturas'));
+
+    // QR Billing Pix (TDD 17) — gerar/consultar QR codes, webhook pix, config pix
+    this.app.use('/api/financeiro', require('./routes/qr-billing'));
 
     // WhatsApp Cobranças e Lembretes Financeiros (TDD 15)
     this.app.use('/api/financeiro', require('./routes/financeiro-cobrancas'));
