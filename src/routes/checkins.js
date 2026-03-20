@@ -56,6 +56,7 @@ router.get('/', extractTenant, authMiddleware, checkPermission('checkin', 'read'
           a.id              AS agendamento_id,
           a.data_hora       AS horario_marcado,
           a.procedimento,
+          a.status           AS agendamento_status,
           p.id              AS paciente_id,
           p.nome            AS paciente_nome,
           p.cpf             AS paciente_cpf,

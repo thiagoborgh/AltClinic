@@ -175,6 +175,8 @@ router.post('/:id/triagem/chamar', extractTenant, authenticateToken, async (req,
       status_novo:     'em_triagem',
       profissional_id: item.profissional_id,
     });
+    const io = req.app.get('io')
+    if (io) io.to(tenantId).emit('fila:update', { tipo: 'status_alterado', fila_id: parseInt(id) })
 
     return res.json({
       success: true,
@@ -268,6 +270,8 @@ router.post('/:id/chamar', extractTenant, authenticateToken, async (req, res) =>
       status_novo:     'em_atendimento',
       profissional_id: item.profissional_id,
     });
+    const io = req.app.get('io')
+    if (io) io.to(tenantId).emit('fila:update', { tipo: 'status_alterado', fila_id: parseInt(id) })
 
     return res.json({
       success: true,
@@ -344,6 +348,8 @@ router.post('/:id/finalizar', extractTenant, authenticateToken, async (req, res)
       profissional_id: item.profissional_id,
       proximo_fila_id: proximo?.fila_id || null,
     });
+    const io = req.app.get('io')
+    if (io) io.to(tenantId).emit('fila:update', { tipo: 'atendimento_finalizado', fila_id: parseInt(id) })
 
     return res.json({
       success: true,
@@ -411,6 +417,8 @@ router.post('/triagens', extractTenant, authenticateToken, async (req, res) => {
       fila_espera_id,
       profissional_id: item.profissional_id,
     });
+    const io = req.app.get('io')
+    if (io) io.to(tenantId).emit('fila:update', { tipo: 'status_alterado', fila_id: parseInt(fila_espera_id) })
 
     return res.status(201).json({
       success: true,
