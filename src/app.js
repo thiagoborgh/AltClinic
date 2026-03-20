@@ -30,6 +30,14 @@ const professionalFirestoreRoutes = require('./routes/professional-firestore'); 
 const manyChatRoutes = require('./routes/manychat');
 const onboardingRoutes = require('./routes/onboarding'); // 🆕 ONBOARDING
 
+// Rotas admin master (TDD 22)
+const adminMasterTenantsRoutes   = require('./admin/routes/admin-tenants');
+const adminMasterFaturamentoRoutes = require('./admin/routes/faturamento');
+const adminMasterLogsRoutes      = require('./admin/routes/logs');
+const adminMasterAuthRoutes      = require('./admin/routes/auth-admin');
+const stripeWebhookRoute         = require('./admin/routes/stripe-webhook');
+const { requireAdminAuth: requireAdminMasterAuth } = require('./admin/middleware/adminAuth');
+
 // 🔥 Rotas Firestore (novas)
 const trialFirestoreRoutes = require('./routes/trial-firestore');
 const pacientesFirestoreRoutes = require('./routes/pacientes-firestore');
@@ -61,6 +69,7 @@ require('./jobs/receitaInsights').register();   // Insights receita IA dia 1 do 
 require('./jobs/dashboard-cache').register();   // Pré-cálculo KPIs dashboard IA a cada hora
 require('./jobs/briefing-diario').register();   // Briefing IA diário às 07:00
 require('./jobs/alertas-engine').register();    // Detectores de alertas proativos a cada 5min
+try { require('./admin/jobs/monitoramento.job').register(); } catch(e) { console.warn('[monitoramento.job] não iniciado:', e.message); }
 const { startAllJobs } = require('./jobs/index');
 const ProductionInitializer = require('./utils/productionInitializer');
 const TenantWhatsAppService = require('./services/TenantWhatsAppService');
@@ -379,6 +388,13 @@ class SaeeApp {
     console.log('🔧 Configurando rotas admin...');
     this.app.use('/api/admin/auth', adminAuthRoutes);
     this.app.use('/api/admin/licencas', adminLicencasRoutes);
+
+    // Rotas admin master (TDD 22)
+    this.app.use('/admin/api/auth',        adminMasterAuthRoutes);
+    this.app.use('/admin/api/tenants',     requireAdminMasterAuth, adminMasterTenantsRoutes);
+    this.app.use('/admin/api/faturamento', requireAdminMasterAuth, adminMasterFaturamentoRoutes);
+    this.app.use('/admin/api/logs',        requireAdminMasterAuth, adminMasterLogsRoutes);
+    this.app.use('/admin/api/webhook',     stripeWebhookRoute); // Stripe webhook sem JWT
     
     // Rotas que precisam de tenant (exceto login que já tem o middleware interno)
     // this.app.use('/api/auth/login', extractTenant); // Removido - middleware aplicado internamente
