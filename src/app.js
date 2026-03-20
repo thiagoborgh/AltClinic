@@ -8,7 +8,6 @@ const multer = require('multer');
 
 // Importar rotas
 const authRoutes = require('./routes/auth');
-// const agendamentosRoutes = require('./routes/agendamentos'); // ⚠️ AGENDA COMPLETA (não usar - muito pesada)
 const agendaAgendamentosRoutes = require('./routes/agenda-agendamentos'); // ✅ AGENDA LITE (PADRÃO)
 const propostasRoutes = require('./routes/propostas');
 const crmRoutes = require('./routes/crm');
@@ -25,7 +24,6 @@ const prontuarioRoutes = require('./routes/prontuario-medico');
 const prontuarioImagemRoutes = require('./routes/prontuario-imagem-simple');
 const configuracoesRoutes = require('./routes/configuracoes-simple');
 const atendimentosRoutes = require('./routes/atendimentos');
-// const professionalRoutes = require('./routes/professional'); // ⚠️ SQLite (não usar)
 const manyChatRoutes = require('./routes/manychat');
 const onboardingRoutes = require('./routes/onboarding'); // 🆕 ONBOARDING
 
@@ -250,12 +248,9 @@ class SaeeApp {
     this.app.use('/api/agendamentos', extractTenant);
     this.app.use('/api/agenda/agendamentos', extractTenant);
     this.app.use('/api/propostas', extractTenant);
-    // this.app.use('/api/crm', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/prontuarios', extractTenant);
-    // this.app.use('/api/financeiro', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/configuracoes', extractTenant);
     this.app.use('/api/atendimentos', extractTenant);
-    // this.app.use('/api/professional', extractTenant); // ⚠️ COMENTADO - usar Firestore abaixo
     this.app.use('/api/manychat', extractTenant);
     this.app.use('/api/onboarding', extractTenant, onboardingRoutes); // 🆕 ONBOARDING
     this.app.use('/api/templates', extractTenant, templatesRoutes); // 🆕 TEMPLATES
@@ -311,14 +306,11 @@ class SaeeApp {
     // ✅ AGENDA LITE (PADRÃO) - Usar em ambos os endpoints com Firestore
     this.app.use('/api/agendamentos', extractTenant, agendaAgendamentosRoutes);
     this.app.use('/api/agenda/agendamentos', extractTenant, agendaAgendamentosRoutes);
-    // this.app.use('/api/agendamentos', agendamentosRoutes); // ⚠️ AGENDA COMPLETA (comentada - muito pesada)
-    
+
     this.app.use('/api/prontuario', prontuarioRoutes); // prontuário médico schema-driven
     this.app.use('/api/prontuarios', prontuariosRoutes);
     // Prontuário Eletrônico TDD (novo — PostgreSQL multi-tenant)
     this.app.use('/api/prontuarios-v2', require('./routes/prontuarios-eletronico'));
-    // this.app.use('/api/financeiro', financeiroRoutes); // ⚠️ SQLite (não usar)
-    // this.app.use('/api/crm', crmRoutes); // ⚠️ SQLite (não usar)
     this.app.use('/api/configuracoes', configuracoesRoutes);
     this.app.use('/api/atendimentos', atendimentosRoutes);
     this.app.use('/api/manychat', manyChatRoutes);
