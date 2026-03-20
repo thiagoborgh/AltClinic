@@ -180,10 +180,24 @@ firestore.rules
 | `trial-firestore.js` | `trial.js` | `/api/trial` |
 | `tenants-admin-firestore.js` | `tenants-admin.js` | `/api/tenants/admin` |
 
-> **Atenção:** `professional-firestore.js` expunha `/api/professional` (singular, legado SQLite/Firestore). O arquivo `profissionais.js` que usa PostgreSQL já está registrado em `app.js` em `/api/profissionais`. São rotas diferentes — basta deletar `professional-firestore.js`, não há swap.
+> **Atenção:** `professional-firestore.js` expunha `/api/professional` (singular, legado SQLite/Firestore). O arquivo `profissionais.js` que usa PostgreSQL já está registrado em `app.js` em `/api/profissionais`. São rotas diferentes — basta:
+> 1. Deletar o arquivo `src/routes/professional-firestore.js`
+> 2. Remover de `src/app.js` a linha `app.use('/api/professional', extractTenantFirestore, professionalFirestoreRoutes)` e o `require` correspondente
+>
+> Não há swap — `profissionais.js` já está no ar.
 
-### Endpoints temporários a remover de app.js
+### Linhas a remover de src/app.js
 ```js
+// Firestore routes — substituir pelos PostgreSQL acima
+app.use('/api/professional', extractTenantFirestore, professionalFirestoreRoutes)  // DELETE: arquivo deletado, path legado
+app.use('/api/crm', extractTenantFirestore, crmFirestoreRoutes)                    // SWAP: registrar crm-pipeline.js
+app.use('/api/financeiro', extractTenantFirestore, financeiroFirestoreRoutes)       // SWAP: registrar financeiro-faturas.js
+app.use('/api/dashboard', extractTenantFirestore, dashboardFirestoreRoutes)        // SWAP: registrar dashboard-ia.js
+app.use('/api/pacientes', extractTenantFirestore, pacientesFirestoreRoutes)        // SWAP: registrar pacientes.js
+app.use('/api/trial', extractTenantFirestore, trialFirestoreRoutes)                // SWAP: registrar trial.js
+app.use('/api/tenants/admin', extractTenantFirestore, tenantsAdminFirestoreRoutes) // SWAP: registrar tenants-admin.js
+
+// Endpoints temporários de manutenção
 /api/cleanup-orphans
 /api/cleanup-user/:email
 ```
@@ -227,8 +241,14 @@ Recharts                 — gráficos (dashboard, relatórios)
 
 **Variáveis de ambiente necessárias (web/):**
 ```
-NEXT_PUBLIC_API_URL=http://localhost:8080    # Express API URL
-JWT_SECRET=<igual ao JWT_SECRET do Express>  # para verificação no middleware.ts
+# Server-side only (usada pelo BFF proxy — não expor ao cliente)
+EXPRESS_API_URL=http://localhost:3000       # URL interna do Express (porta 3000)
+
+# Verificação JWT no middleware.ts (edge runtime)
+JWT_SECRET=<igual ao JWT_SECRET do Express>
+
+# Opcional: URL pública do app (client-side, se necessário)
+NEXT_PUBLIC_APP_URL=http://localhost:8080
 ```
 
 ### RBAC no Frontend
