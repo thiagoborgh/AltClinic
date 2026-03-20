@@ -50,11 +50,11 @@ web/
 │   └── TriagemModal.tsx              # Modal de sinais vitais (enfermeira)
 │
 ├── hooks/
-│   ├── useAgendamentos.ts            # GET /api/agendamentos?data=hoje
+│   ├── useCheckins.ts                # GET /api/checkins?data=hoje
 │   ├── useCheckin.ts                 # POST /api/checkins (mutation)
 │   ├── useFila.ts                    # GET /api/fila + socket.io invalidação
 │   ├── useFilaActions.ts             # POST fila/:id/triagem/chamar, chamar, finalizar
-│   └── useTriagem.ts                 # POST /api/triagens
+│   └── useTriagem.ts                 # POST /api/fila/triagens
 │
 └── __tests__/checkin/
     ├── AgendamentosTab.test.tsx
@@ -83,10 +83,10 @@ Isso habilita o frontend a escutar `fila:update` via socket.io sem remover o SSE
 
 ### `AgendamentosTab`
 
-Lista de agendamentos do dia para o profissional logado (recepcionista vê todos).
+Lista de agendamentos do dia via `useCheckins()` para o profissional logado (recepcionista vê todos).
 
-**Filtro de status** (chips multi-select, padrão: `agendado` + `confirmado`):
-- Todos / Agendado / Confirmado / Check-in feito / Cancelado / No-show
+**Filtro por `agendamento_status`** (chips multi-select, padrão: `agendado` + `confirmado`):
+- Todos / Agendado / Confirmado / Cancelado / No-show
 
 **Cada linha:**
 ```
@@ -95,7 +95,7 @@ Lista de agendamentos do dia para o profissional logado (recepcionista vê todos
                                               [Fazer Check-in]
 ```
 
-- Botão "Fazer Check-in" visível apenas se status for `agendado` ou `confirmado`
+- Botão "Fazer Check-in" visível apenas se `checkin_status` for `null` (sem check-in) — campo retornado pelo `GET /api/checkins`
 - Após check-in: linha atualiza status otimistamente para "check-in feito"; botão some
 - Toast de confirmação exibe: posição na fila + alertas detalhados (fatura R$X, X dias sem visita)
 
@@ -123,7 +123,7 @@ interface AlertaBadgeProps {
 
 Lista em tempo real dos pacientes na fila, ordenada por posição.
 
-Escuta socket.io `fila:update` → invalida `queryClient(['fila'])` → recarrega.
+Escuta socket.io `fila:update` → invalida `queryClient.invalidateQueries({ queryKey: ['fila'] })` → recarrega.
 
 **Cada `FilaCard` mostra:**
 ```
@@ -169,7 +169,7 @@ interface TriagemModalProps {
 - Observações (texto) — opcional
 
 **Comportamento:**
-- Submit → `POST /api/triagens` → fecha modal → socket.io atualiza fila para todos
+- Submit → `POST /api/fila/triagens` → fecha modal → socket.io atualiza fila para todos
 - Erro → exibe mensagem inline, modal permanece aberto
 - Validação: queixa_principal não pode ser vazia
 
@@ -177,40 +177,48 @@ interface TriagemModalProps {
 
 ## Hooks
 
-### `useAgendamentos()`
-- `GET /api/agendamentos?data=hoje`
+### `useCheckins()`
+- `GET /api/checkins?data=hoje`
 - `staleTime: 2 * 60 * 1000` (2 min)
 - Retorna `{ data: Agendamento[], isLoading, error }`
+- Cada item inclui `checkin_status` (backend: `COALESCE(c.status, null)`) e `alertas`
 
 ### `useCheckin()`
 - Mutation `POST /api/checkins`
-- Atualização otimista: marca agendamento como "check-in feito" antes da resposta
+- Atualização otimista: marca agendamento como "aguardando" antes da resposta
 - Rollback em erro
-- `onSuccess`: invalida `['agendamentos']`, exibe toast com posição + alertas
+- `onSuccess`: invalida `{ queryKey: ['checkins'] }`, exibe toast com posição + alertas
 
 ### `useFila()`
 - `GET /api/fila`
 - `staleTime: 30 * 1000` (30s)
-- Conecta socket.io no mount, escuta `fila:update` → `queryClient.invalidateQueries(['fila'])`
+- Conecta socket.io no mount via `getSocket()` de `@/lib/socket`
+- Após conectar: emite `socket.emit('join', tenantId)` para entrar no room do tenant
+- Escuta `fila:update` → `queryClient.invalidateQueries({ queryKey: ['fila'] })`
 - Desconecta no unmount
 
 ### `useFilaActions()`
 - `POST /api/fila/:id/triagem/chamar` — encaminhar para triagem (recepcionista)
 - `POST /api/fila/:id/chamar` — chamar para atendimento (médico)
 - `POST /api/fila/:id/finalizar` — finalizar atendimento (médico)
-- Cada ação invalida `['fila']` no sucesso
+- Cada ação invalida `{ queryKey: ['fila'] }` no sucesso
 
 ### `useTriagem()`
-- Mutation `POST /api/triagens`
-- `onSuccess`: invalida `['fila']`, chama `onClose()`
+- Mutation `POST /api/fila/triagens`
+- `onSuccess`: invalida `{ queryKey: ['fila'] }`, chama `onClose()`
 
 ---
 
 ## Tipos TypeScript (`web/types/checkin.ts`)
 
 ```typescript
+// Status do agendamento em si (tabela agendamentos)
 export type StatusAgendamento =
-  | 'agendado' | 'confirmado' | 'check_in' | 'cancelado' | 'no_show' | 'finalizado'
+  | 'agendado' | 'confirmado' | 'cancelado' | 'no_show' | 'finalizado'
+
+// Status do check-in (COALESCE(c.status, null) — null = sem check-in ainda)
+export type CheckinStatus =
+  | 'aguardando' | 'presente' | null
 
 export interface Agendamento {
   id: number
@@ -219,7 +227,8 @@ export interface Agendamento {
   profissional_id: number
   profissional_nome: string
   data_hora: string
-  status: StatusAgendamento
+  agendamento_status: StatusAgendamento  // campo retornado pelo backend via JOIN
+  checkin_status: CheckinStatus          // null = botão "Fazer Check-in" visível
   alertas?: {
     fatura_aberta: number
     ultimo_atendimento_dias: number
@@ -288,13 +297,13 @@ export interface TriagemPayload {
 ```
 page.tsx
   ├─ AgendamentosTab
-  │    ├─ useAgendamentos() → GET /api/agendamentos?data=hoje
-  │    └─ useCheckin()      → POST /api/checkins
+  │    ├─ useCheckins()      → GET /api/checkins?data=hoje
+  │    └─ useCheckin()       → POST /api/checkins
   │
   └─ FilaTab
        ├─ useFila()          → GET /api/fila + socket.io fila:update
        ├─ useFilaActions()   → POST fila/:id/triagem/chamar | chamar | finalizar
-       └─ useTriagem()       → POST /api/triagens
+       └─ useTriagem()       → POST /api/fila/triagens
             └─ TriagemModal (enfermeira)
 ```
 
@@ -304,14 +313,14 @@ page.tsx
 
 | Método | Rota | Uso |
 |--------|------|-----|
-| GET | `/api/agendamentos` | Lista agendamentos do dia |
+| GET | `/api/checkins` | Lista agendamentos do dia com checkin_status |
 | POST | `/api/checkins` | Criar check-in |
 | DELETE | `/api/checkins/:id` | Cancelar check-in |
 | GET | `/api/fila` | Lista fila de espera |
 | POST | `/api/fila/:id/triagem/chamar` | Encaminhar para triagem |
 | POST | `/api/fila/:id/chamar` | Chamar para atendimento |
 | POST | `/api/fila/:id/finalizar` | Finalizar atendimento |
-| POST | `/api/triagens` | Registrar triagem (sinais vitais) |
+| POST | `/api/fila/triagens` | Registrar triagem (sinais vitais) |
 
 **Adição necessária:** emitir `fila:update` via socket.io em `src/routes/fila-espera.js`.
 
