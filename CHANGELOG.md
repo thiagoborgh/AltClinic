@@ -1,4 +1,27 @@
-# 📝 CHANGELOG - Sistema SAEE & Intranet Altclinic
+# CHANGELOG — AltClinic
+
+## [Sprint 0] — 2026-03-20
+
+### Added
+- Next.js 14 (App Router) em `web/` com TypeScript, shadcn/ui, TanStack Query v5, Zustand
+- Autenticacao via cookie httpOnly `altclinic_token` + `jose` no `middleware.ts`
+- BFF proxy `web/app/api/[...proxy]/route.ts` — repassa chamadas API ao Express
+- AppShell com Sidebar RBAC dinamico e Topbar com logout
+- Dockerfile multi-stage (Express + Next.js) e `entrypoint.sh`
+- Script `npm run dev:all` para desenvolvimento local com `concurrently`
+
+### Removed
+- `frontend/` — React CRA substituido por Next.js 14
+- `public/` — Next.js serve o frontend
+- Rotas Firestore: professional-firestore, crm-firestore, financeiro-firestore, dashboard-firestore, pacientes-firestore, trial-firestore, tenants-admin-firestore
+- Endpoints temporarios `/api/cleanup-orphans` e `/api/cleanup-user/:email`
+- ~110 arquivos `.md` legados da raiz e `docs/`
+
+### Changed
+- `src/app.js`: removidas rotas Firestore, CORS atualizado, removido static server do frontend
+- `.claude/context/`: stack, arquitetura e convencoes atualizados para Next.js
+
+---
 
 ## 🗓️ **02 de Setembro de 2025 - Desenvolvimento Completo da Intranet**
 

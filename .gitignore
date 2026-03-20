@@ -91,3 +91,4 @@ scripts/deploy/
 scripts/utils/
 frontend/public/service-worker.js
 frontend/src/themes/themeC.js
+.worktrees/
