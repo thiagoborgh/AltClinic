@@ -7,11 +7,13 @@ import React from 'react'
 const mockAddEventListener = vi.fn()
 const mockRemoveEventListener = vi.fn()
 const mockClose = vi.fn()
-const MockEventSource = vi.fn(() => ({
-  addEventListener: mockAddEventListener,
-  removeEventListener: mockRemoveEventListener,
-  close: mockClose,
-}))
+const MockEventSource = vi.fn(function () {
+  return {
+    addEventListener: mockAddEventListener,
+    removeEventListener: mockRemoveEventListener,
+    close: mockClose,
+  }
+})
 vi.stubGlobal('EventSource', MockEventSource)
 
 const mockInvalidate = vi.fn()
